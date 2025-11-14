@@ -18,6 +18,11 @@ export default function AdminGameSavesPage() {
   const [saveName, setSaveName] = useState('');
   const [saveDescription, setSaveDescription] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : 'Unbekannter Fehler';
@@ -200,6 +205,53 @@ export default function AdminGameSavesPage() {
     }
   };
 
+  const handleDownloadSave = (gameSaveId: number) => {
+    window.location.href = `/api/admin/gamesaves/${gameSaveId}/download`;
+  };
+
+  const handleUploadSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) {
+      setUploadError('Bitte wähle eine JSON-Datei aus.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      if (uploadName.trim()) {
+        formData.append('name', uploadName.trim());
+      }
+      if (uploadDescription.trim()) {
+        formData.append('description', uploadDescription.trim());
+      }
+
+      const res = await fetch('/api/admin/gamesaves/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Fehler beim Importieren');
+      }
+
+      alert('Spielstand erfolgreich importiert!');
+      setUploadName('');
+      setUploadDescription('');
+      setUploadFile(null);
+      fetchGameSaves();
+    } catch (error) {
+      setUploadError(getErrorMessage(error));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -350,7 +402,14 @@ export default function AdminGameSavesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex flex-wrap gap-2 ml-4">
+                    <button
+                      onClick={() => handleDownloadSave(save.id)}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition text-sm font-semibold"
+                      disabled={processing}
+                    >
+                      ⬇️ Download
+                    </button>
                     <button
                       onClick={() => handleLoadGame(save.id, save.name)}
                       disabled={processing}
@@ -371,6 +430,70 @@ export default function AdminGameSavesPage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+        <h2 className="text-2xl font-bold mb-4">Spielstand importieren</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Lade einen zuvor exportierten Spielstand als JSON-Datei hoch, um ihn in die Liste aufzunehmen.
+        </p>
+        <form className="space-y-4" onSubmit={handleUploadSave}>
+          {uploadError && (
+            <div className="bg-red-50 text-red-700 p-3 rounded-md">{uploadError}</div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Datei *
+            </label>
+            <input
+              type="file"
+              accept="application/json"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setUploadFile(file);
+              }}
+              className="w-full text-sm text-gray-600"
+            />
+            {uploadFile && (
+              <p className="text-xs text-gray-500 mt-1">
+                Ausgewählt: {uploadFile.name}
+              </p>
+            )}
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name (optional)
+              </label>
+              <input
+                type="text"
+                value={uploadName}
+                onChange={(e) => setUploadName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Beschreibung (optional)
+              </label>
+              <input
+                type="text"
+                value={uploadDescription}
+                onChange={(e) => setUploadDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={uploading}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 font-semibold"
+            >
+              {uploading ? 'Importiere...' : 'Importieren'}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">

@@ -64,6 +64,23 @@ export function parseTypes(typesString: string): string[] {
   return types.map((t) => t.trim().toLowerCase()).filter(Boolean);
 }
 
+export const allPokemonTypes = Object.keys(typeNamesGerman);
+
+export function getDefenseMultiplier(defenderTypes: string[], attackType: string): number {
+  return defenderTypes.reduce((multiplier, type) => {
+    const defenseData = defensiveTypeEffectiveness[type];
+    if (!defenseData) {
+      return multiplier;
+    }
+    const typeMultiplier = defenseData[attackType];
+    return typeMultiplier !== undefined ? multiplier * typeMultiplier : multiplier;
+  }, 1);
+}
+
+export function getGermanTypeName(type: string): string {
+  return typeNamesGerman[type] || type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 // Berechne Defensiv-Effektivität für ein Pokémon
 export function calculateDefensiveEffectiveness(types: string[]): { [multiplier: string]: string[] } {
   const effectiveness: { [attackType: string]: number } = {};

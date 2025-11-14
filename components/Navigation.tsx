@@ -90,6 +90,16 @@ export default function Navigation() {
               >
                 Vergleich
               </Link>
+              <Link
+                href="/tabelle"
+                className={`px-3 py-2 rounded-md transition ${
+                  isActive('/tabelle')
+                    ? 'bg-red-800 text-white'
+                    : 'hover:bg-red-500'
+                }`}
+              >
+                Tabelle
+              </Link>
               {isAdmin && (
                 <Link
                   href="/admin"

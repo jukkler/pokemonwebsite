@@ -48,6 +48,13 @@ export default function AdminEncountersPage() {
   });
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingEncounter, setEditingEncounter] = useState<Encounter | null>(null);
+  const [editForm, setEditForm] = useState({
+    pokemonId: '',
+    nickname: '',
+  });
+  const [editError, setEditError] = useState('');
+  const [editSearchTerm, setEditSearchTerm] = useState('');
 
   // Daten laden
   const loadData = useCallback(async () => {
@@ -143,6 +150,62 @@ export default function AdminEncountersPage() {
       p.pokedexId.toString().includes(search)
     );
   });
+
+  const editFilteredPokemon = pokemon.filter((p) => {
+    const search = editSearchTerm.toLowerCase();
+    if (!search) return true;
+    return (
+      p.name.toLowerCase().includes(search) ||
+      p.nameGerman?.toLowerCase().includes(search) ||
+      p.pokedexId.toString().includes(search)
+    );
+  });
+
+  const startEditing = (encounter: Encounter) => {
+    setEditingEncounter(encounter);
+    setEditForm({
+      pokemonId: encounter.pokemon.id.toString(),
+      nickname: encounter.nickname || '',
+    });
+    setEditSearchTerm('');
+    setEditError('');
+    // Scroll zum Bearbeitungsformular
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEditing = () => {
+    setEditingEncounter(null);
+    setEditForm({ pokemonId: '', nickname: '' });
+    setEditError('');
+    setEditSearchTerm('');
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEncounter) return;
+
+    setEditError('');
+
+    try {
+      const res = await fetch(`/api/admin/encounters/${editingEncounter.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        await loadData();
+        cancelEditing();
+      } else {
+        setEditError(data.error || 'Fehler beim Aktualisieren');
+      }
+    } catch (error) {
+      console.error('Error updating encounter:', error);
+      setEditError('Netzwerkfehler');
+    }
+  };
 
   return (
     <div>
@@ -298,6 +361,92 @@ export default function AdminEncountersPage() {
             )}
           </div>
 
+          {editingEncounter && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-8 border border-purple-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Encounter bearbeiten</h2>
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Abbrechen
+                </button>
+              </div>
+              <p className="text-gray-600 mb-4">
+                {editingEncounter.player.name} auf{' '}
+                <span className="font-semibold">{editingEncounter.route.name}</span>
+              </p>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                {editError && (
+                  <div className="bg-red-50 text-red-800 p-3 rounded-md">
+                    {editError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pokémon
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Suchen..."
+                    value={editSearchTerm}
+                    onChange={(e) => setEditSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                  />
+                  <select
+                    required
+                    value={editForm.pokemonId}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, pokemonId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 max-h-48"
+                    size={8}
+                  >
+                    {editFilteredPokemon.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        #{p.pokedexId} - {p.nameGerman || p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Spitzname (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.nickname}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, nickname: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="z.B. Flammy"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+                  >
+                    Änderungen speichern
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {/* Liste */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">
@@ -342,13 +491,21 @@ export default function AdminEncountersPage() {
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="py-2 px-4 text-right">
-                          <button
-                            onClick={() => handleDelete(encounter.id)}
-                            className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                          >
-                            Löschen
-                          </button>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => startEditing(encounter)}
+                              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              onClick={() => handleDelete(encounter.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                            >
+                              Löschen
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

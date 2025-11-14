@@ -7,6 +7,12 @@
 'use client';
 
 import PokemonCard from './PokemonCard';
+import {
+  allPokemonTypes,
+  getDefenseMultiplier,
+  getGermanTypeName,
+  parseTypes,
+} from '@/lib/typeEffectiveness';
 
 interface TeamEncounter {
   id: number;
@@ -50,6 +56,43 @@ interface TeamDisplayProps {
   isAdmin?: boolean;
   onRemoveFromTeam?: (routeId: number) => void;
 }
+
+const analyzeTeamMatchups = (members: TeamEncounter[]): {
+  noResistances: string[];
+  noEffectiveAttacks: string[];
+} => {
+  if (members.length === 0) {
+    return { noResistances: [], noEffectiveAttacks: [] };
+  }
+
+  const noResistances: string[] = [];
+  const noEffectiveAttacks: string[] = [];
+
+  allPokemonTypes.forEach((attackType) => {
+    const hasResistance = members.some((member) => {
+      const defenderTypes = parseTypes(member.pokemon.types);
+      return getDefenseMultiplier(defenderTypes, attackType) < 1;
+    });
+
+    if (!hasResistance) {
+      noResistances.push(attackType);
+    }
+
+    const hasEffectiveAttack = members.some((member) => {
+      const attackerTypes = parseTypes(member.pokemon.types);
+      return attackerTypes.some(
+        (memberAttackType) =>
+          getDefenseMultiplier([attackType], memberAttackType) > 1
+      );
+    });
+
+    if (!hasEffectiveAttack) {
+      noEffectiveAttacks.push(attackType);
+    }
+  });
+
+  return { noResistances, noEffectiveAttacks };
+};
 
 export default function TeamDisplay({
   playerName,
@@ -103,6 +146,8 @@ export default function TeamDisplay({
   };
 
   const teamAverage = calculateTeamAverage();
+  const filledMembers = slots.filter((slot): slot is TeamEncounter => slot !== null);
+  const { noResistances, noEffectiveAttacks } = analyzeTeamMatchups(filledMembers);
 
   // Berechne K.O. Counter: Wie viele K.O.-Routen hat dieser Spieler verursacht?
   const calculateKoCount = () => {
@@ -202,6 +247,55 @@ export default function TeamDisplay({
           </div>
         ))}
       </div>
+
+      {teamAverage && (
+        <div className="mt-6 space-y-4">
+          <MatchupSection
+            title="Keine Resistenzen"
+            types={noResistances}
+            badgeClass="bg-amber-100 text-amber-800"
+            emptyMessage="Alle Typen haben mindestens eine Resistenz."
+          />
+          <MatchupSection
+            title="Keine effektiven Attacken"
+            types={noEffectiveAttacks}
+            badgeClass="bg-red-100 text-red-800"
+            emptyMessage="Für alle Typen existiert eine effektive Attacke."
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchupSection({
+  title,
+  types,
+  badgeClass,
+  emptyMessage,
+}: {
+  title: string;
+  types: string[];
+  badgeClass: string;
+  emptyMessage: string;
+}) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-700 mb-2">{title}</h3>
+      {types.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {types.map((type) => (
+            <span
+              key={`${title}-${type}`}
+              className={`text-xs font-semibold px-3 py-1 rounded-full ${badgeClass}`}
+            >
+              {getGermanTypeName(type)}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400">{emptyMessage}</p>
+      )}
     </div>
   );
 }

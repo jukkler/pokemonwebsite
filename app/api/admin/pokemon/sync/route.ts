@@ -6,6 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { syncAllPlatinumPokemon, syncAllAvailablePokemon } from '@/lib/pokeapi';
+import {
+  startPokemonSync,
+  updatePokemonSync,
+  finishPokemonSync,
+} from '@/lib/pokemonSyncProgress';
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Unbekannter Fehler';
@@ -25,19 +30,25 @@ export async function POST(request: NextRequest) {
     console.log(`Starting Pokemon sync (${syncAll ? 'all available' : 'Gen 1-4 only'})...`);
     
     let results;
+    const total = syncAll ? 1050 : 493;
+    startPokemonSync(total);
+
     try {
       results = syncAll
-        ? await syncAllAvailablePokemon((current, total) => {
+        ? await syncAllAvailablePokemon((current, totalProgress) => {
+            updatePokemonSync(current, totalProgress);
             if (current % 50 === 0) {
-              console.log(`Progress: ${current}/${total}`);
+              console.log(`Progress: ${current}/${totalProgress}`);
             }
           })
-        : await syncAllPlatinumPokemon((current, total) => {
+        : await syncAllPlatinumPokemon((current, totalProgress) => {
+            updatePokemonSync(current, totalProgress);
             if (current % 50 === 0) {
-              console.log(`Progress: ${current}/${total}`);
+              console.log(`Progress: ${current}/${totalProgress}`);
             }
           });
     } catch (syncError) {
+      finishPokemonSync();
       console.error('Error in sync function:', syncError);
       return NextResponse.json(
         { 
@@ -47,6 +58,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    finishPokemonSync();
 
     return NextResponse.json({
       success: true,

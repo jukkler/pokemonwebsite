@@ -238,14 +238,11 @@ export async function syncAllAvailablePokemon(
   // Wir versuchen bis 1050, um auch eventuelle neue hinzuzufügen
   const MAX_POKEMON = 1050;
   const results = [];
-  let consecutiveNotFound = 0;
-  const MAX_CONSECUTIVE_NOT_FOUND = 20; // Stoppe nach 20 aufeinanderfolgenden "nicht gefunden" Fehlern
   
   for (let i = 1; i <= MAX_POKEMON; i++) {
     try {
       const pokemon = await fetchPokemonById(i);
       results.push(pokemon);
-      consecutiveNotFound = 0; // Reset counter on success
       
       // Progress Callback
       if (onProgress) {
@@ -256,16 +253,10 @@ export async function syncAllAvailablePokemon(
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       if (isNotFoundError(error)) {
-        consecutiveNotFound++;
-        // Bei "nicht gefunden" Fehlern einfach weitermachen
-        if (consecutiveNotFound >= MAX_CONSECUTIVE_NOT_FOUND) {
-          console.log(`Stopping sync after ${consecutiveNotFound} consecutive "not found" errors at Pokemon #${i}`);
-          break;
-        }
+        console.warn(`Pokémon #${i} nicht gefunden, wird übersprungen.`);
       } else {
         // Bei anderen Fehlern (Netzwerk, etc.) loggen aber weitermachen
         console.error(`Failed to sync Pokemon ${i}:`, error);
-        consecutiveNotFound = 0; // Reset bei anderen Fehlern
       }
       
       // Rate Limiting auch bei Fehlern

@@ -24,6 +24,15 @@ export default function AdminPokemonPage() {
   const [addPokedexId, setAddPokedexId] = useState('');
   const [adding, setAdding] = useState(false);
   const MAX_AVAILABLE = 1050; // Aktuell verfügbare Pokémon (Gen 1-9)
+  const [liveProgress, setLiveProgress] = useState<{
+    current: number;
+    total: number;
+    isRunning: boolean;
+  }>({
+    current: 0,
+    total: MAX_AVAILABLE,
+    isRunning: false,
+  });
 
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : 'Unbekannter Fehler';
@@ -45,6 +54,40 @@ export default function AdminPokemonPage() {
   useEffect(() => {
     loadPokemon();
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProgress = async () => {
+      try {
+        const res = await fetch('/api/admin/pokemon/sync/progress', {
+          cache: 'no-store',
+        });
+        if (!res.ok || !isMounted) return;
+        const data = await res.json();
+        setLiveProgress({
+          current: data.current ?? 0,
+          total: data.total ?? MAX_AVAILABLE,
+          isRunning: Boolean(data.isRunning),
+        });
+        if (isMounted && Boolean(data.isRunning) !== syncing) {
+          setSyncing(Boolean(data.isRunning));
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching sync progress:', error);
+        }
+      }
+    };
+
+    fetchProgress();
+    const interval = setInterval(fetchProgress, 2000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [MAX_AVAILABLE, syncing]);
 
   // Alle Pokémon synchronisieren (Gen 1-4, 1-493)
   const handleSyncPlatinum = async () => {
@@ -178,6 +221,11 @@ export default function AdminPokemonPage() {
               style={{ width: `${Math.min((count / MAX_AVAILABLE) * 100, 100)}%` }}
             />
           </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Live-Status:{' '}
+            {liveProgress.current}/{liveProgress.total}{' '}
+            {liveProgress.isRunning ? '(läuft …)' : '(inaktiv)'}
+          </p>
         </div>
       </div>
 

@@ -1,0 +1,20 @@
+[Unit]
+Description=Pokémon Website Next.js App
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/pokemonwebsite
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=pokemonwebsite
+
+[Install]
+WantedBy=multi-user.target
+

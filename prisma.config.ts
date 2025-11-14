@@ -8,6 +8,8 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    // Fallback URL für prisma generate (wird nur für Code-Generierung verwendet)
+    // Die echte DATABASE_URL wird zur Laufzeit verwendet
+    url: env("DATABASE_URL", "postgresql://dummy:dummy@localhost:5432/dummy"),
   },
 });

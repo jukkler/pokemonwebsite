@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Spieler-Modell
+model Player {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  color       String         // Hex-Farbe für UI-Darstellung (z.B. "#FF0000")
+  encounters  Encounter[]
+  teamMembers TeamMember[]
+  createdAt   DateTime       @default(now())
+}
+
+// Routen-Modell (z.B. Route 201, Erzelingen, etc.)
+model Route {
+  id          Int            @id @default(autoincrement())
+  name        String         // Custom name für die Route/Location
+  order       Int            @default(0) // Sortierreihenfolge
+  encounters  Encounter[]
+  createdAt   DateTime       @default(now())
+}
+
+// Pokémon-Modell (gecacht von PokeAPI)
+model Pokemon {
+  id          Int            @id @default(autoincrement())
+  pokedexId   Int            @unique // National Dex Number (1-493 für Platin)
+  name        String         // Englischer Name
+  nameGerman  String?        // Deutscher Name (optional)
+  types       String         // JSON Array String: ["Grass", "Poison"]
+  hp          Int
+  attack      Int
+  defense     Int
+  spAttack    Int
+  spDefense   Int
+  speed       Int
+  spriteUrl   String?        // URL zum Sprite von PokeAPI
+  encounters  Encounter[]
+  teamMembers TeamMember[]
+  updatedAt   DateTime       @updatedAt
+}
+
+// Encounter = Gefangenes Pokémon eines Spielers auf einer Route
+model Encounter {
+  id          Int      @id @default(autoincrement())
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId    Int
+  route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  routeId     Int
+  pokemon     Pokemon  @relation(fields: [pokemonId], references: [id])
+  pokemonId   Int
+  nickname    String?  // Optional: Spitzname des gefangenen Pokémon
+  teamSlot    Int?     // NULL = nicht im Team, 1-6 = Team-Slot (alle Encounters einer Route haben denselben Slot)
+  isKnockedOut Boolean @default(false) // K.O.-Status
+  koCausedBy  String?  // Spieler der den K.O. verursacht hat
+  koReason    String?  // Grund des Ausscheidens (Freitext)
+  koDate      DateTime? // Zeitpunkt des K.O.
+  isNotCaught Boolean @default(false) // "Nicht gefangen"-Status
+  notCaughtBy String?  // Spieler der das "Nicht gefangen" verursacht hat
+  notCaughtReason String? // Grund (Freitext)
+  notCaughtDate DateTime? // Zeitpunkt
+  createdAt   DateTime @default(now())
+  
+  @@unique([playerId, routeId]) // Ein Spieler kann nur EIN Pokémon pro Route fangen
+}
+
+// DEPRECATED: TeamMember wird nicht mehr verwendet
+// Teams werden jetzt über Encounter.teamSlot verwaltet
+// Alle Encounters einer Route teilen sich einen Slot
+model TeamMember {
+  id         Int      @id @default(autoincrement())
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId   Int
+  pokemon    Pokemon  @relation(fields: [pokemonId], references: [id])
+  pokemonId  Int
+  nickname   String?  // Optional: Spitzname
+  position   Int      // Position im Team (1-6)
+  
+  @@unique([playerId, position]) // Jede Position kann nur einmal pro Spieler belegt sein
+}
+
+// Spielstand-System: Speichert komplette Snapshots des Spiels
+model GameSave {
+  id          Int      @id @default(autoincrement())
+  name        String   // Name des Spielstands (z.B. "Pokémon Platin - Abgeschlossen")
+  description String?  // Optionale Beschreibung
+  data        String   // JSON-Dump aller Spieldaten (Players, Routes, Encounters)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

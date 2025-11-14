@@ -46,16 +46,42 @@ interface PokeAPISpecies {
   }[];
 }
 
+class PokeAPIRequestError extends Error {
+  status: number;
+  isNotFound: boolean;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'PokeAPIRequestError';
+    this.status = status;
+    this.isNotFound = status === 404;
+  }
+}
+
+const isNotFoundError = (error: unknown): boolean => {
+  if (error instanceof PokeAPIRequestError) {
+    return error.isNotFound;
+  }
+  if (error && typeof error === 'object') {
+    const maybeError = error as { status?: number; isNotFound?: boolean; message?: string };
+    if (maybeError.isNotFound) return true;
+    if (maybeError.status === 404) return true;
+    if (maybeError.message && maybeError.message.includes('404')) return true;
+    if (maybeError.message && maybeError.message.includes('Not Found')) return true;
+  }
+  return false;
+};
+
 /**
  * Holt ein einzelnes Pokémon von PokeAPI
  */
 async function fetchPokemonFromAPI(id: number): Promise<PokeAPIPokemon> {
   const response = await fetch(`${POKEAPI_BASE_URL}/pokemon/${id}`);
   if (!response.ok) {
-    const error = new Error(`Failed to fetch Pokemon ${id}: ${response.status} ${response.statusText}`) as any;
-    error.status = response.status;
-    error.isNotFound = response.status === 404;
-    throw error;
+    throw new PokeAPIRequestError(
+      `Failed to fetch Pokemon ${id}: ${response.status} ${response.statusText}`,
+      response.status
+    );
   }
   return response.json();
 }
@@ -228,14 +254,8 @@ export async function syncAllAvailablePokemon(
       
       // Rate Limiting: 100ms Pause zwischen Requests
       await new Promise(resolve => setTimeout(resolve, 100));
-    } catch (error: any) {
-      // Prüfe ob es ein "nicht gefunden" Fehler ist (404)
-      const isNotFound = error.isNotFound || 
-                        error.status === 404 ||
-                        error.message?.includes('404') || 
-                        error.message?.includes('Not Found');
-      
-      if (isNotFound) {
+    } catch (error) {
+      if (isNotFoundError(error)) {
         consecutiveNotFound++;
         // Bei "nicht gefunden" Fehlern einfach weitermachen
         if (consecutiveNotFound >= MAX_CONSECUTIVE_NOT_FOUND) {

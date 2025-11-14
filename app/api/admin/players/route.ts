@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -66,11 +67,13 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(player, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating player:', error);
     
-    // Unique Constraint Error
-    if (error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       return NextResponse.json(
         { error: 'Ein Spieler mit diesem Namen existiert bereits' },
         { status: 409 }

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -59,11 +60,13 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(teamMember, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating team member:', error);
 
-    // Foreign Key Constraint Error
-    if (error.code === 'P2003') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
       return NextResponse.json(
         { error: 'Ungültige Spieler- oder Pokémon-ID' },
         { status: 400 }

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -28,9 +29,12 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting game save:', error);
-    if (error.code === 'P2025') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
       return NextResponse.json(
         { error: 'Spielstand nicht gefunden' },
         { status: 404 }

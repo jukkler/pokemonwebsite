@@ -25,16 +25,19 @@ export default function AdminPokemonPage() {
   const [adding, setAdding] = useState(false);
   const MAX_AVAILABLE = 1050; // Aktuell verfügbare Pokémon (Gen 1-9)
 
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : 'Unbekannter Fehler';
+
   // Pokémon laden
   const loadPokemon = async () => {
     try {
       const res = await fetch('/api/pokemon');
-      const data = await res.json();
+      const data: { pokemon: Pokemon[]; count: number } = await res.json();
       setPokemon(data.pokemon || []);
       setCount(data.count || 0);
       setLoading(false);
-    } catch (err) {
-      console.error('Error loading pokemon:', err);
+    } catch (error) {
+      console.error('Error loading pokemon:', error);
       setLoading(false);
     }
   };
@@ -68,9 +71,11 @@ export default function AdminPokemonPage() {
         setSyncProgress(`Fehler: ${errorMsg}${details}`);
         console.error('Sync error:', data);
       }
-    } catch (err: any) {
-      setSyncProgress(`Netzwerkfehler beim Synchronisieren: ${err.message || 'Unbekannter Fehler'}`);
-      console.error('Network error:', err);
+    } catch (error) {
+      setSyncProgress(
+        `Netzwerkfehler beim Synchronisieren: ${getErrorMessage(error)}`
+      );
+      console.error('Network error:', error);
     } finally {
       setSyncing(false);
     }
@@ -101,9 +106,11 @@ export default function AdminPokemonPage() {
         setSyncProgress(`Fehler: ${errorMsg}${details}`);
         console.error('Sync error:', data);
       }
-    } catch (err: any) {
-      setSyncProgress(`Netzwerkfehler beim Synchronisieren: ${err.message || 'Unbekannter Fehler'}`);
-      console.error('Network error:', err);
+    } catch (error) {
+      setSyncProgress(
+        `Netzwerkfehler beim Synchronisieren: ${getErrorMessage(error)}`
+      );
+      console.error('Network error:', error);
     } finally {
       setSyncing(false);
     }
@@ -130,7 +137,8 @@ export default function AdminPokemonPage() {
       } else {
         alert(`Fehler: ${data.error}`);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error adding pokemon:', error);
       alert('Netzwerkfehler');
     } finally {
       setAdding(false);

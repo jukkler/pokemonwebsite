@@ -40,7 +40,8 @@ function LoginForm() {
         // Fehler
         setError(data.error || 'Login fehlgeschlagen');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Login error:', error);
       setError('Netzwerkfehler. Bitte versuchen Sie es erneut.');
     } finally {
       setLoading(false);

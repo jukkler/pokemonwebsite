@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -91,19 +92,23 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(encounter, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating encounter:', error);
 
-    // Unique Constraint Error
-    if (error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       return NextResponse.json(
         { error: 'Dieser Spieler hat bereits ein Pokémon auf dieser Route gefangen. Jeder Spieler darf nur 1 Pokémon pro Route fangen.' },
         { status: 409 }
       );
     }
 
-    // Foreign Key Constraint Error
-    if (error.code === 'P2003') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
       return NextResponse.json(
         { error: 'Ungültige Spieler-, Routen- oder Pokémon-ID' },
         { status: 400 }

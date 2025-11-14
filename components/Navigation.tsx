@@ -6,8 +6,10 @@
  */
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { fetchJson } from '@/lib/fetchJson';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -19,8 +21,7 @@ export default function Navigation() {
   useEffect(() => {
     let cancelled = false;
     
-    fetch('/api/auth/status')
-      .then(res => res.json())
+    fetchJson<{ isAdmin?: boolean }>('/api/auth/status')
       .then(data => {
         if (!cancelled) {
           setIsAdmin(data.isAdmin || false);
@@ -42,7 +43,7 @@ export default function Navigation() {
   // Logout Handler
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetchJson('/api/auth/logout', { method: 'POST' });
       setIsAdmin(false);
       router.push('/pokeroute');
       router.refresh();
@@ -57,16 +58,18 @@ export default function Navigation() {
     <nav className="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-4 md:space-x-8">
             <Link href="/pokeroute" className="flex items-center hover:opacity-80 transition">
-              <img 
+              <Image 
                 src="https://upload.wikimedia.org/wikipedia/commons/5/53/Pok%C3%A9_Ball_icon.svg" 
                 alt="Poké Ball" 
-                className="h-8 w-8"
+                width={32}
+                height={32}
+                priority
               />
             </Link>
 
-            <div className="hidden md:flex space-x-4">
+            <div className="flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0">
               <Link
                 href="/pokeroute"
                 className={`px-3 py-2 rounded-md transition ${

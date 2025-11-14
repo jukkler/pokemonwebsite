@@ -7,9 +7,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function middleware() {
   // Keine Middleware-basierte Auth mehr
   // Auth-Prüfung erfolgt in Server Components (app/admin/layout.tsx)
   return NextResponse.next();

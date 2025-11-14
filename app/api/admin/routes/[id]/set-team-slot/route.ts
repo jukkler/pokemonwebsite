@@ -69,7 +69,7 @@ export async function POST(
       count: updated.count,
       teamSlot,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error setting team slot:', error);
     return NextResponse.json(
       { error: 'Fehler beim Setzen des Team-Slots' },

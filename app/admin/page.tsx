@@ -3,6 +3,9 @@
  * Übersicht und Links zu Admin-Funktionen
  */
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 

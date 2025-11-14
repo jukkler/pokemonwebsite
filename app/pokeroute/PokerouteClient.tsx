@@ -5,62 +5,111 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import TeamDisplay from '@/components/TeamDisplay';
 import RouteList from '@/components/RouteList';
+import { fetchJson } from '@/lib/fetchJson';
+
+interface PlayerEncounter {
+  id: number;
+  teamSlot: number | null;
+  nickname: string | null;
+  pokemon: {
+    pokedexId: number;
+    name: string;
+    nameGerman: string | null;
+    types: string;
+    spriteUrl: string | null;
+    hp: number;
+    attack: number;
+    defense: number;
+    spAttack: number;
+    spDefense: number;
+    speed: number;
+  };
+  route: {
+    id: number;
+    name: string;
+  };
+}
 
 interface Player {
   id: number;
   name: string;
   color: string;
-  encounters: any[];
+  encounters: PlayerEncounter[];
 }
 
-interface Route {
+interface RouteEncounterMeta {
+  id: number;
+  nickname: string | null;
+  teamSlot: number | null;
+  isKnockedOut: boolean;
+  koCausedBy: string | null;
+  koReason: string | null;
+  koDate: string | null;
+  isNotCaught: boolean;
+  notCaughtBy: string | null;
+  notCaughtReason: string | null;
+  notCaughtDate: string | null;
+  player: {
+    id: number;
+    name: string;
+    color: string;
+  };
+  pokemon: {
+    pokedexId: number;
+    name: string;
+    nameGerman: string | null;
+    types: string;
+    spriteUrl: string | null;
+    hp: number;
+    attack: number;
+    defense: number;
+    spAttack: number;
+    spDefense: number;
+    speed: number;
+  };
+}
+
+interface RouteListRoute {
   id: number;
   name: string;
-  encounters: any[];
+  order: number;
+  encounters: RouteEncounterMeta[];
 }
 
 interface PokerouteClientProps {
   initialPlayers: Player[];
-  initialRoutes: Route[];
+  initialRoutes: RouteListRoute[];
 }
 
 export default function PokerouteClient({
   initialPlayers,
   initialRoutes,
 }: PokerouteClientProps) {
-  const router = useRouter();
-  const [players, setPlayers] = useState(initialPlayers);
-  const [routes, setRoutes] = useState(initialRoutes);
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [routes, setRoutes] = useState<RouteListRoute[]>(initialRoutes);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // Auth-Status prüfen
   useEffect(() => {
-    fetch('/api/auth/status')
-      .then(res => res.json())
-      .then(data => {
+    fetchJson<{ isAdmin?: boolean }>('/api/auth/status')
+      .then((data) => {
         setIsAdmin(data.isAdmin || false);
-        setLoading(false);
       })
       .catch(() => {
-        setLoading(false);
+        setIsAdmin(false);
       });
   }, []);
 
   // Daten neu laden (wird auch von anderen Funktionen verwendet)
   const reloadData = useCallback(async () => {
     try {
-      const [playersRes, routesRes] = await Promise.all([
-        fetch('/api/players'),
-        fetch('/api/routes'),
+      const [playersData, routesData] = await Promise.all([
+        fetchJson<Player[]>('/api/players'),
+        fetchJson<RouteListRoute[]>('/api/routes'),
       ]);
-      
-      const playersData = await playersRes.json();
-      const routesData = await routesRes.json();
-      
+
       setPlayers(playersData);
       setRoutes(routesData);
     } catch (error) {
@@ -73,14 +122,11 @@ export default function PokerouteClient({
     // Funktion zum Laden der Daten (definiert im useEffect für stabile Referenz)
     const loadData = async () => {
       try {
-        const [playersRes, routesRes] = await Promise.all([
-          fetch('/api/players'),
-          fetch('/api/routes'),
+        const [playersData, routesData] = await Promise.all([
+          fetchJson<Player[]>('/api/players'),
+          fetchJson<RouteListRoute[]>('/api/routes'),
         ]);
-        
-        const playersData = await playersRes.json();
-        const routesData = await routesRes.json();
-        
+
         setPlayers(playersData);
         setRoutes(routesData);
       } catch (error) {
@@ -104,22 +150,19 @@ export default function PokerouteClient({
   }, []); // Leeres Array - Funktion ist im useEffect definiert
 
   // Encounter aus Team entfernen
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : 'Unbekannter Fehler';
+
   const handleRemoveFromTeam = async (routeId: number) => {
     try {
-      const res = await fetch(`/api/admin/routes/${routeId}/set-team-slot`, {
+      await fetchJson(`/api/admin/routes/${routeId}/set-team-slot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamSlot: null }),
       });
-
-      if (res.ok) {
-        await reloadData();
-      } else {
-        const data = await res.json();
-        alert(`Fehler: ${data.error}`);
-      }
-    } catch (error) {
-      alert('Netzwerkfehler beim Entfernen');
+      await reloadData();
+    } catch (error: unknown) {
+      alert(`Fehler beim Entfernen: ${getErrorMessage(error)}`);
     }
   };
 

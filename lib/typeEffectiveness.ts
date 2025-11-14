@@ -55,10 +55,13 @@ export function parseTypes(typesString: string): string[] {
     types = JSON.parse(typesString);
   } catch {
     // Falls kein JSON, splitte nach Komma
-    types = typesString.split(',').map(t => t.trim());
+    types = typesString
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
   // Normalisiere zu lowercase
-  return types.map(t => t.trim().toLowerCase());
+  return types.map((t) => t.trim().toLowerCase()).filter(Boolean);
 }
 
 // Berechne Defensiv-Effektivität für ein Pokémon

@@ -6,7 +6,7 @@
  * Alle Pokémon einer Route teilen sich einen Team-Slot
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PokemonCard from '@/components/PokemonCard';
 
 interface Pokemon {
@@ -45,7 +45,7 @@ export default function AdminTeamPage() {
   const [slotAssignments, setSlotAssignments] = useState<{ [key: number]: number | null }>({});
 
   // Routen und Encounters laden
-  const loadRoutes = async () => {
+  const loadRoutes = useCallback(async () => {
     try {
       const res = await fetch('/api/routes');
       const data = await res.json();
@@ -61,15 +61,17 @@ export default function AdminTeamPage() {
       setSlotAssignments(assignments);
       
       setLoading(false);
-    } catch (err) {
-      console.error('Error loading routes:', err);
+    } catch (error) {
+      console.error('Error loading routes:', error);
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // Teamsicht initial befüllen
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRoutes();
-  }, []);
+  }, [loadRoutes]);
 
   // Slot für Route setzen
   const setTeamSlot = async (routeId: number, slot: number | null) => {
@@ -88,7 +90,8 @@ export default function AdminTeamPage() {
       } else {
         alert(`Fehler: ${data.error}`);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error setting team slot:', error);
       alert('Netzwerkfehler');
     }
   };

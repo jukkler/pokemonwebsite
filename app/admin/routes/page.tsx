@@ -5,7 +5,7 @@
  * CRUD für Routen
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Route {
   id: number;
@@ -31,33 +31,36 @@ export default function AdminRoutesPage() {
     return maxOrder + 1;
   };
 
+  const updateDefaultOrder = useCallback(
+    (routeList: Route[]) => {
+      if (editingId) return;
+      const nextOrderValue =
+        routeList.length > 0
+          ? Math.max(...routeList.map((r) => r.order)) + 1
+          : 1;
+      setFormData((prev) => ({ ...prev, order: nextOrderValue }));
+    },
+    [editingId]
+  );
+
   // Routen laden
-  const loadRoutes = async () => {
+  const loadRoutes = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/routes');
       const data = await res.json();
       setRoutes(data);
+      updateDefaultOrder(data);
       setLoading(false);
-    } catch (err) {
-      console.error('Error loading routes:', err);
+    } catch (error) {
+      console.error('Error loading routes:', error);
       setLoading(false);
     }
-  };
+  }, [updateDefaultOrder]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRoutes();
-  }, []);
-
-  // Aktualisiere Order-Feld wenn Routen geladen werden und nicht im Edit-Modus
-  useEffect(() => {
-    if (!editingId && routes.length > 0) {
-      const maxOrder = Math.max(...routes.map(r => r.order));
-      const nextOrder = maxOrder + 1;
-      setFormData(prev => ({ ...prev, order: nextOrder }));
-    } else if (!editingId && routes.length === 0) {
-      setFormData(prev => ({ ...prev, order: 1 }));
-    }
-  }, [routes, editingId]);
+  }, [loadRoutes]);
 
   // Route erstellen/aktualisieren
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +89,8 @@ export default function AdminRoutesPage() {
       } else {
         setError(data.error || 'Fehler beim Speichern');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error saving route:', error);
       setError('Netzwerkfehler');
     }
   };
@@ -107,7 +111,8 @@ export default function AdminRoutesPage() {
       } else {
         alert('Fehler beim Löschen');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error deleting route:', error);
       alert('Netzwerkfehler');
     }
   };

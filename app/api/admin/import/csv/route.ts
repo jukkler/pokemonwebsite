@@ -14,6 +14,49 @@ interface CSVRow {
   nickname?: string;
 }
 
+interface SpeciesNameEntry {
+  language: {
+    name: string;
+  };
+  name: string;
+}
+
+interface PokeAPISpeciesResponse {
+  names: SpeciesNameEntry[];
+}
+
+interface PokeAPIStatEntry {
+  base_stat: number;
+  stat: {
+    name: string;
+  };
+}
+
+interface PokeAPIPokemonResponse {
+  id: number;
+  name: string;
+  species: {
+    url: string;
+  };
+  stats: PokeAPIStatEntry[];
+  types: {
+    type: {
+      name: string;
+    };
+  }[];
+  sprites: {
+    front_default: string | null;
+    other?: {
+      'official-artwork'?: {
+        front_default: string | null;
+      };
+    };
+  };
+}
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Unbekannter Fehler';
+
 export async function POST(request: NextRequest) {
   try {
     if (!(await isAdmin())) {
@@ -172,21 +215,25 @@ export async function POST(request: NextRequest) {
         // Falls immer noch nicht gefunden, von PokeAPI laden
         if (!pokemon) {
           try {
-            let pokeData = null;
-            let speciesData = null;
+            let pokeData: PokeAPIPokemonResponse | null = null;
+            let speciesData: PokeAPISpeciesResponse | null = null;
 
             // Versuch 1: Direkter Name/ID-Lookup
             if (!isNaN(parseInt(row.pokemon))) {
               // Pokédex-ID
-              const pokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${parseInt(row.pokemon)}`);
+                  const pokeRes = await fetch(
+                    `https://pokeapi.co/api/v2/pokemon/${parseInt(row.pokemon)}`
+                  );
               if (pokeRes.ok) {
-                pokeData = await pokeRes.json();
+                    pokeData = (await pokeRes.json()) as PokeAPIPokemonResponse;
               }
             } else {
               // Englischer Name
-              const pokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${row.pokemon.toLowerCase()}`);
+                  const pokeRes = await fetch(
+                    `https://pokeapi.co/api/v2/pokemon/${row.pokemon.toLowerCase()}`
+                  );
               if (pokeRes.ok) {
-                pokeData = await pokeRes.json();
+                    pokeData = (await pokeRes.json()) as PokeAPIPokemonResponse;
               }
             }
 
@@ -207,19 +254,27 @@ export async function POST(request: NextRequest) {
                 
                 for (let searchId = range.start; searchId <= range.end; searchId++) {
                   try {
-                    const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${searchId}`);
+                    const speciesRes = await fetch(
+                      `https://pokeapi.co/api/v2/pokemon-species/${searchId}`
+                    );
                     if (!speciesRes.ok) continue;
                     
-                    const speciesTemp = await speciesRes.json();
-                    const germanName = speciesTemp.names.find((n: any) => n.language.name === 'de')?.name;
+                    const speciesTemp = (await speciesRes.json()) as PokeAPISpeciesResponse;
+                    const germanName = speciesTemp.names.find(
+                      (n) => n.language.name === 'de'
+                    )?.name;
                     
                     if (germanName && germanName.toLowerCase() === row.pokemon.toLowerCase()) {
                       foundId = searchId;
                       speciesData = speciesTemp;
-                      console.log(`✓ Gefunden: ${row.pokemon} = ID ${foundId} (${speciesTemp.name})`);
+                      const displayName =
+                        speciesTemp.names.find((n) => n.language.name === 'en')?.name ||
+                        speciesTemp.names[0]?.name ||
+                        'Unbekannt';
+                      console.log(`✓ Gefunden: ${row.pokemon} = ID ${foundId} (${displayName})`);
                       break;
                     }
-                  } catch (e) {
+                  } catch {
                     // Überspringe Fehler bei einzelnen IDs
                     continue;
                   }
@@ -227,9 +282,11 @@ export async function POST(request: NextRequest) {
               }
 
               if (foundId) {
-                const pokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${foundId}`);
+                const pokeRes = await fetch(
+                  `https://pokeapi.co/api/v2/pokemon/${foundId}`
+                );
                 if (pokeRes.ok) {
-                  pokeData = await pokeRes.json();
+                  pokeData = (await pokeRes.json()) as PokeAPIPokemonResponse;
                 }
               }
             }
@@ -243,23 +300,40 @@ export async function POST(request: NextRequest) {
             // Species-Daten laden (falls noch nicht geladen)
             if (!speciesData) {
               const speciesRes = await fetch(pokeData.species.url);
-              speciesData = await speciesRes.json();
+              if (!speciesRes.ok) {
+                results.errors.push(
+                  `Pokémon "${row.pokemon}" gefunden, aber Species-Daten konnten nicht geladen werden`
+                );
+                continue;
+              }
+              speciesData = (await speciesRes.json()) as PokeAPISpeciesResponse;
+            }
+
+            if (!speciesData) {
+              results.errors.push(
+                `Pokémon "${row.pokemon}" gefunden, aber Species-Daten fehlten`
+              );
+              continue;
             }
 
             // Deutscher Name
-            const germanName = speciesData.names.find((n: any) => n.language.name === 'de')?.name || pokeData.name;
+            const germanName =
+              speciesData.names.find((n) => n.language.name === 'de')?.name ||
+              pokeData.name;
 
             // Stats extrahieren
-            const stats = pokeData.stats.reduce((acc: any, stat: any) => {
+            const stats = pokeData.stats.reduce<Record<string, number>>((acc, stat) => {
               acc[stat.stat.name.replace('-', '_')] = stat.base_stat;
               return acc;
             }, {});
 
             // Typen extrahieren
-            const types = pokeData.types.map((t: any) => t.type.name).join(',');
+            const types = pokeData.types.map((t) => t.type.name).join(',');
 
             // Sprite URL
-            const spriteUrl = pokeData.sprites.other['official-artwork'].front_default || pokeData.sprites.front_default;
+            const spriteUrl =
+              pokeData.sprites.other?.['official-artwork']?.front_default ||
+              pokeData.sprites.front_default;
 
             // Pokémon in DB speichern
             pokemon = await prisma.pokemon.create({
@@ -281,8 +355,12 @@ export async function POST(request: NextRequest) {
             pokemonByNameMap.set(pokemon.name.toLowerCase(), pokemon);
             pokemonByIdMap.set(pokemon.pokedexId, pokemon);
             results.pokemonSynced++;
-          } catch (syncError: any) {
-            results.errors.push(`Fehler beim Synchronisieren von "${row.pokemon}": ${syncError.message}`);
+          } catch (syncError) {
+            results.errors.push(
+              `Fehler beim Synchronisieren von "${row.pokemon}": ${getErrorMessage(
+                syncError
+              )}`
+            );
             continue;
           }
         }
@@ -310,8 +388,12 @@ export async function POST(request: NextRequest) {
         });
 
         results.encountersCreated++;
-      } catch (rowError: any) {
-        results.errors.push(`Fehler bei "${row.route} / ${row.player} / ${row.pokemon}": ${rowError.message}`);
+      } catch (rowError) {
+        results.errors.push(
+          `Fehler bei "${row.route} / ${row.player} / ${row.pokemon}": ${getErrorMessage(
+            rowError
+          )}`
+        );
       }
     }
 
@@ -320,10 +402,13 @@ export async function POST(request: NextRequest) {
       message: `Import abgeschlossen: ${results.encountersCreated} Encounters erstellt, ${results.routesCreated} Routen erstellt, ${results.pokemonSynced} Pokémon synchronisiert`,
       details: results,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error importing CSV:', error);
     return NextResponse.json(
-      { error: 'Fehler beim Importieren der CSV-Datei', details: error.message },
+      {
+        error: 'Fehler beim Importieren der CSV-Datei',
+        details: getErrorMessage(error),
+      },
       { status: 500 }
     );
   }

@@ -7,7 +7,11 @@
 
 import PokemonCard from './PokemonCard';
 import { useState } from 'react';
-import { parseTypes, calculateDefensiveEffectiveness } from '@/lib/typeEffectiveness';
+import {
+  parseTypes,
+  calculateDefensiveEffectiveness,
+} from '@/lib/typeEffectiveness';
+import { fetchJson } from '@/lib/fetchJson';
 
 interface Encounter {
   id: number;
@@ -61,7 +65,12 @@ interface RouteListProps {
   onTeamUpdate?: () => void;
 }
 
-export default function RouteList({ routes, players, isAdmin = false, onTeamUpdate }: RouteListProps) {
+export default function RouteList({
+  routes,
+  players,
+  isAdmin = false,
+  onTeamUpdate,
+}: RouteListProps) {
   const [addingToTeam, setAddingToTeam] = useState<{ [key: number]: boolean }>({});
   const [koDialogOpen, setKoDialogOpen] = useState(false);
   const [notCaughtDialogOpen, setNotCaughtDialogOpen] = useState(false);
@@ -116,26 +125,25 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
     };
   };
 
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : 'Unbekannter Fehler';
+
   // Route ins Team hinzufügen/entfernen
   const handleAddToTeam = async (routeId: number, slot: number) => {
     setAddingToTeam({ ...addingToTeam, [routeId]: true });
 
     try {
-      const res = await fetch(`/api/admin/routes/${routeId}/set-team-slot`, {
+      await fetchJson(`/api/admin/routes/${routeId}/set-team-slot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamSlot: slot === 0 ? null : slot }),
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        if (onTeamUpdate) onTeamUpdate();
-      } else {
-        alert(`Fehler: ${data.error}`);
-      }
-    } catch (error) {
-      alert('Netzwerkfehler');
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error: unknown) {
+      alert(
+        `Fehler beim Aktualisieren des Teams: ${getErrorMessage(error)}`
+      );
     } finally {
       setAddingToTeam({ ...addingToTeam, [routeId]: false });
     }
@@ -159,21 +167,15 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
 
     setProcessing(true);
     try {
-      const res = await fetch(`/api/admin/routes/${selectedRouteId}/knockout`, {
+      await fetchJson(`/api/admin/routes/${selectedRouteId}/knockout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ causedBy: koCausedBy, reason: koReason }),
       });
-
-      const data = await res.json();
-      if (res.ok) {
-        setKoDialogOpen(false);
-        if (onTeamUpdate) onTeamUpdate();
-      } else {
-        alert(`Fehler: ${data.error}`);
-      }
-    } catch (error) {
-      alert('Netzwerkfehler');
+      setKoDialogOpen(false);
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error: unknown) {
+      alert(`Fehler beim K.O.-Eintrag: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -185,24 +187,18 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
 
     setProcessing(true);
     try {
-      const res = await fetch(`/api/admin/routes/${routeId}/knockout`, {
+      await fetchJson(`/api/admin/routes/${routeId}/knockout`, {
         method: 'DELETE',
       });
-
-      const data = await res.json();
-      if (res.ok) {
-        if (onTeamUpdate) onTeamUpdate();
-      } else {
-        alert(`Fehler: ${data.error}`);
-      }
-    } catch (error) {
-      alert('Netzwerkfehler');
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error: unknown) {
+      alert(`Fehler beim Reaktivieren: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
   };
 
-  // "Nicht gefangen"-Dialog öffnen
+  // Nicht-gefangen-Dialog öffnen
   const openNotCaughtDialog = (routeId: number) => {
     setSelectedRouteId(routeId);
     setNotCaughtBy('');
@@ -210,7 +206,7 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
     setNotCaughtDialogOpen(true);
   };
 
-  // "Nicht gefangen" bestätigen
+  // Nicht-gefangen bestätigen
   const handleNotCaught = async () => {
     if (!selectedRouteId) return;
     if (!notCaughtBy.trim()) {
@@ -220,50 +216,41 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
 
     setProcessing(true);
     try {
-      const res = await fetch(`/api/admin/routes/${selectedRouteId}/notcaught`, {
+      await fetchJson(`/api/admin/routes/${selectedRouteId}/notcaught`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          causedBy: notCaughtBy.trim(), 
-          reason: notCaughtReason.trim() || null 
+        body: JSON.stringify({
+          causedBy: notCaughtBy.trim(),
+          reason: notCaughtReason.trim() || null,
         }),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setNotCaughtDialogOpen(false);
-        setNotCaughtBy('');
-        setNotCaughtReason('');
-        if (onTeamUpdate) onTeamUpdate();
-      } else {
-        alert(`Fehler: ${data.error || 'Unbekannter Fehler'}`);
-      }
-    } catch (error: any) {
+      setNotCaughtDialogOpen(false);
+      setNotCaughtBy('');
+      setNotCaughtReason('');
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error: unknown) {
       console.error('Error setting not-caught status:', error);
-      alert(`Netzwerkfehler: ${error.message || 'Unbekannter Fehler'}`);
+      alert(
+        `Fehler beim Nicht-gefangen-Eintrag: ${getErrorMessage(error)}`
+      );
     } finally {
       setProcessing(false);
     }
   };
 
-  // "Nicht gefangen" reaktivieren
+  // Nicht-gefangen reaktivieren
   const handleReactivateNotCaught = async (routeId: number) => {
     if (!confirm('Möchtest du diese Route wirklich reaktivieren?')) return;
 
     setProcessing(true);
     try {
-      const res = await fetch(`/api/admin/routes/${routeId}/notcaught`, {
+      await fetchJson(`/api/admin/routes/${routeId}/notcaught`, {
         method: 'DELETE',
       });
-
-      const data = await res.json();
-      if (res.ok) {
-        if (onTeamUpdate) onTeamUpdate();
-      } else {
-        alert(`Fehler: ${data.error}`);
-      }
-    } catch (error) {
-      alert('Netzwerkfehler');
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error: unknown) {
+      alert(`Fehler beim Reaktivieren: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -366,7 +353,7 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
                         onClick={() => openNotCaughtDialog(route.id)}
                         disabled={processing}
                         className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md transition text-sm disabled:opacity-50"
-                        title="Route als 'Nicht gefangen' markieren"
+                        title="Route als Nicht gefangen markieren"
                       >
                         ⚠️ Nicht gefangen
                       </button>
@@ -658,13 +645,13 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
       </div>
     )}
 
-    {/* "Nicht gefangen"-Dialog */}
+    {/* Nicht-gefangen-Dialog */}
     {notCaughtDialogOpen && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4 text-yellow-700">⚠️ Route als "Nicht gefangen" markieren</h2>
+          <h2 className="text-2xl font-bold mb-4 text-yellow-700">⚠️ Route als Nicht gefangen markieren</h2>
           <p className="text-gray-600 mb-4">
-            Diese Route wird als "Nicht gefangen" markiert und aus dem Team entfernt.
+            Diese Route wird als Nicht gefangen markiert und aus dem Team entfernt.
           </p>
           
           <div className="space-y-4">
@@ -715,7 +702,7 @@ export default function RouteList({ routes, players, isAdmin = false, onTeamUpda
               disabled={processing || !notCaughtBy.trim()}
               className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition disabled:opacity-50"
             >
-              {processing ? 'Wird gesetzt...' : '⚠️ Als "Nicht gefangen" markieren'}
+              {processing ? 'Wird gesetzt...' : '⚠️ Als Nicht gefangen markieren'}
             </button>
           </div>
         </div>

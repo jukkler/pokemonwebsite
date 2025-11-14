@@ -5,7 +5,7 @@
  * Encounters erstellen und löschen
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Player {
   id: number;
@@ -50,7 +50,7 @@ export default function AdminEncountersPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Daten laden
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [encountersRes, playersRes, routesRes, pokemonRes] = await Promise.all([
         fetch('/api/admin/encounters'),
@@ -69,15 +69,17 @@ export default function AdminEncountersPage() {
       setRoutes(routesData);
       setPokemon(pokemonData.pokemon || []);
       setLoading(false);
-    } catch (err) {
-      console.error('Error loading data:', err);
+    } catch (error) {
+      console.error('Error loading data:', error);
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // Initialdaten für Encounters laden
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
-  }, []);
+  }, [loadData]);
 
   // Encounter erstellen
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,7 +106,8 @@ export default function AdminEncountersPage() {
       } else {
         setError(data.error || 'Fehler beim Erstellen');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error creating encounter:', error);
       setError('Netzwerkfehler');
     }
   };
@@ -125,7 +128,8 @@ export default function AdminEncountersPage() {
       } else {
         alert('Fehler beim Löschen');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error deleting encounter:', error);
       alert('Netzwerkfehler');
     }
   };
@@ -214,11 +218,13 @@ export default function AdminEncountersPage() {
                     <option value="">-- Route wählen --</option>
                     {routes.map((r) => {
                       // Prüfe, ob ausgewählter Spieler bereits auf dieser Route ein Pokémon hat
+                      const playerId = formData.playerId
+                        ? parseInt(formData.playerId, 10)
+                        : null;
                       const playerHasEncounter =
-                        Boolean(formData.playerId) &&
+                        playerId !== null &&
                         encounters.some(
-                          (e) =>
-                            e.player.id === parseInt(formData.playerId) && e.route.id === r.id
+                          (e) => e.player.id === playerId && e.route.id === r.id
                         );
                       return (
                         <option 

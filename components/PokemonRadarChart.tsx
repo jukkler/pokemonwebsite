@@ -35,6 +35,10 @@ interface PokemonRadarChartProps {
   colors: string[];
 }
 
+type RadarDataPoint = {
+  stat: string;
+} & Record<string, number | string>;
+
 export default function PokemonRadarChart({
   pokemon,
   colors,
@@ -66,10 +70,11 @@ export default function PokemonRadarChart({
   const dynamicMax = Math.ceil((maxValue * 1.1) / 10) * 10;
 
   const data = stats.map((stat, index) => {
-    const dataPoint: any = { stat };
+    const dataPoint: RadarDataPoint = { stat };
     pokemon.forEach((p) => {
       const displayName = p.nameGerman || p.name;
-      dataPoint[displayName] = p[statKeys[index] as keyof PokemonStats];
+      const statValue = p[statKeys[index] as keyof PokemonStats];
+      dataPoint[displayName] = typeof statValue === 'number' ? statValue : 0;
     });
     return dataPoint;
   });

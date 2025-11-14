@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import PokemonRadarChart from '@/components/PokemonRadarChart';
 import PokemonCard from '@/components/PokemonCard';
+import { fetchJson } from '@/lib/fetchJson';
 
 interface Pokemon {
   id: number;
@@ -35,8 +36,7 @@ export default function PokeradarPage() {
 
   // Pokémon laden
   useEffect(() => {
-    fetch('/api/pokemon')
-      .then((res) => res.json())
+    fetchJson<{ pokemon: Pokemon[] }>('/api/pokemon')
       .then((data) => {
         setAllPokemon(data.pokemon || []);
         setLoading(false);

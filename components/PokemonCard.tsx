@@ -4,6 +4,7 @@
  */
 
 import Image from 'next/image';
+import { parseTypes } from '@/lib/typeEffectiveness';
 
 interface PokemonCardProps {
   pokemon: {
@@ -77,7 +78,7 @@ export default function PokemonCard({
   showStats = false,
   stats,
 }: PokemonCardProps) {
-  const types = JSON.parse(pokemon.types) as string[];
+  const types = parseTypes(pokemon.types);
   
   const sizeClasses = {
     small: 'w-20 h-20',

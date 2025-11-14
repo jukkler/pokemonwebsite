@@ -5,7 +5,7 @@
  * CRUD für Spieler
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Player {
   id: number;
@@ -26,21 +26,23 @@ export default function AdminPlayersPage() {
   const [error, setError] = useState('');
 
   // Spieler laden
-  const loadPlayers = async () => {
+  const loadPlayers = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/players');
       const data = await res.json();
       setPlayers(data);
       setLoading(false);
-    } catch (err) {
-      console.error('Error loading players:', err);
+    } catch (error) {
+      console.error('Error loading players:', error);
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // Spieler initial laden
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPlayers();
-  }, []);
+  }, [loadPlayers]);
 
   // Spieler erstellen/aktualisieren
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,7 +70,8 @@ export default function AdminPlayersPage() {
       } else {
         setError(data.error || 'Fehler beim Speichern');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error saving player:', error);
       setError('Netzwerkfehler');
     }
   };
@@ -89,7 +92,8 @@ export default function AdminPlayersPage() {
       } else {
         alert('Fehler beim Löschen');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error deleting player:', error);
       alert('Netzwerkfehler');
     }
   };

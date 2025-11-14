@@ -47,11 +47,40 @@ async function getRoutes() {
     });
     
     // Serialize für Client-Komponente
-    return routes.map(route => ({
-      ...route,
-      encounters: route.encounters.map(e => ({
-        ...e,
+    return routes.map((route) => ({
+      id: route.id,
+      name: route.name,
+      order: route.order,
+      encounters: route.encounters.map((e) => ({
+        id: e.id,
+        nickname: e.nickname,
         teamSlot: e.teamSlot,
+        isKnockedOut: e.isKnockedOut,
+        koCausedBy: e.koCausedBy,
+        koReason: e.koReason,
+        koDate: e.koDate ? e.koDate.toISOString() : null,
+        isNotCaught: e.isNotCaught,
+        notCaughtBy: e.notCaughtBy,
+        notCaughtReason: e.notCaughtReason,
+        notCaughtDate: e.notCaughtDate ? e.notCaughtDate.toISOString() : null,
+        player: {
+          id: e.player.id,
+          name: e.player.name,
+          color: e.player.color,
+        },
+        pokemon: {
+          pokedexId: e.pokemon.pokedexId,
+          name: e.pokemon.name,
+          nameGerman: e.pokemon.nameGerman,
+          types: e.pokemon.types,
+          spriteUrl: e.pokemon.spriteUrl,
+          hp: e.pokemon.hp,
+          attack: e.pokemon.attack,
+          defense: e.pokemon.defense,
+          spAttack: e.pokemon.spAttack,
+          spDefense: e.pokemon.spDefense,
+          speed: e.pokemon.speed,
+        },
       })),
     }));
   } catch (error) {

@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -44,17 +45,23 @@ export async function PUT(
     });
 
     return NextResponse.json(player);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating player:', error);
 
-    if (error.code === 'P2025') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
       return NextResponse.json(
         { error: 'Spieler nicht gefunden' },
         { status: 404 }
       );
     }
 
-    if (error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       return NextResponse.json(
         { error: 'Ein Spieler mit diesem Namen existiert bereits' },
         { status: 409 }
@@ -92,10 +99,13 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting player:', error);
 
-    if (error.code === 'P2025') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
       return NextResponse.json(
         { error: 'Spieler nicht gefunden' },
         { status: 404 }

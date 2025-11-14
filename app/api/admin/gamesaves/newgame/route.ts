@@ -3,11 +3,11 @@
  * POST /api/admin/gamesaves/newgame - Startet ein neues Spiel (nach Auto-Save)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     if (!(await isAdmin())) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });

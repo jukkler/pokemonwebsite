@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface GameSave {
   id: number;
@@ -19,22 +19,25 @@ export default function AdminGameSavesPage() {
   const [saveDescription, setSaveDescription] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  const fetchGameSaves = async () => {
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : 'Unbekannter Fehler';
+
+  const fetchGameSaves = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/gamesaves');
       if (!res.ok) throw new Error('Fehler beim Laden');
-      const data = await res.json();
+      const data: GameSave[] = await res.json();
       setGameSaves(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchGameSaves();
-  }, []);
+  }, [fetchGameSaves]);
 
   const handleSaveGame = async () => {
     if (!saveName.trim()) {
@@ -63,8 +66,8 @@ export default function AdminGameSavesPage() {
       setSaveName('');
       setSaveDescription('');
       fetchGameSaves();
-    } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+    } catch (error) {
+      alert(`Fehler: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -96,8 +99,8 @@ export default function AdminGameSavesPage() {
       alert(data.message);
       // Reload page to reflect changes
       window.location.reload();
-    } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+    } catch (error) {
+      alert(`Fehler: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -126,8 +129,8 @@ export default function AdminGameSavesPage() {
       const data = await res.json();
       alert(data.message);
       window.location.reload();
-    } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+    } catch (error) {
+      alert(`Fehler: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -165,8 +168,8 @@ export default function AdminGameSavesPage() {
       const data = await res.json();
       alert(data.message);
       window.location.reload();
-    } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+    } catch (error) {
+      alert(`Fehler: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -190,8 +193,8 @@ export default function AdminGameSavesPage() {
 
       alert('Spielstand gelöscht');
       fetchGameSaves();
-    } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+    } catch (error) {
+      alert(`Fehler: ${getErrorMessage(error)}`);
     } finally {
       setProcessing(false);
     }
@@ -316,7 +319,7 @@ export default function AdminGameSavesPage() {
           <div className="p-12 text-center text-gray-500">
             <p className="text-lg mb-2">📦 Noch keine Spielstände vorhanden</p>
             <p className="text-sm">
-              Klicke auf "Aktuelles Spiel speichern", um deinen Fortschritt zu sichern.
+              Klicke auf &quot;Aktuelles Spiel speichern&quot;, um deinen Fortschritt zu sichern.
             </p>
           </div>
         ) : (

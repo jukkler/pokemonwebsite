@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { syncAllPlatinumPokemon, syncAllAvailablePokemon } from '@/lib/pokeapi';
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Unbekannter Fehler';
+
 // POST: Alle Pokémon synchronisieren
 export async function POST(request: NextRequest) {
   try {
@@ -34,12 +37,12 @@ export async function POST(request: NextRequest) {
               console.log(`Progress: ${current}/${total}`);
             }
           });
-    } catch (syncError: any) {
+    } catch (syncError) {
       console.error('Error in sync function:', syncError);
       return NextResponse.json(
         { 
-          error: `Fehler beim Synchronisieren: ${syncError.message || 'Unbekannter Fehler'}`,
-          details: syncError.stack 
+          error: `Fehler beim Synchronisieren: ${getErrorMessage(syncError)}`,
+          details: syncError instanceof Error ? syncError.stack : undefined,
         },
         { status: 500 }
       );
@@ -50,12 +53,15 @@ export async function POST(request: NextRequest) {
       count: results.length,
       message: `${results.length} Pokémon erfolgreich synchronisiert`,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error syncing pokemon:', error);
     return NextResponse.json(
       { 
-        error: `Fehler beim Synchronisieren der Pokémon: ${error.message || 'Unbekannter Fehler'}`,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        error: `Fehler beim Synchronisieren der Pokémon: ${getErrorMessage(error)}`,
+        details:
+          process.env.NODE_ENV === 'development' && error instanceof Error
+            ? error.stack
+            : undefined,
       },
       { status: 500 }
     );

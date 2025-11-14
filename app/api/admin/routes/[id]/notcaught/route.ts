@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Unbekannter Fehler';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,10 +44,14 @@ export async function POST(
     });
 
     return NextResponse.json({ message: `Route ${routeId} als "Nicht gefangen" markiert.` });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error setting route not-caught status:', error);
     return NextResponse.json(
-      { error: `Fehler beim Setzen des "Nicht gefangen"-Status: ${error.message || 'Unbekannter Fehler'}` },
+      {
+        error: `Fehler beim Setzen des "Nicht gefangen"-Status: ${getErrorMessage(
+          error
+        )}`,
+      },
       { status: 500 }
     );
   }

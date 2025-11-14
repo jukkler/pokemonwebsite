@@ -2,11 +2,24 @@
 
 import { useState } from 'react';
 
+interface ImportResult {
+  message: string;
+  details: {
+    routesCreated: number;
+    pokemonSynced: number;
+    encountersCreated: number;
+    errors?: string[];
+  };
+}
+
 export default function AdminImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const getErrorMessage = (err: unknown) =>
+    err instanceof Error ? err.message : 'Unbekannter Fehler';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,15 +48,18 @@ export default function AdminImportPage() {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as ImportResult & { error?: string };
 
       if (res.ok) {
-        setResult(data);
+        setResult({
+          message: data.message,
+          details: data.details,
+        });
       } else {
         setError(data.error || 'Fehler beim Importieren');
       }
-    } catch (err: any) {
-      setError(`Netzwerkfehler: ${err.message}`);
+    } catch (err) {
+      setError(`Netzwerkfehler: ${getErrorMessage(err)}`);
     } finally {
       setImporting(false);
     }
@@ -141,7 +157,7 @@ Zweiblattdorf,Thorben,Bisasam,Planty`}
             <ul className="list-disc list-inside text-blue-700 space-y-1 text-sm">
               <li>Spieler müssen <strong>vorher im Admin-Panel erstellt</strong> werden</li>
               <li>Routen werden automatisch erstellt, falls sie noch nicht existieren</li>
-              <li>Pokémon können per <strong>Name</strong> (z.B. "Bisasam" oder "Bulbasaur") oder <strong>Pokédex-ID</strong> (z.B. "1") angegeben werden</li>
+              <li>Pokémon können per <strong>Name</strong> (z.B. &quot;Bisasam&quot; oder &quot;Bulbasaur&quot;) oder <strong>Pokédex-ID</strong> (z.B. &quot;1&quot;) angegeben werden</li>
               <li><strong>Deutsche UND englische Namen</strong> werden unterstützt! 🇩🇪🇬🇧</li>
               <li>Fehlende Pokémon werden <strong>automatisch von PokeAPI</strong> geladen</li>
               <li>Pro Spieler und Route kann nur <strong>1 Pokémon</strong> gefangen werden</li>

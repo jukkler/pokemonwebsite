@@ -214,9 +214,12 @@ export default function AdminEncountersPage() {
                     <option value="">-- Route wählen --</option>
                     {routes.map((r) => {
                       // Prüfe, ob ausgewählter Spieler bereits auf dieser Route ein Pokémon hat
-                      const playerHasEncounter = formData.playerId && encounters.some(
-                        (e) => e.player.id === parseInt(formData.playerId) && e.route.id === r.id
-                      );
+                      const playerHasEncounter =
+                        Boolean(formData.playerId) &&
+                        encounters.some(
+                          (e) =>
+                            e.player.id === parseInt(formData.playerId) && e.route.id === r.id
+                        );
                       return (
                         <option 
                           key={r.id} 

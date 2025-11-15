@@ -252,14 +252,8 @@ export default function TeamDisplay({
         ))}
       </div>
 
-      {teamAverage && (
+      {teamAverage && noEffectiveAttacks.length > 0 && (
         <div className="mt-6 space-y-4">
-          <MatchupSection
-            title="Schwächen"
-            types={noResistances}
-            badgeClass="bg-amber-100 text-amber-800"
-            emptyMessage="Alle Typen haben mindestens eine neutrale Antwort."
-          />
           <MatchupSection
             title="Keine effektiven Attacken"
             types={noEffectiveAttacks}

@@ -69,12 +69,16 @@ const analyzeTeamMatchups = (members: TeamEncounter[]): {
   const noEffectiveAttacks: string[] = [];
 
   allPokemonTypes.forEach((attackType) => {
-    const hasResistance = members.some((member) => {
+    const multipliers = members.map((member) => {
       const defenderTypes = parseTypes(member.pokemon.types);
-      return getDefenseMultiplier(defenderTypes, attackType) < 1;
+      return getDefenseMultiplier(defenderTypes, attackType);
     });
 
-    if (!hasResistance) {
+    const hasResistance = multipliers.some((multiplier) => multiplier < 1);
+    const hasNeutral = multipliers.some((multiplier) => multiplier === 1);
+    const allWeak = multipliers.length > 0 && multipliers.every((multiplier) => multiplier > 1);
+
+    if (!hasResistance && !hasNeutral && allWeak) {
       noResistances.push(attackType);
     }
 
@@ -251,10 +255,10 @@ export default function TeamDisplay({
       {teamAverage && (
         <div className="mt-6 space-y-4">
           <MatchupSection
-            title="Keine Resistenzen"
+            title="Schwächen"
             types={noResistances}
             badgeClass="bg-amber-100 text-amber-800"
-            emptyMessage="Alle Typen haben mindestens eine Resistenz."
+            emptyMessage="Alle Typen haben mindestens eine neutrale Antwort."
           />
           <MatchupSection
             title="Keine effektiven Attacken"

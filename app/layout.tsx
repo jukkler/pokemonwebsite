@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pokémon Playthrough Dokumentation",
+  title: "PokéTool by Lukas",
   description: "Dokumentation eines Parallel-Playthroughs",
 };
 

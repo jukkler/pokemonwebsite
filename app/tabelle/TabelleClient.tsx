@@ -18,6 +18,7 @@ type PlayerCell = {
   types: string[];
   basePoints: number | null;
   status: EncounterStatus;
+  spriteUrl: string | null;
 };
 
 export type RouteRow = {
@@ -135,25 +136,34 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
         : null;
 
     return (
-      <div className="flex flex-col">
-        <span className="font-semibold text-gray-900">{displayName}</span>
-        {typeText && (
-          <span className="text-sm text-gray-600">{typeText}</span>
+      <div className="flex items-start gap-3">
+        {cell.spriteUrl && (
+          <img
+            src={cell.spriteUrl}
+            alt={displayName}
+            className="w-16 h-16 object-contain flex-shrink-0"
+          />
         )}
-        <span className="text-sm font-medium text-purple-700">
-          BP: {cell.basePoints ?? '-'}
-        </span>
-        {cell.status && (
-          <span
-            className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${
-              cell.status === 'ko'
-                ? 'bg-red-100 text-red-700'
-                : 'bg-amber-100 text-amber-800'
-            }`}
-          >
-            {cell.status === 'ko' ? 'K.O.' : 'Nicht gefangen'}
+        <div className="flex flex-col">
+          <span className="font-semibold text-gray-900">{displayName}</span>
+          {typeText && (
+            <span className="text-sm text-gray-600">{typeText}</span>
+          )}
+          <span className="text-sm font-medium text-purple-700">
+            BP: {cell.basePoints ?? '-'}
           </span>
-        )}
+          {cell.status && (
+            <span
+              className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${
+                cell.status === 'ko'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              {cell.status === 'ko' ? 'K.O.' : 'Nicht gefangen'}
+            </span>
+          )}
+        </div>
       </div>
     );
   };

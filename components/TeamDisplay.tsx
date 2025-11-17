@@ -6,6 +6,7 @@
 
 'use client';
 
+import React from 'react';
 import PokemonCard from './PokemonCard';
 import {
   allPokemonTypes,
@@ -45,6 +46,11 @@ interface Route {
     koCausedBy: string | null;
     isNotCaught: boolean;
     notCaughtBy: string | null;
+    pokemon: {
+      pokedexId: number;
+      name: string;
+      nameGerman: string | null;
+    };
   }[];
 }
 
@@ -97,6 +103,91 @@ const analyzeTeamMatchups = (members: TeamEncounter[]): {
 
   return { noResistances, noEffectiveAttacks };
 };
+
+interface TooltipProps {
+  items: { routeName: string; pokemonNames: string[] }[];
+  children: React.ReactNode;
+}
+
+function Tooltip({ items, children }: TooltipProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  if (items.length === 0) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="relative group">
+      <div onClick={() => setIsOpen(!isOpen)}>
+        {children}
+      </div>
+      {/* Hover-Tooltip (nur wenn nicht per Klick geöffnet) */}
+      {!isOpen && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+          <div className="bg-gray-900 text-white text-sm rounded-lg shadow-lg p-3 max-w-xs max-h-64 overflow-y-auto">
+            <div className="space-y-2">
+              {items.map((item, index) => (
+                <div key={index}>
+                  <div className="font-semibold">{item.routeName}:</div>
+                  <div className="ml-2 text-gray-300">
+                    {item.pokemonNames.join(', ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Tooltip-Pfeil */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+              <div className="border-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Klick-Tooltip (dauerhaft geöffnet mit X-Button) */}
+      {isOpen && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
+          <div className="bg-gray-900 text-white text-sm rounded-lg shadow-lg p-3 max-w-xs max-h-64 overflow-y-auto relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
+              className="absolute top-2 right-2 text-white hover:text-gray-300 transition"
+              aria-label="Tooltip schließen"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <div className="space-y-2 pr-6">
+              {items.map((item, index) => (
+                <div key={index}>
+                  <div className="font-semibold">{item.routeName}:</div>
+                  <div className="ml-2 text-gray-300">
+                    {item.pokemonNames.join(', ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Tooltip-Pfeil */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+              <div className="border-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TeamDisplay({
   playerName,
@@ -182,6 +273,49 @@ export default function TeamDisplay({
 
   const notCaughtCount = calculateNotCaughtCount();
 
+  // Sammle betroffene Pokémon für K.O.s, gruppiert nach Route
+  const getKnockedOutPokemon = (): { routeName: string; pokemonNames: string[] }[] => {
+    const routeMap = new Map<string, string[]>();
+    routes.forEach((route) => {
+      route.encounters.forEach((encounter) => {
+        if (encounter.isKnockedOut && encounter.koCausedBy === playerName) {
+          const pokemonName = encounter.pokemon.nameGerman || encounter.pokemon.name;
+          if (!routeMap.has(route.name)) {
+            routeMap.set(route.name, []);
+          }
+          routeMap.get(route.name)!.push(pokemonName);
+        }
+      });
+    });
+    return Array.from(routeMap.entries()).map(([routeName, pokemonNames]) => ({
+      routeName,
+      pokemonNames,
+    }));
+  };
+
+  // Sammle betroffene Pokémon für "Nicht gefangen", gruppiert nach Route
+  const getNotCaughtPokemon = (): { routeName: string; pokemonNames: string[] }[] => {
+    const routeMap = new Map<string, string[]>();
+    routes.forEach((route) => {
+      route.encounters.forEach((encounter) => {
+        if (encounter.isNotCaught && encounter.notCaughtBy === playerName) {
+          const pokemonName = encounter.pokemon.nameGerman || encounter.pokemon.name;
+          if (!routeMap.has(route.name)) {
+            routeMap.set(route.name, []);
+          }
+          routeMap.get(route.name)!.push(pokemonName);
+        }
+      });
+    });
+    return Array.from(routeMap.entries()).map(([routeName, pokemonNames]) => ({
+      routeName,
+      pokemonNames,
+    }));
+  };
+
+  const knockedOutPokemon = getKnockedOutPokemon();
+  const notCaughtPokemon = getNotCaughtPokemon();
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex items-center justify-between mb-4">
@@ -197,14 +331,18 @@ export default function TeamDisplay({
             </span>
           )}
           {koCount > 0 && (
-            <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">
-              💀 K.O.s: {koCount}
-            </span>
+            <Tooltip items={knockedOutPokemon}>
+              <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold cursor-help">
+                💀 K.O.s: {koCount}
+              </span>
+            </Tooltip>
           )}
           {notCaughtCount > 0 && (
-            <span className="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-semibold">
-              ⚠️ Nicht gefangen: {notCaughtCount}
-            </span>
+            <Tooltip items={notCaughtPokemon}>
+              <span className="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-semibold cursor-help">
+                ⚠️ Nicht gefangen: {notCaughtCount}
+              </span>
+            </Tooltip>
           )}
         </div>
         {teamAverage && (

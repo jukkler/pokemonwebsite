@@ -89,6 +89,7 @@ async function getTableData(): Promise<{
           types: parseTypes(pokemon.types),
           basePoints,
           status,
+          spriteUrl: pokemon.spriteUrl,
         };
       });
 

@@ -5,18 +5,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { isAdmin } from '@/lib/auth';
+import {
+  withAdminAuthAndErrorHandling,
+  validateRequired,
+  badRequest,
+  created,
+  conflict,
+  handlePrismaError,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 // GET: Alle Spieler abrufen
 export async function GET() {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const players = await prisma.player.findMany({
       include: {
         _count: {
@@ -30,60 +31,42 @@ export async function GET() {
     });
 
     return NextResponse.json(players);
-  } catch (error) {
-    console.error('Error fetching players:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Laden der Spieler' },
-      { status: 500 }
-    );
-  }
+  }, 'fetching players');
 }
 
 // POST: Neuen Spieler erstellen
 export async function POST(request: NextRequest) {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const body = await request.json();
     const { name, color } = body;
 
     // Validierung
-    if (!name || !color) {
-      return NextResponse.json(
-        { error: 'Name und Farbe sind erforderlich' },
-        { status: 400 }
+    try {
+      validateRequired(body, ['name', 'color']);
+    } catch (error) {
+      return badRequest(
+        error instanceof Error ? error.message : 'Name und Farbe sind erforderlich'
       );
     }
 
-    // Spieler erstellen
-    const player = await prisma.player.create({
-      data: {
-        name,
-        color,
-      },
-    });
+    try {
+      // Spieler erstellen
+      const player = await prisma.player.create({
+        data: {
+          name: String(name).trim(),
+          color: String(color).trim(),
+        },
+      });
 
-    return NextResponse.json(player, { status: 201 });
-  } catch (error) {
-    console.error('Error creating player:', error);
-    
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      return NextResponse.json(
-        { error: 'Ein Spieler mit diesem Namen existiert bereits' },
-        { status: 409 }
-      );
+      return created(player);
+    } catch (error) {
+      // Spezifische Fehlerbehandlung für Unique Constraint
+      const prismaError = handlePrismaError(error, 'creating player');
+      if (prismaError.status === 409) {
+        return conflict('Ein Spieler mit diesem Namen existiert bereits');
+      }
+      throw error;
     }
-
-    return NextResponse.json(
-      { error: 'Fehler beim Erstellen des Spielers' },
-      { status: 500 }
-    );
-  }
+  }, 'creating player');
 }
 

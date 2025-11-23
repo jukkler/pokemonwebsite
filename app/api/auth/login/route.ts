@@ -5,41 +5,39 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAdminCredentials, loginAdmin } from '@/lib/auth';
+import {
+  withErrorHandling,
+  validateRequired,
+  badRequest,
+  internalError,
+  success,
+} from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
-  try {
+  return withErrorHandling(async () => {
     const body = await request.json();
     const { username, password } = body;
 
     // Validierung
-    if (!username || !password) {
-      return NextResponse.json(
-        { error: 'Username und Password sind erforderlich' },
-        { status: 400 }
+    try {
+      validateRequired(body, ['username', 'password']);
+    } catch (error) {
+      return badRequest(
+        error instanceof Error
+          ? error.message
+          : 'Username und Password sind erforderlich'
       );
     }
 
     // Credentials prüfen
-    if (!validateAdminCredentials(username, password)) {
-      return NextResponse.json(
-        { error: 'Ungültige Zugangsdaten' },
-        { status: 401 }
-      );
+    if (!validateAdminCredentials(String(username), String(password))) {
+      return NextResponse.json({ error: 'Ungültige Zugangsdaten' }, { status: 401 });
     }
 
     // Session setzen
-    await loginAdmin(username);
+    await loginAdmin(String(username));
 
-    return NextResponse.json(
-      { success: true, message: 'Login erfolgreich' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Interner Server-Fehler' },
-      { status: 500 }
-    );
-  }
+    return success({ message: 'Login erfolgreich' });
+  }, 'login');
 }
 

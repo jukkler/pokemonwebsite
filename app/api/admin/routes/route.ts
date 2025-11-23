@@ -5,17 +5,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import {
+  withAdminAuthAndErrorHandling,
+  validateRequired,
+  badRequest,
+  created,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 // GET: Alle Routen abrufen
 export async function GET() {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const routes = await prisma.route.findMany({
       include: {
         _count: {
@@ -28,49 +28,33 @@ export async function GET() {
     });
 
     return NextResponse.json(routes);
-  } catch (error) {
-    console.error('Error fetching routes:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Laden der Routen' },
-      { status: 500 }
-    );
-  }
+  }, 'fetching routes');
 }
 
 // POST: Neue Route erstellen
 export async function POST(request: NextRequest) {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const body = await request.json();
     const { name, order } = body;
 
     // Validierung
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Name ist erforderlich' },
-        { status: 400 }
+    try {
+      validateRequired(body, ['name']);
+    } catch (error) {
+      return badRequest(
+        error instanceof Error ? error.message : 'Name ist erforderlich'
       );
     }
 
     // Route erstellen
     const route = await prisma.route.create({
       data: {
-        name,
-        order: order || 0,
+        name: String(name).trim(),
+        order: typeof order === 'number' ? order : 0,
       },
     });
 
-    return NextResponse.json(route, { status: 201 });
-  } catch (error) {
-    console.error('Error creating route:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Erstellen der Route' },
-      { status: 500 }
-    );
-  }
+    return created(route);
+  }, 'creating route');
 }
 

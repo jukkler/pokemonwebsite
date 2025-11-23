@@ -3,23 +3,13 @@
  * Admin-Logout Endpoint
  */
 
-import { NextResponse } from 'next/server';
 import { logoutAdmin } from '@/lib/auth';
+import { withErrorHandling, success } from '@/lib/api-utils';
 
 export async function POST() {
-  try {
+  return withErrorHandling(async () => {
     await logoutAdmin();
-
-    return NextResponse.json(
-      { success: true, message: 'Logout erfolgreich' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Logout error:', error);
-    return NextResponse.json(
-      { error: 'Interner Server-Fehler' },
-      { status: 500 }
-    );
-  }
+    return success({ message: 'Logout erfolgreich' });
+  }, 'logout');
 }
 

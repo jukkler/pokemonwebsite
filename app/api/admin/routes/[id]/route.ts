@@ -5,8 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { isAdmin } from '@/lib/auth';
+import {
+  withAdminAuthAndErrorHandling,
+  parseId,
+  validateRequired,
+  badRequest,
+  success,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 // PUT: Route aktualisieren
@@ -14,55 +19,47 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const routeId = parseInt(id);
+    let routeId: number;
 
-    if (isNaN(routeId)) {
-      return NextResponse.json({ error: 'Ungültige ID' }, { status: 400 });
+    try {
+      routeId = parseId(id, 'Routen-ID');
+    } catch (error) {
+      return badRequest(error instanceof Error ? error.message : 'Ungültige ID');
     }
 
     const body = await request.json();
     const { name, order } = body;
 
-    // Validierung
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Name ist erforderlich' },
-        { status: 400 }
+    try {
+      validateRequired(body, ['name']);
+    } catch (error) {
+      return badRequest(
+        error instanceof Error ? error.message : 'Name ist erforderlich'
       );
     }
 
-    // Route aktualisieren
-    const route = await prisma.route.update({
-      where: { id: routeId },
-      data: { name, order },
-    });
+    try {
+      // Route aktualisieren
+      const route = await prisma.route.update({
+        where: { id: routeId },
+        data: {
+          name: String(name).trim(),
+          order: typeof order === 'number' ? order : undefined,
+        },
+      });
 
-    return NextResponse.json(route);
-  } catch (error) {
-    console.error('Error updating route:', error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
-      return NextResponse.json(
-        { error: 'Route nicht gefunden' },
-        { status: 404 }
-      );
+      return NextResponse.json(route);
+    } catch (error) {
+      // Spezifische Fehlerbehandlung
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2025') {
+        return NextResponse.json({ error: 'Route nicht gefunden' }, { status: 404 });
+      }
+      throw error;
     }
-
-    return NextResponse.json(
-      { error: 'Fehler beim Aktualisieren der Route' },
-      { status: 500 }
-    );
-  }
+  }, 'updating route');
 }
 
 // DELETE: Route löschen
@@ -70,42 +67,31 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const routeId = parseInt(id);
+    let routeId: number;
 
-    if (isNaN(routeId)) {
-      return NextResponse.json({ error: 'Ungültige ID' }, { status: 400 });
+    try {
+      routeId = parseId(id, 'Routen-ID');
+    } catch (error) {
+      return badRequest(error instanceof Error ? error.message : 'Ungültige ID');
     }
 
-    // Route löschen (Cascade löscht auch Encounters)
-    await prisma.route.delete({
-      where: { id: routeId },
-    });
+    try {
+      // Route löschen (Cascade löscht auch Encounters)
+      await prisma.route.delete({
+        where: { id: routeId },
+      });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting route:', error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
-      return NextResponse.json(
-        { error: 'Route nicht gefunden' },
-        { status: 404 }
-      );
+      return success();
+    } catch (error) {
+      // Spezifische Fehlerbehandlung
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2025') {
+        return NextResponse.json({ error: 'Route nicht gefunden' }, { status: 404 });
+      }
+      throw error;
     }
-
-    return NextResponse.json(
-      { error: 'Fehler beim Löschen der Route' },
-      { status: 500 }
-    );
-  }
+  }, 'deleting route');
 }
 

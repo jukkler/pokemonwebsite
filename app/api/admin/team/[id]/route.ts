@@ -4,8 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { isAdmin } from '@/lib/auth';
+import {
+  withAdminAuthAndErrorHandling,
+  parseId,
+  badRequest,
+  success,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 // DELETE: Team-Member entfernen
@@ -13,42 +17,30 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const teamMemberId = parseInt(id);
+    let teamMemberId: number;
 
-    if (isNaN(teamMemberId)) {
-      return NextResponse.json({ error: 'Ungültige ID' }, { status: 400 });
+    try {
+      teamMemberId = parseId(id, 'Team-Member-ID');
+    } catch (error) {
+      return badRequest(error instanceof Error ? error.message : 'Ungültige ID');
     }
 
-    // Team-Member entfernen
-    await prisma.teamMember.delete({
-      where: { id: teamMemberId },
-    });
+    try {
+      // Team-Member entfernen
+      await prisma.teamMember.delete({
+        where: { id: teamMemberId },
+      });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting team member:', error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
-      return NextResponse.json(
-        { error: 'Team-Member nicht gefunden' },
-        { status: 404 }
-      );
+      return success();
+    } catch (error) {
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2025') {
+        return NextResponse.json({ error: 'Team-Member nicht gefunden' }, { status: 404 });
+      }
+      throw error;
     }
-
-    return NextResponse.json(
-      { error: 'Fehler beim Entfernen des Team-Members' },
-      { status: 500 }
-    );
-  }
+  }, 'deleting team member');
 }
 

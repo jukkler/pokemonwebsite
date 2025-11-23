@@ -1,33 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+/**
+ * Admin API: Route "Nicht gefangen" Status
+ * POST /api/admin/routes/[id]/notcaught - Route als "Nicht gefangen" markieren
+ * DELETE /api/admin/routes/[id]/notcaught - Route reaktivieren
+ */
 
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : 'Unbekannter Fehler';
+import { NextRequest } from 'next/server';
+import {
+  withAdminAuthAndErrorHandling,
+  parseId,
+  validateRequired,
+  badRequest,
+  success,
+} from '@/lib/api-utils';
+import prisma from '@/lib/prisma';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const routeId = parseInt(id);
+    let routeId: number;
 
-    if (isNaN(routeId)) {
-      return NextResponse.json({ error: 'Ungültige Routen-ID' }, { status: 400 });
+    try {
+      routeId = parseId(id, 'Routen-ID');
+    } catch (error) {
+      return badRequest(error instanceof Error ? error.message : 'Ungültige Routen-ID');
     }
 
     const body = await request.json();
     const { causedBy, reason } = body;
 
-    if (!causedBy) {
-      return NextResponse.json(
-        { error: 'Verursacher ist erforderlich' },
-        { status: 400 }
+    try {
+      validateRequired(body, ['causedBy']);
+    } catch (error) {
+      return badRequest(
+        error instanceof Error ? error.message : 'Verursacher ist erforderlich'
       );
     }
 
@@ -36,41 +44,29 @@ export async function POST(
       where: { routeId },
       data: {
         isNotCaught: true,
-        notCaughtBy: causedBy,
-        notCaughtReason: reason && reason.trim() ? reason.trim() : null,
+        notCaughtBy: String(causedBy).trim(),
+        notCaughtReason: reason && String(reason).trim() ? String(reason).trim() : null,
         notCaughtDate: new Date(),
         teamSlot: null, // Entferne aus Team
       },
     });
 
-    return NextResponse.json({ message: `Route ${routeId} als "Nicht gefangen" markiert.` });
-  } catch (error) {
-    console.error('Error setting route not-caught status:', error);
-    return NextResponse.json(
-      {
-        error: `Fehler beim Setzen des "Nicht gefangen"-Status: ${getErrorMessage(
-          error
-        )}`,
-      },
-      { status: 500 }
-    );
-  }
+    return success({ message: `Route ${routeId} als "Nicht gefangen" markiert.` });
+  }, 'setting route not-caught status');
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const routeId = parseInt(id);
+    let routeId: number;
 
-    if (isNaN(routeId)) {
-      return NextResponse.json({ error: 'Ungültige Routen-ID' }, { status: 400 });
+    try {
+      routeId = parseId(id, 'Routen-ID');
+    } catch (error) {
+      return badRequest(error instanceof Error ? error.message : 'Ungültige Routen-ID');
     }
 
     // Reaktiviere alle Encounters dieser Route
@@ -84,13 +80,7 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ message: `Route ${routeId} reaktiviert.` });
-  } catch (error) {
-    console.error('Error reactivating route:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Reaktivieren der Route' },
-      { status: 500 }
-    );
-  }
+    return success({ message: `Route ${routeId} reaktiviert.` });
+  }, 'reactivating route');
 }
 

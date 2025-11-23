@@ -12,6 +12,7 @@ import {
   calculateDefensiveEffectiveness,
 } from '@/lib/typeEffectiveness';
 import { fetchJson } from '@/lib/fetchJson';
+import { getErrorMessage } from '@/lib/component-utils';
 
 interface Encounter {
   id: number;
@@ -124,9 +125,6 @@ export default function RouteList({
       total: Math.round(totalBase / count),
     };
   };
-
-  const getErrorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : 'Unbekannter Fehler';
 
   // Route ins Team hinzufügen/entfernen
   const handleAddToTeam = async (routeId: number, slot: number) => {

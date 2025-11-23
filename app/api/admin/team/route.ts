@@ -3,80 +3,83 @@
  * POST /api/admin/team - Team-Member hinzufügen/aktualisieren
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { isAdmin } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import {
+  withAdminAuthAndErrorHandling,
+  parseId,
+  validateRequired,
+  badRequest,
+  created,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 // POST: Team-Member setzen (upsert)
 export async function POST(request: NextRequest) {
-  try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const body = await request.json();
     const { playerId, pokemonId, nickname, position } = body;
 
     // Validierung
-    if (!playerId || !pokemonId || !position) {
-      return NextResponse.json(
-        { error: 'Spieler, Pokémon und Position sind erforderlich' },
-        { status: 400 }
+    try {
+      validateRequired(body, ['playerId', 'pokemonId', 'position']);
+    } catch (error) {
+      return badRequest(
+        error instanceof Error
+          ? error.message
+          : 'Spieler, Pokémon und Position sind erforderlich'
       );
     }
 
-    // Position muss zwischen 1 und 6 sein
-    if (position < 1 || position > 6) {
-      return NextResponse.json(
-        { error: 'Position muss zwischen 1 und 6 liegen' },
-        { status: 400 }
-      );
+    // Position-Validierung
+    const positionNum = Number(position);
+    if (isNaN(positionNum) || positionNum < 1 || positionNum > 6) {
+      return badRequest('Position muss zwischen 1 und 6 liegen');
     }
 
-    // Team-Member erstellen oder aktualisieren (upsert)
-    const teamMember = await prisma.teamMember.upsert({
-      where: {
-        playerId_position: {
-          playerId: parseInt(playerId),
-          position: parseInt(position),
+    // IDs parsen
+    let parsedPlayerId: number;
+    let parsedPokemonId: number;
+
+    try {
+      parsedPlayerId = parseId(String(playerId), 'Spieler-ID');
+      parsedPokemonId = parseId(String(pokemonId), 'Pokémon-ID');
+    } catch (error) {
+      return badRequest(error instanceof Error ? error.message : 'Ungültige ID');
+    }
+
+    try {
+      // Team-Member erstellen oder aktualisieren (upsert)
+      const teamMember = await prisma.teamMember.upsert({
+        where: {
+          playerId_position: {
+            playerId: parsedPlayerId,
+            position: positionNum,
+          },
         },
-      },
-      update: {
-        pokemonId: parseInt(pokemonId),
-        nickname: nickname || null,
-      },
-      create: {
-        playerId: parseInt(playerId),
-        pokemonId: parseInt(pokemonId),
-        nickname: nickname || null,
-        position: parseInt(position),
-      },
-      include: {
-        player: true,
-        pokemon: true,
-      },
-    });
+        update: {
+          pokemonId: parsedPokemonId,
+          nickname: nickname ? String(nickname).trim() : null,
+        },
+        create: {
+          playerId: parsedPlayerId,
+          pokemonId: parsedPokemonId,
+          nickname: nickname ? String(nickname).trim() : null,
+          position: positionNum,
+        },
+        include: {
+          player: true,
+          pokemon: true,
+        },
+      });
 
-    return NextResponse.json(teamMember, { status: 201 });
-  } catch (error) {
-    console.error('Error creating team member:', error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2003'
-    ) {
-      return NextResponse.json(
-        { error: 'Ungültige Spieler- oder Pokémon-ID' },
-        { status: 400 }
-      );
+      return created(teamMember);
+    } catch (error) {
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2003') {
+        return badRequest('Ungültige Spieler- oder Pokémon-ID');
+      }
+      throw error;
     }
-
-    return NextResponse.json(
-      { error: 'Fehler beim Setzen des Team-Members' },
-      { status: 500 }
-    );
-  }
+  }, 'creating team member');
 }
 

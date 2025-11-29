@@ -72,10 +72,10 @@ export default function PokeradarPage() {
     selectedPokemon.some((p) => p.id === pokemon.id);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-2">
           Pokémon Vergleichstool
         </h1>
         <p className="text-gray-600">
@@ -88,7 +88,7 @@ export default function PokeradarPage() {
           <p className="text-gray-500 text-lg">Lade Pokémon-Daten...</p>
         </div>
       ) : allPokemon.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-lg p-12 text-center">
+        <div className="bg-white rounded-xl shadow-md p-12 text-center border border-gray-200">
           <p className="text-gray-500 text-lg mb-4">
             Noch keine Pokémon in der Datenbank.
           </p>
@@ -99,13 +99,13 @@ export default function PokeradarPage() {
       ) : (
         <>
           {/* Radar Chart */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="bg-white rounded-xl shadow-md p-6 mb-6 md:mb-8 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Stats Vergleich</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">Stats Vergleich</h2>
               {selectedPokemon.length > 0 && (
                 <button
                   onClick={() => setSelectedPokemon([])}
-                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition text-sm font-semibold"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition text-sm font-medium"
                   title="Alle Auswahlen zurücksetzen"
                 >
                   🔄 Zurücksetzen
@@ -117,8 +117,8 @@ export default function PokeradarPage() {
 
           {/* Stats Tabelle */}
           {selectedPokemon.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8 overflow-x-auto">
-              <h2 className="text-2xl font-bold mb-4">Detaillierte Stats</h2>
+            <div className="bg-white rounded-xl shadow-md p-6 mb-6 md:mb-8 overflow-x-auto border border-gray-200">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-900">Detaillierte Stats</h2>
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b">
@@ -164,9 +164,9 @@ export default function PokeradarPage() {
           )}
 
           {/* Pokémon Auswahl */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
             <div className="mb-4">
-              <h2 className="text-2xl font-bold mb-4">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-900">
                 Pokémon auswählen ({selectedPokemon.length}/6)
               </h2>
               <input

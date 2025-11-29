@@ -6,6 +6,8 @@
 'use client';
 
 import PokemonCard from './PokemonCard';
+import TypeBadge from './ui/TypeBadge';
+import Button from './ui/Button';
 import { useState } from 'react';
 import {
   parseTypes,
@@ -287,29 +289,29 @@ export default function RouteList({
           const isInactive = isKnockedOut || isNotCaught;
           
           return (
-            <div key={route.id} className={`bg-white rounded-lg shadow-lg p-6 ${isInactive ? 'opacity-60 bg-gray-50' : ''}`}>
-              <div className="flex items-center justify-between mb-4 border-b pb-2">
+            <div key={route.id} className={`bg-white rounded-xl shadow-md p-6 border border-gray-200 ${isInactive ? 'opacity-60 bg-gray-50' : ''}`}>
+              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className={`text-2xl font-bold ${isInactive ? 'text-gray-500 line-through' : ''}`}>
+                  <h3 className={`text-2xl font-semibold ${isInactive ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                     {route.name}
                   </h3>
                   {isKnockedOut && koInfo && (
-                    <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">
+                    <span className="text-sm bg-red-50 text-red-700 px-3 py-1.5 rounded-full font-medium border border-red-200">
                       💀 K.O. durch {koInfo.koCausedBy}
                     </span>
                   )}
                   {isNotCaught && notCaughtInfo && (
-                    <span className="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-semibold">
+                    <span className="text-sm bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full font-medium border border-yellow-200">
                       ⚠️ Nicht gefangen durch {notCaughtInfo.notCaughtBy}
                     </span>
                   )}
                   {currentSlot && !isInactive && (
-                    <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
+                    <span className="text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-full font-medium border border-green-200">
                       Im Team (Slot {currentSlot})
                     </span>
                   )}
                   {routeAverage && !isInactive && (
-                    <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">
+                    <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium border border-blue-200">
                       ⌀ Gesamt-BP: {routeAverage.total}
                     </span>
                   )}
@@ -456,76 +458,39 @@ export default function RouteList({
             </p>
           ) : (
             <div className="flex flex-wrap items-start gap-6">
-              {/* Gruppiere Encounters nach Spieler und zeige horizontal */}
-              {Array.from(
-                new Set(route.encounters.map((e) => e.player.id))
-              ).map((playerId) => {
-                const playerEncounters = route.encounters.filter(
-                  (e) => e.player.id === playerId
+              {(() => {
+                // Finde die maximale Anzahl von Typen für ALLE Encounters in dieser Route
+                const maxTypesInRoute = Math.max(
+                  ...route.encounters.map(e => parseTypes(e.pokemon.types).length)
                 );
-                const player = playerEncounters[0].player;
-
+                // Bestimme die Mindesthöhe basierend auf der maximalen Anzahl der Typen in der Route
+                const minHeight = maxTypesInRoute === 2 ? 'min-h-[240px]' : 'min-h-[220px]';
+                
                 return (
-                  <div key={playerId} className="flex-shrink-0">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: player.color }}
-                      />
-                      <h4 className="font-semibold text-lg">{player.name}</h4>
-                    </div>
+                  <>
+                    {/* Gruppiere Encounters nach Spieler und zeige horizontal */}
+                    {Array.from(
+                      new Set(route.encounters.map((e) => e.player.id))
+                    ).map((playerId) => {
+                      const playerEncounters = route.encounters.filter(
+                        (e) => e.player.id === playerId
+                      );
+                      const player = playerEncounters[0].player;
 
-                    <div className="flex flex-wrap gap-3">
-                      {playerEncounters.map((encounter) => {
-                        const p = encounter.pokemon;
-                        const totalStats = p.hp + p.attack + p.defense + p.spAttack + p.spDefense + p.speed;
-                        
-                        return (
-                          <div key={encounter.id} className="flex-shrink-0">
-                            <PokemonCard
-                              pokemon={encounter.pokemon}
-                              nickname={encounter.nickname}
-                              size="small"
+                      return (
+                        <div key={playerId} className="flex-shrink-0">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: player.color }}
                             />
-                            {/* Basispunkte des Pokémon */}
-                            <div className="mt-2 bg-gray-50 rounded-lg p-2 border border-gray-200">
-                              <div className="text-xs font-bold text-gray-700 mb-1 text-center">
-                                Basispunkte
-                              </div>
-                              <div className="grid grid-cols-3 gap-1 text-xs text-center">
-                                <div>
-                                  <div className="text-gray-500">KP</div>
-                                  <div className="font-bold text-red-600">{p.hp}</div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-500">Ang.</div>
-                                  <div className="font-bold text-orange-600">{p.attack}</div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-500">Vert.</div>
-                                  <div className="font-bold text-yellow-600">{p.defense}</div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-500">Sp.A</div>
-                                  <div className="font-bold text-blue-600">{p.spAttack}</div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-500">Sp.V</div>
-                                  <div className="font-bold text-green-600">{p.spDefense}</div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-500">Init.</div>
-                                  <div className="font-bold text-pink-600">{p.speed}</div>
-                                </div>
-                              </div>
-                              <div className="mt-1 pt-1 border-t border-gray-300 text-center">
-                                <span className="text-xs text-gray-500">Gesamt:</span>
-                                <span className="text-xs font-bold text-purple-700 ml-1">{totalStats}</span>
-                              </div>
-                            </div>
+                            <h4 className="font-semibold text-lg">{player.name}</h4>
+                          </div>
 
-                            {/* Typ-Effektivität */}
-                            {(() => {
+                          <div className="flex flex-wrap items-start gap-3 md:gap-2">
+                            {playerEncounters.map((encounter) => {
+                              const p = encounter.pokemon;
+                              const totalStats = p.hp + p.attack + p.defense + p.spAttack + p.spDefense + p.speed;
                               const types = parseTypes(p.types);
                               const effectiveness = calculateDefensiveEffectiveness(types);
                               const sortedMultipliers = Object.keys(effectiveness).sort((a, b) => {
@@ -536,42 +501,96 @@ export default function RouteList({
                               const relevantMultipliers = sortedMultipliers.filter(
                                 mult => mult !== '1x' && effectiveness[mult] && effectiveness[mult].length > 0
                               );
-
-                              if (relevantMultipliers.length === 0) return null;
-
+                              const hasTypeEffectiveness = relevantMultipliers.length > 0;
+                              
                               return (
-                                <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-200">
-                                  <div className="text-xs font-bold text-blue-900 mb-1">
-                                    Typ-Effektivität
+                                <div key={encounter.id} className="flex flex-col w-[140px] flex-shrink-0">
+                                  <div className={`relative group flex-1 ${minHeight}`}>
+                                    <div className={`h-full ${minHeight}`}>
+                                      <PokemonCard
+                                        pokemon={encounter.pokemon}
+                                        nickname={encounter.nickname}
+                                        size="small"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="space-y-1">
-                                    {relevantMultipliers.map(mult => {
-                                      let colorClass = 'text-gray-700';
-                                      
-                                      if (mult === '0x') colorClass = 'text-purple-700';
-                                      else if (mult === '0.25x') colorClass = 'text-green-700';
-                                      else if (mult === '0.5x') colorClass = 'text-blue-700';
-                                      else if (mult === '2x') colorClass = 'text-orange-700';
-                                      else if (mult === '4x') colorClass = 'text-red-700';
+                                  {/* Basispunkte des Pokémon */}
+                                  <div className="mt-2 bg-gray-50 rounded-lg p-2 border border-gray-200 w-full">
+                                    <div className="text-xs font-bold text-gray-700 mb-1.5 text-center">
+                                      Basispunkte
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                                      <div className="text-center">
+                                        <div className="text-gray-500 mb-0.5">KP</div>
+                                        <div className="font-bold text-red-600">{p.hp}</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-gray-500 mb-0.5">Ang.</div>
+                                        <div className="font-bold text-orange-600">{p.attack}</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-gray-500 mb-0.5">Vert.</div>
+                                        <div className="font-bold text-yellow-600">{p.defense}</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-gray-500 mb-0.5">Sp.A</div>
+                                        <div className="font-bold text-blue-600">{p.spAttack}</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-gray-500 mb-0.5">Sp.V</div>
+                                        <div className="font-bold text-green-600">{p.spDefense}</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-gray-500 mb-0.5">Init.</div>
+                                        <div className="font-bold text-pink-600">{p.speed}</div>
+                                      </div>
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-gray-300 text-center">
+                                      <span className="text-xs text-gray-500">Gesamt:</span>
+                                      <span className="text-xs font-bold text-purple-700 ml-1">{totalStats}</span>
+                                    </div>
+                                  </div>
 
-                                      return (
-                                        <div key={mult} className="text-xs">
-                                          <span className={`font-bold ${colorClass}`}>{mult}:</span>{' '}
-                                          <span className="text-gray-700">{effectiveness[mult].join(', ')}</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                  {/* Typ-Effektivität */}
+                                  {hasTypeEffectiveness ? (
+                                    <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-200 w-full">
+                                      <div className="text-xs font-bold text-blue-900 mb-1">
+                                        Typ-Effektivität
+                                      </div>
+                                      <div className="space-y-1">
+                                        {relevantMultipliers.map(mult => {
+                                          let colorClass = 'text-gray-700';
+                                          
+                                          if (mult === '0x') colorClass = 'text-purple-700';
+                                          else if (mult === '0.25x') colorClass = 'text-green-700';
+                                          else if (mult === '0.5x') colorClass = 'text-blue-700';
+                                          else if (mult === '2x') colorClass = 'text-orange-700';
+                                          else if (mult === '4x') colorClass = 'text-red-700';
+
+                                          return (
+                                            <div key={mult} className="text-xs">
+                                              <span className={`font-bold ${colorClass}`}>{mult}:</span>{' '}
+                                              <span className="text-gray-700">{effectiveness[mult].join(', ')}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-200 w-full min-h-[60px]">
+                                      {/* Platzhalter für konsistente Höhe */}
+                                    </div>
+                                  )}
                                 </div>
                               );
-                            })()}
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        </div>
+                      );
+                    })}
+                  </>
                 );
-              })}
+              })()}
             </div>
           )}
           </div>
@@ -582,8 +601,8 @@ export default function RouteList({
     {/* K.O.-Dialog */}
     {koDialogOpen && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4 text-red-700">💀 Route K.O. setzen</h2>
+        <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+          <h2 className="text-2xl font-semibold mb-4 text-red-700">💀 Route K.O. setzen</h2>
           <p className="text-gray-600 mb-4">
             Alle Pokémon dieser Route werden K.O. gesetzt und aus dem Team entfernt.
           </p>
@@ -624,20 +643,21 @@ export default function RouteList({
           </div>
 
           <div className="flex gap-2 justify-end mt-6">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setKoDialogOpen(false)}
-              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md transition"
               disabled={processing}
             >
               Abbrechen
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleKnockout}
               disabled={processing || !koCausedBy.trim() || !koReason.trim()}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition disabled:opacity-50"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
             >
               {processing ? 'Wird gesetzt...' : '💀 K.O. setzen'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -646,8 +666,8 @@ export default function RouteList({
     {/* Nicht-gefangen-Dialog */}
     {notCaughtDialogOpen && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4 text-yellow-700">⚠️ Route als Nicht gefangen markieren</h2>
+        <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+          <h2 className="text-2xl font-semibold mb-4 text-yellow-700">⚠️ Route als Nicht gefangen markieren</h2>
           <p className="text-gray-600 mb-4">
             Diese Route wird als Nicht gefangen markiert und aus dem Team entfernt.
           </p>
@@ -688,20 +708,21 @@ export default function RouteList({
           </div>
 
           <div className="flex gap-2 justify-end mt-6">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setNotCaughtDialogOpen(false)}
-              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md transition"
               disabled={processing}
             >
               Abbrechen
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleNotCaught}
               disabled={processing || !notCaughtBy.trim()}
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition disabled:opacity-50"
+              className="bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500"
             >
               {processing ? 'Wird gesetzt...' : '⚠️ Als Nicht gefangen markieren'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

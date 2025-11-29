@@ -167,17 +167,17 @@ export default function PokerouteClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-2">
           PokéTool by Lukas
         </h1>
       </div>
 
       {/* Aktuelle Teams */}
-      <div className="mb-12">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">Aktuelle Teams</h2>
+      <div className="mb-8 md:mb-12">
+        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6">Aktuelle Teams</h2>
         {players.length === 0 ? (
           <div className="bg-white rounded-lg shadow-lg p-12 text-center">
             <p className="text-gray-500 text-lg">
@@ -185,7 +185,7 @@ export default function PokerouteClient({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
             {players.map((player) => (
               <TeamDisplay
                 key={player.id}
@@ -203,7 +203,7 @@ export default function PokerouteClient({
 
       {/* Routen */}
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">Routen & Encounters</h2>
+        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6">Routen & Encounters</h2>
         <RouteList 
           routes={routes}
           players={players}

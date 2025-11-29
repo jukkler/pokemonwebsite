@@ -16,6 +16,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { parseTypes, calculateDefensiveEffectiveness, typeNamesGerman } from '@/lib/typeEffectiveness';
+import TypeBadge from '@/components/ui/TypeBadge';
 
 interface PokemonStats {
   pokedexId: number;
@@ -140,8 +141,13 @@ export default function PokemonRadarChart({
               className="bg-white rounded-lg p-4 border-l-4"
               style={{ borderLeftColor: colors[index % colors.length] }}
             >
-              <h4 className="font-bold text-lg mb-2" style={{ color: colors[index % colors.length] }}>
-                {displayName} <span className="text-sm text-gray-500">({types.map(t => typeNamesGerman[t] || t).join(', ')})</span>
+              <h4 className="font-bold text-lg mb-2 flex items-center gap-2 flex-wrap" style={{ color: colors[index % colors.length] }}>
+                {displayName}
+                <div className="flex gap-1.5">
+                  {types.map((type) => (
+                    <TypeBadge key={type} type={type} size="sm" />
+                  ))}
+                </div>
               </h4>
               {!hasEffectiveness ? (
                 <p className="text-gray-500 text-sm">Keine besonderen Typ-Effektivitäten (alle neutral)</p>

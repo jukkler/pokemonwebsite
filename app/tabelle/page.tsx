@@ -124,12 +124,12 @@ export default async function TabellePage() {
   const data = await getTableData();
 
   return (
-    <div className="container mx-auto px-4 py-10">
-      <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-purple-600 mb-2">
+    <div className="container mx-auto px-4 py-6 md:py-10 max-w-7xl">
+      <div className="mb-6 md:mb-8">
+        <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 mb-2">
           Übersicht
         </p>
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">Tabelle</h1>
+        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">Tabelle</h1>
         <p className="text-gray-600 max-w-3xl">
           Vergleich aller gefangenen Pokémon je Route. Die Spalten zeigen das
           aktuell gefangene Pokémon pro Spieler inklusive Typen und

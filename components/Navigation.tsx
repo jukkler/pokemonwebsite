@@ -56,10 +56,10 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg">
+    <nav className="bg-white border-b border-gray-200 shadow-sm hidden md:block">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-4 md:space-x-8">
+          <div className="flex items-center space-x-8">
             <Link href="/pokeroute" className="flex items-center hover:opacity-80 transition">
               <Image 
                 src="https://upload.wikimedia.org/wikipedia/commons/5/53/Pok%C3%A9_Ball_icon.svg" 
@@ -68,42 +68,36 @@ export default function Navigation() {
                 height={32}
                 priority
               />
+              <span className="ml-2 text-xl font-semibold text-gray-900">PokéTool</span>
             </Link>
 
-            <div
-              className={`${
-                mobileOpen ? 'flex' : 'hidden'
-              } flex-col space-y-2 md:flex md:flex-row md:space-x-4 md:space-y-0 w-full md:w-auto md:items-center`}
-            >
+            <div className="flex items-center space-x-1">
               <Link
                 href="/pokeroute"
-                onClick={() => setMobileOpen(false)}
-                className={`px-3 py-2 rounded-md transition ${
+                className={`px-4 py-2 rounded-lg transition font-medium ${
                   isActive('/pokeroute')
-                    ? 'bg-red-800 text-white'
-                    : 'hover:bg-red-500'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 Routen
               </Link>
               <Link
                 href="/pokeradar"
-                onClick={() => setMobileOpen(false)}
-                className={`px-3 py-2 rounded-md transition ${
+                className={`px-4 py-2 rounded-lg transition font-medium ${
                   isActive('/pokeradar')
-                    ? 'bg-red-800 text-white'
-                    : 'hover:bg-red-500'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 Vergleich
               </Link>
               <Link
                 href="/tabelle"
-                onClick={() => setMobileOpen(false)}
-                className={`px-3 py-2 rounded-md transition ${
+                className={`px-4 py-2 rounded-lg transition font-medium ${
                   isActive('/tabelle')
-                    ? 'bg-red-800 text-white'
-                    : 'hover:bg-red-500'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 Tabelle
@@ -111,48 +105,15 @@ export default function Navigation() {
               {isAdmin && (
                 <Link
                   href="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className={`px-3 py-2 rounded-md transition ${
+                  className={`px-4 py-2 rounded-lg transition font-medium ${
                     pathname?.startsWith('/admin')
-                      ? 'bg-red-800 text-white'
-                      : 'hover:bg-red-500'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   Admin
                 </Link>
               )}
-            </div>
-            <div className="md:hidden">
-              <button
-                type="button"
-                className="p-2 rounded-md hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-white"
-                aria-label="Navigation umschalten"
-                onClick={() => setMobileOpen((prev) => !prev)}
-              >
-                <svg
-                  className="h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  {mobileOpen ? (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  )}
-                </svg>
-              </button>
             </div>
           </div>
 
@@ -162,14 +123,14 @@ export default function Navigation() {
                 {isAdmin ? (
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 bg-red-800 hover:bg-red-900 rounded-md transition text-sm"
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition text-sm font-medium"
                   >
                     Logout
                   </button>
                 ) : (
                   <Link
                     href="/login"
-                    className="px-4 py-2 bg-red-800 hover:bg-red-900 rounded-md transition text-sm"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
                   >
                     Login
                   </Link>
@@ -180,17 +141,17 @@ export default function Navigation() {
         </div>
       </div>
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-red-700 bg-opacity-95 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-red-500">
-            <span className="text-xl font-bold">Navigation</span>
+        <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+            <span className="text-xl font-semibold text-gray-900">Navigation</span>
             <button
               type="button"
-              className="p-2 rounded-md bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-white"
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Menü schließen"
               onClick={() => setMobileOpen(false)}
             >
               <svg
-                className="h-6 w-6"
+                className="h-6 w-6 text-gray-700"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -205,12 +166,12 @@ export default function Navigation() {
               </svg>
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 text-lg font-semibold">
+          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
             <Link
               href="/pokeroute"
               onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-md ${
-                isActive('/pokeroute') ? 'bg-red-900 text-white' : 'hover:bg-red-600'
+              className={`block px-4 py-3 rounded-lg font-medium ${
+                isActive('/pokeroute') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               Routen
@@ -218,8 +179,8 @@ export default function Navigation() {
             <Link
               href="/pokeradar"
               onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-md ${
-                isActive('/pokeradar') ? 'bg-red-900 text-white' : 'hover:bg-red-600'
+              className={`block px-4 py-3 rounded-lg font-medium ${
+                isActive('/pokeradar') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               Vergleich
@@ -227,8 +188,8 @@ export default function Navigation() {
             <Link
               href="/tabelle"
               onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-md ${
-                isActive('/tabelle') ? 'bg-red-900 text-white' : 'hover:bg-red-600'
+              className={`block px-4 py-3 rounded-lg font-medium ${
+                isActive('/tabelle') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               Tabelle
@@ -237,24 +198,24 @@ export default function Navigation() {
               <Link
                 href="/admin"
                 onClick={() => setMobileOpen(false)}
-                className={`block px-4 py-3 rounded-md ${
+                className={`block px-4 py-3 rounded-lg font-medium ${
                   pathname?.startsWith('/admin')
-                    ? 'bg-red-900 text-white'
-                    : 'hover:bg-red-600'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 Admin
               </Link>
             )}
             {!loading && (
-              <div className="pt-4 border-t border-red-600">
+              <div className="pt-4 border-t border-gray-200">
                 {isAdmin ? (
                   <button
                     onClick={() => {
                       setMobileOpen(false);
                       handleLogout();
                     }}
-                    className="w-full px-4 py-3 bg-red-900 text-white rounded-md"
+                    className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
                   >
                     Logout
                   </button>
@@ -262,7 +223,7 @@ export default function Navigation() {
                   <Link
                     href="/login"
                     onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 bg-red-900 text-white rounded-md text-center"
+                    className="block px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-center font-medium"
                   >
                     Login
                   </Link>

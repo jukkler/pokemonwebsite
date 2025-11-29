@@ -154,10 +154,10 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
           </span>
           {cell.status && (
             <span
-              className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${
+              className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium border ${
                 cell.status === 'ko'
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-amber-100 text-amber-800'
+                  ? 'bg-red-50 text-red-700 border-red-200'
+                  : 'bg-yellow-50 text-yellow-700 border-yellow-200'
               }`}
             >
               {cell.status === 'ko' ? 'K.O.' : 'Nicht gefangen'}

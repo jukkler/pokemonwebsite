@@ -1,10 +1,15 @@
 /**
  * Pokémon-Karte Komponente
- * Zeigt ein Pokémon mit Sprite, Name, Typen und optional Nickname an
+ * Modernes Design mit farbigen Karten basierend auf Typ
  */
+
+'use client';
 
 import Image from 'next/image';
 import { parseTypes } from '@/lib/typeEffectiveness';
+import { getTypeColor } from '@/lib/design-tokens';
+import TypeBadge from './ui/TypeBadge';
+import { useState } from 'react';
 
 interface PokemonCardProps {
   pokemon: {
@@ -25,51 +30,10 @@ interface PokemonCardProps {
     spDefense: number;
     speed: number;
   };
+  isFavorite?: boolean;
+  onFavoriteToggle?: () => void;
+  onClick?: () => void;
 }
-
-// Typ-Farben für bessere Visualisierung
-const typeColors: { [key: string]: string } = {
-  normal: 'bg-gray-400',
-  fire: 'bg-red-500',
-  water: 'bg-blue-500',
-  electric: 'bg-yellow-400',
-  grass: 'bg-green-500',
-  ice: 'bg-cyan-300',
-  fighting: 'bg-red-700',
-  poison: 'bg-purple-500',
-  ground: 'bg-yellow-600',
-  flying: 'bg-indigo-400',
-  psychic: 'bg-pink-500',
-  bug: 'bg-lime-500',
-  rock: 'bg-yellow-700',
-  ghost: 'bg-purple-700',
-  dragon: 'bg-indigo-700',
-  dark: 'bg-gray-700',
-  steel: 'bg-gray-500',
-  fairy: 'bg-pink-300',
-};
-
-// Typ-Übersetzungen Englisch -> Deutsch
-const typeTranslations: { [key: string]: string } = {
-  normal: 'Normal',
-  fire: 'Feuer',
-  water: 'Wasser',
-  electric: 'Elektro',
-  grass: 'Pflanze',
-  ice: 'Eis',
-  fighting: 'Kampf',
-  poison: 'Gift',
-  ground: 'Boden',
-  flying: 'Flug',
-  psychic: 'Psycho',
-  bug: 'Käfer',
-  rock: 'Gestein',
-  ghost: 'Geist',
-  dragon: 'Drache',
-  dark: 'Unlicht',
-  steel: 'Stahl',
-  fairy: 'Fee',
-};
 
 export default function PokemonCard({
   pokemon,
@@ -77,62 +41,117 @@ export default function PokemonCard({
   size = 'medium',
   showStats = false,
   stats,
+  isFavorite = false,
+  onFavoriteToggle,
+  onClick,
 }: PokemonCardProps) {
   const types = parseTypes(pokemon.types);
+  const primaryType = types[0] || 'normal';
+  const typeColor = getTypeColor(primaryType);
+  const [isHovered, setIsHovered] = useState(false);
   
   const sizeClasses = {
-    small: 'w-20 h-20',
-    medium: 'w-32 h-32',
-    large: 'w-48 h-48',
+    small: {
+      card: 'p-3 md:p-4',
+      image: 'w-16 h-16 md:w-20 md:h-20',
+      name: 'text-sm',
+      number: 'text-xs',
+    },
+    medium: {
+      card: 'p-4',
+      image: 'w-24 h-24',
+      name: 'text-base',
+      number: 'text-xs',
+    },
+    large: {
+      card: 'p-6',
+      image: 'w-32 h-32',
+      name: 'text-lg',
+      number: 'text-sm',
+    },
   };
 
+  const currentSize = sizeClasses[size];
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition">
-      {/* Sprite */}
-      <div className={`relative ${sizeClasses[size]} mx-auto mb-2`}>
+    <div
+      className={`relative rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col ${currentSize.card}`}
+      style={{
+        backgroundColor: `${typeColor}15`,
+        border: `2px solid ${typeColor}40`,
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={onClick}
+    >
+      {/* Herz-Icon für Favoriten */}
+      {onFavoriteToggle && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onFavoriteToggle();
+          }}
+          className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white transition-colors"
+          aria-label={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+        >
+          <svg
+            className={`w-5 h-5 transition-colors ${
+              isFavorite ? 'text-red-600 fill-current' : 'text-gray-400'
+            }`}
+            fill={isFavorite ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* Pokémon-Bild */}
+      <div className={`relative ${currentSize.image} mx-auto mb-3 transition-transform ${isHovered ? 'scale-110' : 'scale-100'}`}>
         {pokemon.spriteUrl ? (
           <Image
             src={pokemon.spriteUrl}
-            alt={pokemon.name}
+            alt={pokemon.nameGerman || pokemon.name}
             fill
             className="object-contain"
             unoptimized
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded">
-            <span className="text-gray-400 text-sm">Kein Bild</span>
+          <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded-lg">
+            <span className="text-gray-400 text-xs">Kein Bild</span>
           </div>
         )}
       </div>
 
-      {/* Name */}
-      <div className="text-center">
-        <p className="text-xs text-gray-500">#{pokemon.pokedexId}</p>
-        <h3 className="font-bold text-lg">
+      {/* Name und Nummer */}
+      <div className="text-center mb-3">
+        <p className={`${currentSize.number} font-semibold text-gray-600 mb-1`}>
+          N°{String(pokemon.pokedexId).padStart(3, '0')}
+        </p>
+        <h3 className={`${currentSize.name} font-bold text-gray-900 mb-1`}>
           {pokemon.nameGerman || pokemon.name}
         </h3>
         {nickname && (
-          <p className="text-sm text-gray-600 italic">&quot;{nickname}&quot;</p>
+          <p className="text-xs text-gray-500 italic">&quot;{nickname}&quot;</p>
         )}
       </div>
 
-      {/* Typen */}
-      <div className="flex justify-center gap-2 mt-2 flex-wrap">
+      {/* Typ-Badges */}
+      <div className="flex justify-center gap-2 flex-wrap mt-auto">
         {types.map((type) => (
-          <span
-            key={type}
-            className={`px-3 py-1 rounded-full text-white text-xs font-semibold ${
-              typeColors[type] || 'bg-gray-400'
-            }`}
-          >
-            {typeTranslations[type] || type}
-          </span>
+          <TypeBadge key={type} type={type} size={size === 'small' ? 'sm' : 'md'} />
         ))}
       </div>
 
       {/* Stats (optional) */}
       {showStats && stats && (
-        <div className="mt-4 text-xs space-y-1">
+        <div className="mt-4 text-xs space-y-1 bg-white/50 rounded-lg p-2">
           <div className="flex justify-between">
             <span className="text-gray-600">HP:</span>
             <span className="font-semibold">{stats.hp}</span>

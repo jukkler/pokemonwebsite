@@ -1,174 +1,199 @@
-# Hetzner Cloud Deployment Anleitung
+# Hetzner Cloud Deployment mit Docker
 
-Vollständige Schritt-für-Schritt-Anleitung zum Deployen der Pokémon Website auf einem Hetzner Cloud Server.
+Vollständige Schritt-für-Schritt-Anleitung zum Deployen der Pokémon Website auf einem Hetzner Cloud Server mit Docker.
 
-## 📋 Voraussetzungen
+---
 
-- Hetzner Cloud Account
-- Domain (optional, aber empfohlen)
-- SSH-Zugriff auf den Server
+## Inhaltsverzeichnis
 
-## 🚀 Schritt 1: Hetzner Cloud Server erstellen
+1. [Voraussetzungen](#voraussetzungen)
+2. [Hetzner Server erstellen](#schritt-1-hetzner-cloud-server-erstellen)
+3. [SSH-Zugang einrichten](#schritt-2-ssh-zugang-einrichten)
+4. [Server-Setup](#schritt-3-server-setup)
+5. [Projekt deployen](#schritt-4-projekt-deployen)
+6. [Domain & SSL konfigurieren](#schritt-5-domain--ssl-konfigurieren)
+7. [App testen](#schritt-6-app-testen)
+8. [Wartung & Updates](#wartung--updates)
 
-1. Gehe zu [Hetzner Cloud Console](https://console.hetzner.cloud/)
-2. Klicke auf "Add Server"
-3. Wähle:
-   - **Image**: Ubuntu 22.04 oder Debian 12
-   - **Type**: CPX11 (2 vCPU, 2 GB RAM) oder CPX21 (3 vCPU, 4 GB RAM)
-   - **Location**: Nürnberg (nbg1) oder Falkenstein (fsn1)
-   - **SSH Key**: Füge deinen SSH-Key hinzu (oder erstelle einen)
-4. Klicke auf "Create & Buy Now"
+---
 
-## 🔐 Schritt 2: Server-Zugriff
+## Voraussetzungen
 
-### SSH-Key erstellen (falls noch nicht vorhanden)
+- Hetzner Cloud Account ([Registrierung](https://console.hetzner.cloud/))
+- SSH-Client (Windows: PowerShell, PuTTY oder Windows Terminal)
+- Optional: Eigene Domain
+
+### Geschätzte Kosten
+
+| Ressource | Kosten |
+|-----------|--------|
+| Hetzner CPX11 (2 vCPU, 2GB RAM) | ~4,75€/Monat |
+| Domain (optional) | ~1€/Jahr |
+| **Gesamt** | **~5€/Monat** |
+
+---
+
+## Schritt 1: Hetzner Cloud Server erstellen
+
+### 1.1 In Hetzner Console einloggen
+
+1. Gehe zu [console.hetzner.cloud](https://console.hetzner.cloud/)
+2. Erstelle ein Projekt (falls noch keins vorhanden)
+3. Klicke auf **"Add Server"**
+
+### 1.2 Server-Konfiguration
+
+| Einstellung | Empfehlung |
+|-------------|------------|
+| **Location** | Nürnberg (nbg1) oder Falkenstein (fsn1) |
+| **Image** | Ubuntu 22.04 |
+| **Type** | CPX11 (2 vCPU, 2 GB RAM) - reicht für die App |
+| **Volume** | Nicht benötigt |
+| **Network** | Default |
+| **SSH Key** | Deinen SSH-Key hinzufügen (siehe Schritt 2) |
+| **Name** | z.B. "pokemon-server" |
+
+### 1.3 Server erstellen
+
+Klicke auf **"Create & Buy Now"**. Der Server ist in ~30 Sekunden bereit.
+
+**Notiere dir die IP-Adresse!** (z.B. `65.108.xxx.xxx`)
+
+---
+
+## Schritt 2: SSH-Zugang einrichten
+
+### 2.1 SSH-Key erstellen (falls noch nicht vorhanden)
 
 **Windows (PowerShell):**
 ```powershell
+# SSH-Key generieren
 ssh-keygen -t ed25519 -C "deine-email@example.com"
-# Speichere den Key z.B. in: C:\Users\Lukas\.ssh\id_ed25519
+
+# Standard-Speicherort akzeptieren: C:\Users\DEIN_NAME\.ssh\id_ed25519
+
+# Öffentlichen Key anzeigen (kopieren!)
+Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub
 ```
 
 **Linux/Mac:**
 ```bash
 ssh-keygen -t ed25519 -C "deine-email@example.com"
+cat ~/.ssh/id_ed25519.pub
 ```
 
-### SSH-Key zu Hetzner hinzufügen
+### 2.2 SSH-Key zu Hetzner hinzufügen
 
-1. Kopiere den öffentlichen Key:
-   ```bash
-   # Windows
-   cat C:\Users\Lukas\.ssh\id_ed25519.pub
-   
-   # Linux/Mac
-   cat ~/.ssh/id_ed25519.pub
-   ```
+1. In Hetzner Console: **Security** → **SSH Keys** → **Add SSH Key**
+2. Füge den öffentlichen Key ein (beginnt mit `ssh-ed25519`)
+3. Namen vergeben (z.B. "Mein Laptop")
 
-2. In Hetzner Cloud Console:
-   - Gehe zu "Security" → "SSH Keys"
-   - Klicke auf "Add SSH Key"
-   - Füge den öffentlichen Key ein
-
-### Verbindung zum Server
+### 2.3 Mit Server verbinden
 
 ```bash
-# Ersetze ROOT_IP mit der IP-Adresse deines Servers
-ssh root@ROOT_IP
+# Ersetze SERVER_IP mit deiner IP-Adresse
+ssh root@SERVER_IP
 ```
 
-## 📦 Schritt 3: Server Setup
+Beim ersten Mal: `yes` eingeben um den Fingerprint zu akzeptieren.
 
-### Option A: Automatisches Setup-Script
+---
 
-1. Lade das Setup-Script hoch:
-   ```bash
-   # Auf deinem lokalen Rechner
-   scp deployment/hetzner-setup.sh root@ROOT_IP:/root/
-   ```
+## Schritt 3: Server-Setup
 
-2. Führe das Script aus:
-   ```bash
-   # Auf dem Server
-   chmod +x /root/hetzner-setup.sh
-   /root/hetzner-setup.sh
-   ```
-
-### Option B: Manuelles Setup
-
-Führe diese Befehle auf dem Server aus:
+### 3.1 System aktualisieren
 
 ```bash
-# 1. System aktualisieren
 apt update && apt upgrade -y
+```
 
-# 2. Node.js installieren (Version 20)
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs
+### 3.2 Docker installieren
 
-# 3. PostgreSQL installieren
-apt-get install -y postgresql postgresql-contrib
+```bash
+# Benötigte Pakete
+apt install -y ca-certificates curl gnupg lsb-release git
 
-# 4. PM2 installieren
-npm install -g pm2
+# Docker GPG Key
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-# 5. Nginx installieren
-apt-get install -y nginx
+# Docker Repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-# 6. Git installieren
-apt-get install -y git
+# Docker installieren
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# 7. Certbot für SSL installieren
-apt-get install -y certbot python3-certbot-nginx
+# Testen
+docker --version
+docker compose version
+```
 
-# 8. Firewall konfigurieren
-ufw allow 22/tcp
+### 3.3 Nginx installieren
+
+```bash
+apt install -y nginx certbot python3-certbot-nginx
+```
+
+### 3.4 Firewall konfigurieren
+
+```bash
+ufw allow ssh
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
+ufw status
 ```
 
-## 🗄️ Schritt 4: PostgreSQL Datenbank einrichten
+---
+
+## Schritt 4: Projekt deployen
+
+### 4.1 Repository klonen
 
 ```bash
-# Als root auf dem Server
-sudo -u postgres psql
-```
+# In /opt wechseln
+cd /opt
 
-In PostgreSQL:
+# Projekt klonen (ersetze URL mit deinem Repository)
+git clone https://github.com/DEIN-USERNAME/pokemonwebsite.git
 
-```sql
--- Datenbank erstellen
-CREATE DATABASE pokemonwebsite;
-
--- Benutzer erstellen
-CREATE USER pokemonuser WITH PASSWORD 'DEIN-SICHERES-PASSWORT';
-
--- Rechte vergeben
-GRANT ALL PRIVILEGES ON DATABASE pokemonwebsite TO pokemonuser;
-
--- PostgreSQL verlassen
-\q
-```
-
-**Wichtig:** Notiere dir das Passwort! Du brauchst es für die `DATABASE_URL`.
-
-## 📁 Schritt 5: Projekt klonen
-
-```bash
-# Projekt-Verzeichnis erstellen
-mkdir -p /var/www
-cd /var/www
-
-# Projekt klonen (ersetze USERNAME und REPO-NAME)
-git clone https://github.com/USERNAME/REPO-NAME.git pokemonwebsite
-
-# In Projekt-Verzeichnis wechseln
 cd pokemonwebsite
-
-# Rechte setzen
-chown -R www-data:www-data /var/www/pokemonwebsite
 ```
 
-## ⚙️ Schritt 6: Environment Variables setzen
+### 4.2 Umgebungsvariablen konfigurieren
 
 ```bash
-# .env Datei erstellen
-nano /var/www/pokemonwebsite/.env
+# Vorlage kopieren
+cp env.example .env
+
+# Datei bearbeiten
+nano .env
 ```
 
-Füge folgende Variablen hinzu:
+**Inhalt anpassen:**
 
 ```env
-# Datenbank
-DATABASE_URL="postgresql://pokemonuser:DEIN-SICHERES-PASSWORT@localhost:5432/pokemonwebsite"
+# ================================
+# PostgreSQL Database
+# ================================
+POSTGRES_USER=pokemon
+POSTGRES_PASSWORD=EIN-SICHERES-PASSWORT-HIER-EINGEBEN
+POSTGRES_DB=pokemon
 
-# Admin-Credentials
+# ================================
+# Application
+# ================================
+DATABASE_URL=postgresql://pokemon:EIN-SICHERES-PASSWORT-HIER-EINGEBEN@db:5432/pokemon
+
+# Session Secret generieren mit: openssl rand -base64 32
+SESSION_SECRET=HIER-DEN-GENERIERTEN-KEY-EINFUEGEN
+
+# Admin Zugangsdaten
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=dein-sicheres-admin-passwort
-
-# Session Secret (generiere ein sicheres Secret)
-SESSION_SECRET=generiere-ein-langes-zufaelliges-secret-min-32-zeichen
+ADMIN_PASSWORD=DEIN-ADMIN-PASSWORT
 ```
 
 **Session Secret generieren:**
@@ -176,62 +201,51 @@ SESSION_SECRET=generiere-ein-langes-zufaelliges-secret-min-32-zeichen
 openssl rand -base64 32
 ```
 
-Speichere mit `Ctrl+O`, dann `Enter`, dann `Ctrl+X`.
+Speichern: `Ctrl+O` → `Enter` → `Ctrl+X`
 
-## 🔧 Schritt 7: Prisma Setup
-
-```bash
-cd /var/www/pokemonwebsite
-
-# Prisma Client generieren
-npx prisma generate
-
-# Datenbank-Migrationen ausführen
-npx prisma migrate deploy
-```
-
-## 🏗️ Schritt 8: App builden
+### 4.3 Container starten
 
 ```bash
-cd /var/www/pokemonwebsite
+# Container bauen und starten
+docker compose up -d --build
 
-# Dependencies installieren
-npm install
+# Warten bis alles läuft (ca. 1-2 Minuten)
+docker compose ps
 
-# Build
-npm run build
+# Alle Container sollten "running" oder "healthy" zeigen
 ```
 
-## 🚀 Schritt 9: App mit PM2 starten
+### 4.4 Logs prüfen
 
 ```bash
-cd /var/www/pokemonwebsite
+# Migration-Logs (sollte "Your database is now in sync" zeigen)
+docker compose logs migrate
 
-# App starten
-pm2 start npm --name "pokemonwebsite" -- start
-
-# PM2 beim Systemstart aktivieren
-pm2 startup
-# Folge den Anweisungen, die PM2 ausgibt
-
-# PM2 Konfiguration speichern
-pm2 save
-
-# Status prüfen
-pm2 status
-pm2 logs pokemonwebsite
+# App-Logs
+docker compose logs app
 ```
 
-## 🌐 Schritt 10: Nginx konfigurieren
+---
 
-### Nginx Config erstellen
+## Schritt 5: Domain & SSL konfigurieren
+
+### Option A: Mit eigener Domain (empfohlen)
+
+#### 5.1 DNS konfigurieren
+
+Bei deinem Domain-Anbieter:
+- **A-Record**: `@` → `DEINE_SERVER_IP`
+- **A-Record**: `www` → `DEINE_SERVER_IP`
+
+*DNS-Propagation kann bis zu 24 Stunden dauern (meist aber nur Minuten)*
+
+#### 5.2 Nginx konfigurieren
 
 ```bash
-# Config-Datei erstellen
-nano /etc/nginx/sites-available/pokemonwebsite
+nano /etc/nginx/sites-available/pokemon
 ```
 
-Füge den Inhalt von `deployment/nginx-pokemonwebsite.conf` ein und passe die Domain an:
+Inhalt (ersetze `deine-domain.de`):
 
 ```nginx
 server {
@@ -248,215 +262,251 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 300s;
     }
 }
 ```
 
-**Wichtig:** Ersetze `deine-domain.de` mit deiner tatsächlichen Domain!
-
-### Nginx Config aktivieren
+Aktivieren:
 
 ```bash
-# Symlink erstellen
-ln -s /etc/nginx/sites-available/pokemonwebsite /etc/nginx/sites-enabled/
+# Default-Config entfernen
+rm -f /etc/nginx/sites-enabled/default
+
+# Neue Config aktivieren
+ln -s /etc/nginx/sites-available/pokemon /etc/nginx/sites-enabled/
 
 # Testen
 nginx -t
 
-# Nginx neu starten
+# Nginx neustarten
 systemctl restart nginx
-
-# Nginx Status prüfen
-systemctl status nginx
 ```
 
-## 🔒 Schritt 11: SSL-Zertifikat einrichten (Let's Encrypt)
+#### 5.3 SSL-Zertifikat erstellen
 
 ```bash
-# SSL-Zertifikat erstellen (ersetze deine-domain.de)
 certbot --nginx -d deine-domain.de -d www.deine-domain.de
-
-# Folge den Anweisungen:
-# - E-Mail eingeben
-# - Terms of Service akzeptieren
-# - Optional: E-Mail für Renewal-Benachrichtigungen
 ```
 
-Certbot konfiguriert Nginx automatisch für HTTPS!
+Folge den Anweisungen:
+1. E-Mail eingeben
+2. Terms akzeptieren: `Y`
+3. Redirect zu HTTPS: `2` (empfohlen)
 
-## ✅ Schritt 12: Testen
+**Fertig!** Deine Website ist jetzt unter `https://deine-domain.de` erreichbar.
 
-1. Öffne deine Domain im Browser: `https://deine-domain.de`
-2. Prüfe, ob die Website lädt
-3. Teste den Login: `/login`
-4. Prüfe die Admin-Funktionen
+---
 
-## 🔄 Schritt 13: Deployment-Script einrichten (optional)
-
-Für zukünftige Updates:
+### Option B: Ohne Domain (nur IP-Zugriff)
 
 ```bash
-# Deployment-Script hochladen
-scp deployment/deploy.sh root@ROOT_IP:/var/www/pokemonwebsite/
-
-# Auf dem Server
-chmod +x /var/www/pokemonwebsite/deploy.sh
+nano /etc/nginx/sites-available/pokemon
 ```
 
-**Zukünftige Deployments:**
-```bash
-cd /var/www/pokemonwebsite
-./deploy.sh
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
 ```
 
-## 📊 Schritt 14: Monitoring & Wartung
-
-### PM2 Befehle
-
 ```bash
-# Status anzeigen
-pm2 status
-
-# Logs anzeigen
-pm2 logs pokemonwebsite
-
-# App neu starten
-pm2 restart pokemonwebsite
-
-# App stoppen
-pm2 stop pokemonwebsite
-
-# App löschen
-pm2 delete pokemonwebsite
-```
-
-### Nginx Logs
-
-```bash
-# Access Logs
-tail -f /var/log/nginx/access.log
-
-# Error Logs
-tail -f /var/log/nginx/error.log
-```
-
-### PostgreSQL
-
-```bash
-# PostgreSQL Status
-systemctl status postgresql
-
-# PostgreSQL Logs
-tail -f /var/log/postgresql/postgresql-*.log
-```
-
-## 🔧 Troubleshooting
-
-### App startet nicht
-
-```bash
-# PM2 Logs prüfen
-pm2 logs pokemonwebsite
-
-# Manuell starten (für Debugging)
-cd /var/www/pokemonwebsite
-npm start
-```
-
-### Datenbank-Verbindung schlägt fehl
-
-```bash
-# PostgreSQL Status prüfen
-systemctl status postgresql
-
-# PostgreSQL neu starten
-systemctl restart postgresql
-
-# Verbindung testen
-sudo -u postgres psql -d pokemonwebsite
-```
-
-### Nginx Fehler
-
-```bash
-# Nginx Config testen
+rm -f /etc/nginx/sites-enabled/default
+ln -s /etc/nginx/sites-available/pokemon /etc/nginx/sites-enabled/
 nginx -t
-
-# Nginx Logs prüfen
-tail -f /var/log/nginx/error.log
-
-# Nginx neu starten
 systemctl restart nginx
 ```
 
-### Port 3000 bereits belegt
+Website erreichbar unter: `http://DEINE_SERVER_IP`
+
+---
+
+## Schritt 6: App testen
+
+### 6.1 Website öffnen
+
+- Mit Domain: `https://deine-domain.de`
+- Ohne Domain: `http://DEINE_SERVER_IP`
+
+### 6.2 Als Admin einloggen
+
+1. Gehe zu `/login`
+2. Melde dich mit den Credentials aus `.env` an
+
+### 6.3 Pokémon-Datenbank füllen
+
+1. Gehe zu `/admin/pokemon`
+2. Klicke auf **"Nur Gen 1-4 synchronisieren (1-493)"**
+3. Warte 5-10 Minuten bis alle Pokémon geladen sind
+
+### 6.4 Spieler und Routen erstellen
+
+1. `/admin/players` - Spieler hinzufügen
+2. `/admin/routes` - Routen erstellen
+3. `/admin/encounters` - Gefangene Pokémon dokumentieren
+
+---
+
+## Wartung & Updates
+
+### Code-Updates deployen
 
 ```bash
-# Prüfe, was auf Port 3000 läuft
-lsof -i :3000
+cd /opt/pokemonwebsite
 
-# Oder
-netstat -tulpn | grep 3000
-```
+# Neuesten Code holen
+git pull origin main
 
-## 🔐 Sicherheit
-
-### Firewall
-
-```bash
-# Firewall Status
-ufw status
-
-# Firewall Regeln anzeigen
-ufw status verbose
-```
-
-### Regelmäßige Updates
-
-```bash
-# System aktualisieren
-apt update && apt upgrade -y
-
-# Node.js Dependencies aktualisieren
-cd /var/www/pokemonwebsite
-npm update
+# Container neu bauen
+docker compose up -d --build
 ```
 
 ### Backups
 
-```bash
-# Datenbank-Backup erstellen
-sudo -u postgres pg_dump pokemonwebsite > /root/backup-$(date +%Y%m%d).sql
+#### Manuelles Backup
 
-# Backup wiederherstellen
-sudo -u postgres psql pokemonwebsite < /root/backup-YYYYMMDD.sql
+```bash
+cd /opt/pokemonwebsite
+
+# Datenbank sichern
+docker compose exec db pg_dump -U pokemon pokemon > backup_$(date +%Y%m%d).sql
 ```
 
-## 📝 Checkliste
+#### Automatisches Backup (täglich um 3 Uhr)
 
-- [ ] Hetzner Cloud Server erstellt
-- [ ] SSH-Zugriff eingerichtet
-- [ ] Server Setup durchgeführt
-- [ ] PostgreSQL installiert und Datenbank erstellt
+```bash
+# Backup-Ordner erstellen
+mkdir -p /opt/backups
+
+# Cronjob einrichten
+crontab -e
+
+# Diese Zeile hinzufügen:
+0 3 * * * cd /opt/pokemonwebsite && docker compose exec -T db pg_dump -U pokemon pokemon | gzip > /opt/backups/pokemon_$(date +\%Y\%m\%d).sql.gz
+```
+
+### Container-Befehle
+
+```bash
+# Status anzeigen
+docker compose ps
+
+# Logs anzeigen
+docker compose logs -f app
+
+# Container neustarten
+docker compose restart
+
+# Container stoppen
+docker compose down
+
+# Alles löschen (VORSICHT: auch Datenbank!)
+docker compose down -v
+```
+
+### System-Updates
+
+```bash
+# Ubuntu Updates
+apt update && apt upgrade -y
+
+# Docker Images aktualisieren
+docker compose pull
+docker compose up -d
+```
+
+---
+
+## Troubleshooting
+
+### Container startet nicht
+
+```bash
+docker compose logs migrate
+docker compose logs app
+docker compose logs db
+```
+
+### Datenbank-Verbindungsfehler
+
+- Prüfe `DATABASE_URL` in `.env`
+- Stelle sicher, dass das Passwort mit `POSTGRES_PASSWORD` übereinstimmt
+
+### SSL-Zertifikat erneuern
+
+```bash
+# Automatisch (sollte via Cron laufen)
+certbot renew
+
+# Status prüfen
+certbot certificates
+```
+
+### Nginx-Fehler
+
+```bash
+nginx -t
+tail -f /var/log/nginx/error.log
+```
+
+### Speicherplatz voll
+
+```bash
+# Docker aufräumen
+docker system prune -a
+
+# Alte Backups löschen
+find /opt/backups -mtime +30 -delete
+```
+
+---
+
+## Schnellreferenz
+
+| Aktion | Befehl |
+|--------|--------|
+| Container starten | `docker compose up -d` |
+| Container stoppen | `docker compose down` |
+| Logs anzeigen | `docker compose logs -f` |
+| Neu bauen | `docker compose up -d --build` |
+| DB-Backup | `docker compose exec db pg_dump -U pokemon pokemon > backup.sql` |
+| DB-Restore | `docker compose exec -T db psql -U pokemon pokemon < backup.sql` |
+
+---
+
+## Checkliste
+
+- [ ] Hetzner Server erstellt
+- [ ] SSH-Zugang funktioniert
+- [ ] Docker installiert
 - [ ] Projekt geklont
-- [ ] Environment Variables gesetzt
-- [ ] Prisma Setup durchgeführt
-- [ ] App gebaut
-- [ ] PM2 konfiguriert und App gestartet
+- [ ] `.env` konfiguriert
+- [ ] Container laufen
 - [ ] Nginx konfiguriert
-- [ ] SSL-Zertifikat eingerichtet
-- [ ] Website getestet
-- [ ] Deployment-Script eingerichtet (optional)
+- [ ] SSL-Zertifikat (bei Domain)
+- [ ] Website erreichbar
+- [ ] Admin-Login funktioniert
+- [ ] Pokémon synchronisiert
+- [ ] Backup eingerichtet
 
-## 💰 Kosten
+---
 
-- **Hetzner Cloud CPX11**: ~4,75€/Monat
-- **Domain**: ~1€/Jahr (bei Hetzner)
-- **Gesamt**: ~5€/Monat
+## Support
 
-## 🎉 Fertig!
-
-Deine Website sollte jetzt unter `https://deine-domain.de` erreichbar sein!
-
-Bei Problemen siehe den Troubleshooting-Abschnitt oder prüfe die Logs.
-
+Bei Problemen:
+1. Logs prüfen: `docker compose logs`
+2. Container-Status: `docker compose ps`
+3. Nginx-Status: `systemctl status nginx`

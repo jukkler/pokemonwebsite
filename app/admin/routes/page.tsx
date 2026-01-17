@@ -84,8 +84,8 @@ export default function AdminRoutesPage() {
       if (res.ok) {
         await loadRoutes();
         setEditingId(null);
-        // Order wird durch useEffect automatisch auf getNextOrder() gesetzt
-        setFormData({ name: '', order: getNextOrder() });
+        // Nur Name zurücksetzen - Order wurde bereits von loadRoutes/updateDefaultOrder gesetzt
+        setFormData(prev => ({ ...prev, name: '' }));
       } else {
         setError(data.error || 'Fehler beim Speichern');
       }

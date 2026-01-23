@@ -6,7 +6,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import PokemonCard from './PokemonCard';
 import TypeBadge from './ui/TypeBadge';
 import {
@@ -15,6 +16,21 @@ import {
   getGermanTypeName,
   parseTypes,
 } from '@/lib/typeEffectiveness';
+import { fetchJson } from '@/lib/fetchJson';
+import { getErrorMessage } from '@/lib/component-utils';
+
+// Evolution-Typen
+interface EvolutionOption {
+  pokedexId: number;
+  name: string;
+  nameGerman: string | null;
+  spriteUrl: string | null;
+}
+
+interface EvolutionChainResult {
+  preEvolutions: EvolutionOption[];
+  evolutions: EvolutionOption[];
+}
 
 interface TeamEncounter {
   id: number;
@@ -62,6 +78,7 @@ interface TeamDisplayProps {
   routes: Route[];
   isAdmin?: boolean;
   onRemoveFromTeam?: (routeId: number) => void;
+  onEvolution?: () => void; // Callback nach erfolgreicher Evolution
 }
 
 const analyzeTeamMatchups = (members: TeamEncounter[]): {
@@ -197,7 +214,76 @@ export default function TeamDisplay({
   routes,
   isAdmin = false,
   onRemoveFromTeam,
+  onEvolution,
 }: TeamDisplayProps) {
+  // State für Evolution-Menü
+  const [evolutionMenuOpen, setEvolutionMenuOpen] = useState<number | null>(null); // encounterId
+  const [evolutionData, setEvolutionData] = useState<EvolutionChainResult | null>(null);
+  const [loadingEvolutions, setLoadingEvolutions] = useState(false);
+  const [evolvingPokemon, setEvolvingPokemon] = useState(false);
+  const evolutionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Evolution-Menü öffnen und Daten laden
+  const openEvolutionMenu = async (encounterId: number, pokedexId: number) => {
+    if (evolutionMenuOpen === encounterId) {
+      // Menü schließen wenn bereits offen
+      setEvolutionMenuOpen(null);
+      setEvolutionData(null);
+      return;
+    }
+
+    setEvolutionMenuOpen(encounterId);
+    setLoadingEvolutions(true);
+    setEvolutionData(null);
+
+    try {
+      const data = await fetchJson<EvolutionChainResult>(`/api/pokemon/${pokedexId}/evolutions`);
+      setEvolutionData(data);
+    } catch (error) {
+      console.error('Error loading evolutions:', error);
+      setEvolutionData({ preEvolutions: [], evolutions: [] });
+    } finally {
+      setLoadingEvolutions(false);
+    }
+  };
+
+  // Pokémon entwickeln
+  const handleEvolve = async (encounterId: number, targetPokedexId: number) => {
+    setEvolvingPokemon(true);
+    try {
+      await fetchJson(`/api/admin/encounters/${encounterId}/evolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPokedexId }),
+      });
+      setEvolutionMenuOpen(null);
+      setEvolutionData(null);
+      if (onEvolution) onEvolution();
+    } catch (error) {
+      alert(`Fehler beim Entwickeln: ${getErrorMessage(error)}`);
+    } finally {
+      setEvolvingPokemon(false);
+    }
+  };
+
+  // Klick außerhalb des Menüs schließt es
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (evolutionMenuRef.current && !evolutionMenuRef.current.contains(event.target as Node)) {
+        setEvolutionMenuOpen(null);
+        setEvolutionData(null);
+      }
+    };
+
+    if (evolutionMenuOpen !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [evolutionMenuOpen]);
+
   // Erstelle Array mit 6 Slots basierend auf teamSlot
   const slots: (TeamEncounter | null)[] = Array.from({ length: 6 }, (_, i) => {
     const slotNumber = i + 1;
@@ -318,7 +404,7 @@ export default function TeamDisplay({
   const notCaughtPokemon = getNotCaughtPokemon();
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-4 md:p-5 border border-gray-200">
+    <div className="bg-white rounded-xl shadow-md p-4 md:p-5 border border-gray-200 overflow-visible">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <div
@@ -353,10 +439,10 @@ export default function TeamDisplay({
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-2 overflow-visible">
         {slots.map((member, index) => (
-          <div key={index} className="flex flex-col">
-            <div className="relative group flex-1 min-h-[220px]">
+          <div key={index} className="flex flex-col overflow-visible">
+            <div className="relative group flex-1 min-h-[220px] overflow-visible">
               <div className="absolute top-1 left-1 bg-gray-900 text-white text-xs px-2 py-1 rounded-md z-10 font-medium">
                 Slot {index + 1}
               </div>
@@ -364,7 +450,10 @@ export default function TeamDisplay({
               {/* Admin: Remove Button */}
               {isAdmin && member && onRemoveFromTeam && (
                 <button
-                  onClick={() => onRemoveFromTeam(member.route.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFromTeam(member.route.id);
+                  }}
                   className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-md z-10 flex items-center justify-center transition opacity-0 group-hover:opacity-100 shadow-sm"
                   title="Aus Team entfernen"
                 >
@@ -373,13 +462,115 @@ export default function TeamDisplay({
               )}
               
               {member ? (
-                <div className="h-full min-h-[220px]">
-                  <PokemonCard
-                    pokemon={member.pokemon}
-                    nickname={member.nickname}
-                    size="small"
-                  />
-                </div>
+                <>
+                  <div 
+                    className={`h-full min-h-[220px] ${isAdmin ? 'cursor-pointer' : ''}`}
+                    onClick={() => {
+                      if (isAdmin) {
+                        openEvolutionMenu(member.id, member.pokemon.pokedexId);
+                      }
+                    }}
+                  >
+                    <PokemonCard
+                      pokemon={member.pokemon}
+                      nickname={member.nickname}
+                      size="small"
+                    />
+                  </div>
+                  
+                  {/* Evolution-Menü */}
+                  {isAdmin && evolutionMenuOpen === member.id && (
+                    <div 
+                      ref={evolutionMenuRef}
+                      className="absolute z-50 top-10 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[200px] max-w-[280px]"
+                    >
+                      {loadingEvolutions ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          Lade Evolutionen...
+                        </div>
+                      ) : evolutionData ? (
+                        <div>
+                          {/* Entwickeln */}
+                          {evolutionData.evolutions.length > 0 && (
+                            <div className="border-b border-gray-100">
+                              <div className="px-3 py-2 bg-green-50 text-green-800 text-xs font-semibold flex items-center gap-1">
+                                <span>⬆️</span> Entwickeln zu
+                              </div>
+                              {evolutionData.evolutions.map((evo) => (
+                                <button
+                                  key={evo.pokedexId}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEvolve(member.id, evo.pokedexId);
+                                  }}
+                                  disabled={evolvingPokemon}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-green-50 transition flex items-center gap-2 disabled:opacity-50"
+                                >
+                                  {evo.spriteUrl && (
+                                    <Image
+                                      src={evo.spriteUrl}
+                                      alt={evo.nameGerman || evo.name}
+                                      width={32}
+                                      height={32}
+                                      className="object-contain"
+                                      unoptimized
+                                    />
+                                  )}
+                                  <div>
+                                    <span className="font-medium">{evo.nameGerman || evo.name}</span>
+                                    <span className="text-gray-400 text-xs ml-1">#{evo.pokedexId}</span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Zurückentwickeln */}
+                          {evolutionData.preEvolutions.length > 0 && (
+                            <div>
+                              <div className="px-3 py-2 bg-orange-50 text-orange-800 text-xs font-semibold flex items-center gap-1">
+                                <span>⬇️</span> Zurückentwickeln zu
+                              </div>
+                              {evolutionData.preEvolutions.map((evo) => (
+                                <button
+                                  key={evo.pokedexId}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEvolve(member.id, evo.pokedexId);
+                                  }}
+                                  disabled={evolvingPokemon}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-orange-50 transition flex items-center gap-2 disabled:opacity-50"
+                                >
+                                  {evo.spriteUrl && (
+                                    <Image
+                                      src={evo.spriteUrl}
+                                      alt={evo.nameGerman || evo.name}
+                                      width={32}
+                                      height={32}
+                                      className="object-contain"
+                                      unoptimized
+                                    />
+                                  )}
+                                  <div>
+                                    <span className="font-medium">{evo.nameGerman || evo.name}</span>
+                                    <span className="text-gray-400 text-xs ml-1">#{evo.pokedexId}</span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Keine Evolutionen */}
+                          {evolutionData.evolutions.length === 0 && evolutionData.preEvolutions.length === 0 && (
+                            <div className="p-4 text-center text-gray-500 text-sm">
+                              Keine Evolutionen verfügbar
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="bg-gray-50 rounded-xl p-4 h-full min-h-[220px] flex items-center justify-center border-2 border-dashed border-gray-300">
                   <span className="text-gray-400 text-sm font-medium">Leer</span>

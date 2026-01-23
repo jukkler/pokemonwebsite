@@ -10,7 +10,7 @@ Vollständige Anleitung zum Deployen der Pokemon Website mit Docker auf einem Ub
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
 │  │   Next.js   │  │  PostgreSQL │  │    Migration    │  │
 │  │    App      │◄─┤   Database  │◄─┤    Service      │  │
-│  │  Port 3000  │  │  Port 5432  │  │  (runs once)    │  │
+│  │  Port 3001  │  │  Port 5432  │  │  (runs once)    │  │
 │  └─────────────┘  └─────────────┘  └─────────────────┘  │
 │         ▲               │                               │
 │         │               ▼                               │
@@ -174,14 +174,14 @@ docker compose logs migrate
 
 ## Teil 4: App testen
 
-Die App läuft jetzt auf Port 3000:
+Die App läuft jetzt auf Port 3001:
 
 ```bash
 # Lokaler Test
-curl http://localhost:3000
+curl http://localhost:3001
 
 # Von außen (Firewall beachten)
-curl http://SERVER-IP:3000
+curl http://SERVER-IP:3001
 ```
 
 ---
@@ -213,7 +213,7 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -432,11 +432,11 @@ docker compose logs migrate
 2. Prüfe `DATABASE_URL` in `.env` (Passwort muss mit `POSTGRES_PASSWORD` übereinstimmen)
 3. Warte bis Healthcheck grün ist
 
-### Port 3000 bereits belegt
+### Port 3001 bereits belegt
 
 ```bash
-# Prüfen was Port 3000 belegt
-sudo lsof -i :3000
+# Prüfen was Port 3001 belegt
+sudo lsof -i :3001
 
 # Prozess beenden oder anderen Port in docker-compose.yml verwenden
 ```

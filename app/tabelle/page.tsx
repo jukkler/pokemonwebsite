@@ -30,7 +30,7 @@ async function getTableData(): Promise<{
           name: true,
           color: true,
         },
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'asc' },
       }),
       prisma.route.findMany({
         include: {

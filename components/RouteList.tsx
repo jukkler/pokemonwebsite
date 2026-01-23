@@ -8,13 +8,27 @@
 import PokemonCard from './PokemonCard';
 import TypeBadge from './ui/TypeBadge';
 import Button from './ui/Button';
-import { useState } from 'react';
+import Image from 'next/image';
+import { useState, useEffect, useRef } from 'react';
 import {
   parseTypes,
   calculateDefensiveEffectiveness,
 } from '@/lib/typeEffectiveness';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
+
+// Evolution-Typen
+interface EvolutionOption {
+  pokedexId: number;
+  name: string;
+  nameGerman: string | null;
+  spriteUrl: string | null;
+}
+
+interface EvolutionChainResult {
+  preEvolutions: EvolutionOption[];
+  evolutions: EvolutionOption[];
+}
 
 interface Encounter {
   id: number;
@@ -61,11 +75,19 @@ interface Player {
   color: string;
 }
 
+interface Pokemon {
+  id: number;
+  pokedexId: number;
+  name: string;
+  nameGerman: string | null;
+}
+
 interface RouteListProps {
   routes: Route[];
   players: Player[];
   isAdmin?: boolean;
   onTeamUpdate?: () => void;
+  pokemon?: Pokemon[];
 }
 
 export default function RouteList({
@@ -73,6 +95,7 @@ export default function RouteList({
   players,
   isAdmin = false,
   onTeamUpdate,
+  pokemon = [],
 }: RouteListProps) {
   const [addingToTeam, setAddingToTeam] = useState<{ [key: number]: boolean }>({});
   const [koDialogOpen, setKoDialogOpen] = useState(false);
@@ -83,6 +106,17 @@ export default function RouteList({
   const [notCaughtBy, setNotCaughtBy] = useState('');
   const [notCaughtReason, setNotCaughtReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  
+  // State für Pokémon-Hinzufügen
+  const [addPokemonSearch, setAddPokemonSearch] = useState<{ [key: string]: string }>({});
+  const [addingPokemon, setAddingPokemon] = useState<{ [key: string]: boolean }>({});
+  
+  // State für Evolution-Menü
+  const [evolutionMenuOpen, setEvolutionMenuOpen] = useState<number | null>(null); // encounterId
+  const [evolutionData, setEvolutionData] = useState<EvolutionChainResult | null>(null);
+  const [loadingEvolutions, setLoadingEvolutions] = useState(false);
+  const [evolvingPokemon, setEvolvingPokemon] = useState(false);
+  const evolutionMenuRef = useRef<HTMLDivElement>(null);
 
   // Ermittle, welche Slots bereits belegt sind (Map: Slot -> Route)
   const usedSlots: { [slot: number]: { routeId: number; routeName: string } } = {};
@@ -255,6 +289,104 @@ export default function RouteList({
       setProcessing(false);
     }
   };
+
+  // Pokémon zu einer Route hinzufügen
+  const handleAddPokemon = async (routeId: number, playerId: number, pokemonId: number) => {
+    const key = `${routeId}-${playerId}`;
+    setAddingPokemon({ ...addingPokemon, [key]: true });
+
+    try {
+      await fetchJson('/api/admin/encounters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          routeId,
+          playerId,
+          pokemonId,
+        }),
+      });
+      setAddPokemonSearch({ ...addPokemonSearch, [key]: '' });
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error: unknown) {
+      alert(`Fehler beim Hinzufügen: ${getErrorMessage(error)}`);
+    } finally {
+      setAddingPokemon({ ...addingPokemon, [key]: false });
+    }
+  };
+
+  // Pokémon nach Suchbegriff filtern
+  const filterPokemon = (search: string) => {
+    if (!search.trim()) return [];
+    const searchLower = search.toLowerCase();
+    return pokemon
+      .filter(p => 
+        p.name.toLowerCase().includes(searchLower) ||
+        p.nameGerman?.toLowerCase().includes(searchLower) ||
+        p.pokedexId.toString().includes(search)
+      )
+      .slice(0, 8); // Maximal 8 Ergebnisse anzeigen
+  };
+
+  // Evolution-Menü öffnen und Daten laden
+  const openEvolutionMenu = async (encounterId: number, pokedexId: number) => {
+    if (evolutionMenuOpen === encounterId) {
+      // Menü schließen wenn bereits offen
+      setEvolutionMenuOpen(null);
+      setEvolutionData(null);
+      return;
+    }
+
+    setEvolutionMenuOpen(encounterId);
+    setLoadingEvolutions(true);
+    setEvolutionData(null);
+
+    try {
+      const data = await fetchJson<EvolutionChainResult>(`/api/pokemon/${pokedexId}/evolutions`);
+      setEvolutionData(data);
+    } catch (error) {
+      console.error('Error loading evolutions:', error);
+      setEvolutionData({ preEvolutions: [], evolutions: [] });
+    } finally {
+      setLoadingEvolutions(false);
+    }
+  };
+
+  // Pokémon entwickeln
+  const handleEvolve = async (encounterId: number, targetPokedexId: number) => {
+    setEvolvingPokemon(true);
+    try {
+      await fetchJson(`/api/admin/encounters/${encounterId}/evolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPokedexId }),
+      });
+      setEvolutionMenuOpen(null);
+      setEvolutionData(null);
+      if (onTeamUpdate) onTeamUpdate();
+    } catch (error) {
+      alert(`Fehler beim Entwickeln: ${getErrorMessage(error)}`);
+    } finally {
+      setEvolvingPokemon(false);
+    }
+  };
+
+  // Klick außerhalb des Menüs schließt es
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (evolutionMenuRef.current && !evolutionMenuRef.current.contains(event.target as Node)) {
+        setEvolutionMenuOpen(null);
+        setEvolutionData(null);
+      }
+    };
+
+    if (evolutionMenuOpen !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [evolutionMenuOpen]);
 
   if (routes.length === 0) {
     return (
@@ -452,43 +584,39 @@ export default function RouteList({
               </div>
             )}
 
-          {route.encounters.length === 0 ? (
-            <p className="text-gray-500 italic">
-              Noch keine Pokémon auf dieser Route gefangen.
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-start gap-6">
-              {(() => {
-                // Finde die maximale Anzahl von Typen für ALLE Encounters in dieser Route
-                const maxTypesInRoute = Math.max(
-                  ...route.encounters.map(e => parseTypes(e.pokemon.types).length)
+          <div className="flex flex-wrap items-start gap-6">
+            {(() => {
+              // Finde die maximale Anzahl von Typen für ALLE Encounters in dieser Route
+              const maxTypesInRoute = route.encounters.length > 0 
+                ? Math.max(...route.encounters.map(e => parseTypes(e.pokemon.types).length))
+                : 1;
+              // Bestimme die Mindesthöhe basierend auf der maximalen Anzahl der Typen in der Route
+              const minHeight = maxTypesInRoute === 2 ? 'min-h-[240px]' : 'min-h-[220px]';
+              
+              // Zeige alle Spieler, auch die ohne Encounters
+              return players.map((player) => {
+                const playerEncounters = route.encounters.filter(
+                  (e) => e.player.id === player.id
                 );
-                // Bestimme die Mindesthöhe basierend auf der maximalen Anzahl der Typen in der Route
-                const minHeight = maxTypesInRoute === 2 ? 'min-h-[240px]' : 'min-h-[220px]';
-                
+                const hasEncounter = playerEncounters.length > 0;
+                const key = `${route.id}-${player.id}`;
+                const searchValue = addPokemonSearch[key] || '';
+                const filteredPokemon = filterPokemon(searchValue);
+                const isAdding = addingPokemon[key] || false;
+
                 return (
-                  <>
-                    {/* Gruppiere Encounters nach Spieler und zeige horizontal */}
-                    {Array.from(
-                      new Set(route.encounters.map((e) => e.player.id))
-                    ).map((playerId) => {
-                      const playerEncounters = route.encounters.filter(
-                        (e) => e.player.id === playerId
-                      );
-                      const player = playerEncounters[0].player;
+                  <div key={player.id} className="flex-shrink-0">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: player.color }}
+                      />
+                      <h4 className="font-semibold text-lg">{player.name}</h4>
+                    </div>
 
-                      return (
-                        <div key={playerId} className="flex-shrink-0">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: player.color }}
-                            />
-                            <h4 className="font-semibold text-lg">{player.name}</h4>
-                          </div>
-
-                          <div className="flex flex-wrap items-start gap-3 md:gap-2">
-                            {playerEncounters.map((encounter) => {
+                    {hasEncounter ? (
+                      <div className="flex flex-wrap items-start gap-3 md:gap-2">
+                        {playerEncounters.map((encounter) => {
                               const p = encounter.pokemon;
                               const totalStats = p.hp + p.attack + p.defense + p.spAttack + p.spDefense + p.speed;
                               const types = parseTypes(p.types);
@@ -506,13 +634,113 @@ export default function RouteList({
                               return (
                                 <div key={encounter.id} className="flex flex-col w-[140px] flex-shrink-0">
                                   <div className={`relative group flex-1 ${minHeight}`}>
-                                    <div className={`h-full ${minHeight}`}>
+                                    <div 
+                                      className={`h-full ${minHeight} ${isAdmin && !isInactive ? 'cursor-pointer' : ''}`}
+                                      onClick={() => {
+                                        if (isAdmin && !isInactive) {
+                                          openEvolutionMenu(encounter.id, p.pokedexId);
+                                        }
+                                      }}
+                                    >
                                       <PokemonCard
                                         pokemon={encounter.pokemon}
                                         nickname={encounter.nickname}
                                         size="small"
                                       />
                                     </div>
+                                    
+                                    {/* Evolution-Menü */}
+                                    {isAdmin && evolutionMenuOpen === encounter.id && (
+                                      <div 
+                                        ref={evolutionMenuRef}
+                                        className="absolute z-30 top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden"
+                                      >
+                                        {loadingEvolutions ? (
+                                          <div className="p-4 text-center text-gray-500 text-sm">
+                                            Lade Evolutionen...
+                                          </div>
+                                        ) : evolutionData ? (
+                                          <div>
+                                            {/* Entwickeln */}
+                                            {evolutionData.evolutions.length > 0 && (
+                                              <div className="border-b border-gray-100">
+                                                <div className="px-3 py-2 bg-green-50 text-green-800 text-xs font-semibold flex items-center gap-1">
+                                                  <span>⬆️</span> Entwickeln zu
+                                                </div>
+                                                {evolutionData.evolutions.map((evo) => (
+                                                  <button
+                                                    key={evo.pokedexId}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleEvolve(encounter.id, evo.pokedexId);
+                                                    }}
+                                                    disabled={evolvingPokemon}
+                                                    className="w-full px-3 py-2 text-left text-sm hover:bg-green-50 transition flex items-center gap-2 disabled:opacity-50"
+                                                  >
+                                                    {evo.spriteUrl && (
+                                                      <Image
+                                                        src={evo.spriteUrl}
+                                                        alt={evo.nameGerman || evo.name}
+                                                        width={32}
+                                                        height={32}
+                                                        className="object-contain"
+                                                        unoptimized
+                                                      />
+                                                    )}
+                                                    <div>
+                                                      <span className="font-medium">{evo.nameGerman || evo.name}</span>
+                                                      <span className="text-gray-400 text-xs ml-1">#{evo.pokedexId}</span>
+                                                    </div>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            )}
+                                            
+                                            {/* Zurückentwickeln */}
+                                            {evolutionData.preEvolutions.length > 0 && (
+                                              <div>
+                                                <div className="px-3 py-2 bg-orange-50 text-orange-800 text-xs font-semibold flex items-center gap-1">
+                                                  <span>⬇️</span> Zurückentwickeln zu
+                                                </div>
+                                                {evolutionData.preEvolutions.map((evo) => (
+                                                  <button
+                                                    key={evo.pokedexId}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleEvolve(encounter.id, evo.pokedexId);
+                                                    }}
+                                                    disabled={evolvingPokemon}
+                                                    className="w-full px-3 py-2 text-left text-sm hover:bg-orange-50 transition flex items-center gap-2 disabled:opacity-50"
+                                                  >
+                                                    {evo.spriteUrl && (
+                                                      <Image
+                                                        src={evo.spriteUrl}
+                                                        alt={evo.nameGerman || evo.name}
+                                                        width={32}
+                                                        height={32}
+                                                        className="object-contain"
+                                                        unoptimized
+                                                      />
+                                                    )}
+                                                    <div>
+                                                      <span className="font-medium">{evo.nameGerman || evo.name}</span>
+                                                      <span className="text-gray-400 text-xs ml-1">#{evo.pokedexId}</span>
+                                                    </div>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            )}
+                                            
+                                            {/* Keine Evolutionen */}
+                                            {evolutionData.evolutions.length === 0 && evolutionData.preEvolutions.length === 0 && (
+                                              <div className="p-4 text-center text-gray-500 text-sm">
+                                                Keine Evolutionen verfügbar
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    )}
                                   </div>
                                   {/* Basispunkte des Pokémon */}
                                   <div className="mt-2 bg-gray-50 rounded-lg p-2 border border-gray-200 w-full">
@@ -584,15 +812,46 @@ export default function RouteList({
                                 </div>
                               );
                             })}
+                      </div>
+                    ) : isAdmin ? (
+                      <div className="relative min-w-[160px]">
+                        <input
+                          type="text"
+                          placeholder="Pokémon suchen..."
+                          value={searchValue}
+                          onChange={(e) => setAddPokemonSearch({ ...addPokemonSearch, [key]: e.target.value })}
+                          disabled={isAdding}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        {searchValue && filteredPokemon.length > 0 && (
+                          <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {filteredPokemon.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => handleAddPokemon(route.id, player.id, p.id)}
+                                disabled={isAdding}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition flex items-center gap-2 disabled:opacity-50"
+                              >
+                                <span className="text-gray-500">#{p.pokedexId}</span>
+                                <span className="font-medium">{p.nameGerman || p.name}</span>
+                              </button>
+                            ))}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </>
+                        )}
+                        {searchValue && filteredPokemon.length === 0 && (
+                          <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                            <p className="text-sm text-gray-500">Kein Pokémon gefunden</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-sm italic min-w-[160px]">Noch kein Pokémon</p>
+                    )}
+                  </div>
                 );
-              })()}
-            </div>
-          )}
+              });
+            })()}
+          </div>
           </div>
         );
       })}

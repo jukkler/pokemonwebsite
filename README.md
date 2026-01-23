@@ -60,7 +60,7 @@ cp env.example .env
 docker compose up -d --build
 
 # 4. App öffnen
-# http://localhost:3000
+# http://localhost:3001
 ```
 
 Die Datenbank wird automatisch beim ersten Start initialisiert.
@@ -110,7 +110,7 @@ Die Datenbank wird automatisch beim ersten Start initialisiert.
 
 6. **Im Browser öffnen:**
    ```
-   http://localhost:3000
+   http://localhost:3001
    ```
 
 ---

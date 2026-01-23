@@ -78,6 +78,13 @@ interface RouteListRoute {
   encounters: RouteEncounterMeta[];
 }
 
+interface Pokemon {
+  id: number;
+  pokedexId: number;
+  name: string;
+  nameGerman: string | null;
+}
+
 interface PokerouteClientProps {
   initialPlayers: Player[];
   initialRoutes: RouteListRoute[];
@@ -90,12 +97,25 @@ export default function PokerouteClient({
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [routes, setRoutes] = useState<RouteListRoute[]>(initialRoutes);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [newRouteName, setNewRouteName] = useState('');
+  const [isCreatingRoute, setIsCreatingRoute] = useState(false);
+  const [pokemon, setPokemon] = useState<Pokemon[]>([]);
 
-  // Auth-Status prüfen
+  // Auth-Status prüfen und Pokémon laden
   useEffect(() => {
     fetchJson<{ isAdmin?: boolean }>('/api/auth/status')
       .then((data) => {
         setIsAdmin(data.isAdmin || false);
+        // Pokémon nur für Admins laden
+        if (data.isAdmin) {
+          fetchJson<{ pokemon: Pokemon[] }>('/api/pokemon')
+            .then((pokemonData) => {
+              setPokemon(pokemonData.pokemon || []);
+            })
+            .catch((err) => {
+              console.error('Error loading pokemon:', err);
+            });
+        }
       })
       .catch(() => {
         setIsAdmin(false);
@@ -166,6 +186,35 @@ export default function PokerouteClient({
     }
   };
 
+  // Neue Route erstellen
+  const handleCreateRoute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRouteName.trim()) return;
+
+    setIsCreatingRoute(true);
+    try {
+      // Berechne die nächste Order-Nummer
+      const maxOrder = routes.length > 0 
+        ? Math.max(...routes.map(r => r.order)) 
+        : 0;
+
+      await fetchJson('/api/admin/routes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: newRouteName.trim(),
+          order: maxOrder + 1,
+        }),
+      });
+      setNewRouteName('');
+      await reloadData();
+    } catch (error: unknown) {
+      alert(`Fehler beim Erstellen: ${getErrorMessage(error)}`);
+    } finally {
+      setIsCreatingRoute(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-7xl">
       {/* Header */}
@@ -195,6 +244,7 @@ export default function PokerouteClient({
                 routes={routes}
                 isAdmin={isAdmin}
                 onRemoveFromTeam={handleRemoveFromTeam}
+                onEvolution={reloadData}
               />
             ))}
           </div>
@@ -209,8 +259,33 @@ export default function PokerouteClient({
           players={players}
           isAdmin={isAdmin}
           onTeamUpdate={reloadData}
+          pokemon={pokemon}
         />
       </div>
+
+      {/* Admin: Neue Route erstellen (am Seitenende) */}
+      {isAdmin && (
+        <div className="mt-8 bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Route erstellen</h3>
+          <form onSubmit={handleCreateRoute} className="flex gap-2">
+            <input
+              type="text"
+              value={newRouteName}
+              onChange={(e) => setNewRouteName(e.target.value)}
+              placeholder="Routenname eingeben..."
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              disabled={isCreatingRoute}
+            />
+            <button
+              type="submit"
+              disabled={isCreatingRoute || !newRouteName.trim()}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium whitespace-nowrap"
+            >
+              {isCreatingRoute ? 'Erstelle...' : '+ Route erstellen'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

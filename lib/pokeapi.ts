@@ -44,6 +44,35 @@ interface PokeAPISpecies {
     };
     name: string;
   }[];
+  evolution_chain?: {
+    url: string;
+  };
+}
+
+// Evolution Chain Typen
+interface PokeAPIEvolutionChainLink {
+  species: {
+    name: string;
+    url: string;
+  };
+  evolves_to: PokeAPIEvolutionChainLink[];
+}
+
+interface PokeAPIEvolutionChain {
+  chain: PokeAPIEvolutionChainLink;
+}
+
+// Export-Typen für Evolution
+export interface EvolutionOption {
+  pokedexId: number;
+  name: string;
+  nameGerman: string | null;
+  spriteUrl: string | null;
+}
+
+export interface EvolutionChainResult {
+  preEvolutions: EvolutionOption[];
+  evolutions: EvolutionOption[];
 }
 
 class PokeAPIRequestError extends Error {
@@ -283,3 +312,134 @@ export async function getCachedPokemonCount() {
   return prisma.pokemon.count();
 }
 
+/**
+ * Extrahiert die Pokedex-ID aus einer PokeAPI Species-URL
+ * z.B. "https://pokeapi.co/api/v2/pokemon-species/25/" -> 25
+ */
+function extractPokedexIdFromUrl(url: string): number {
+  const match = url.match(/\/pokemon-species\/(\d+)\/?$/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+/**
+ * Sammelt alle Pokémon in einer Evolution-Chain rekursiv
+ * und gibt sie als flache Liste mit ihrer Position zurück
+ */
+function collectEvolutionChain(
+  chain: PokeAPIEvolutionChainLink,
+  depth: number = 0
+): Array<{ pokedexId: number; depth: number }> {
+  const result: Array<{ pokedexId: number; depth: number }> = [];
+  
+  const pokedexId = extractPokedexIdFromUrl(chain.species.url);
+  if (pokedexId > 0) {
+    result.push({ pokedexId, depth });
+  }
+  
+  // Rekursiv alle Entwicklungen sammeln
+  for (const evolution of chain.evolves_to) {
+    result.push(...collectEvolutionChain(evolution, depth + 1));
+  }
+  
+  return result;
+}
+
+/**
+ * Holt die Evolution-Chain für ein Pokémon von PokeAPI
+ * Gibt alle Vor- und Nachentwicklungen zurück
+ */
+export async function fetchEvolutionChain(pokedexId: number): Promise<EvolutionChainResult> {
+  try {
+    // 1. Species-Daten holen um die Evolution-Chain-URL zu bekommen
+    const speciesResponse = await fetch(`${POKEAPI_BASE_URL}/pokemon-species/${pokedexId}`);
+    if (!speciesResponse.ok) {
+      throw new PokeAPIRequestError(
+        `Failed to fetch species for Pokemon ${pokedexId}`,
+        speciesResponse.status
+      );
+    }
+    
+    const speciesData: PokeAPISpecies = await speciesResponse.json();
+    
+    if (!speciesData.evolution_chain?.url) {
+      // Keine Evolution-Chain (z.B. bei legendären Pokémon)
+      return { preEvolutions: [], evolutions: [] };
+    }
+    
+    // 2. Evolution-Chain holen
+    const chainResponse = await fetch(speciesData.evolution_chain.url);
+    if (!chainResponse.ok) {
+      throw new PokeAPIRequestError(
+        `Failed to fetch evolution chain`,
+        chainResponse.status
+      );
+    }
+    
+    const chainData: PokeAPIEvolutionChain = await chainResponse.json();
+    
+    // 3. Alle Pokémon in der Chain sammeln
+    const allInChain = collectEvolutionChain(chainData.chain);
+    
+    // 4. Finde die Position des aktuellen Pokémon
+    const currentEntry = allInChain.find(p => p.pokedexId === pokedexId);
+    const currentDepth = currentEntry?.depth ?? 0;
+    
+    // 5. Vor- und Nachentwicklungen trennen
+    const preEvolutionIds = allInChain
+      .filter(p => p.depth < currentDepth && p.pokedexId !== pokedexId)
+      .map(p => p.pokedexId);
+    
+    const evolutionIds = allInChain
+      .filter(p => p.depth > currentDepth && p.pokedexId !== pokedexId)
+      .map(p => p.pokedexId);
+    
+    // 6. Pokémon-Daten aus der Datenbank holen (oder von API fetchen)
+    const preEvolutions: EvolutionOption[] = [];
+    const evolutions: EvolutionOption[] = [];
+    
+    for (const id of preEvolutionIds) {
+      try {
+        const pokemon = await fetchPokemonById(id);
+        preEvolutions.push({
+          pokedexId: pokemon.pokedexId,
+          name: pokemon.name,
+          nameGerman: pokemon.nameGerman,
+          spriteUrl: pokemon.spriteUrl,
+        });
+      } catch (error) {
+        console.error(`Failed to fetch pre-evolution ${id}:`, error);
+      }
+    }
+    
+    for (const id of evolutionIds) {
+      try {
+        const pokemon = await fetchPokemonById(id);
+        evolutions.push({
+          pokedexId: pokemon.pokedexId,
+          name: pokemon.name,
+          nameGerman: pokemon.nameGerman,
+          spriteUrl: pokemon.spriteUrl,
+        });
+      } catch (error) {
+        console.error(`Failed to fetch evolution ${id}:`, error);
+      }
+    }
+    
+    return { preEvolutions, evolutions };
+  } catch (error) {
+    console.error(`Error fetching evolution chain for Pokemon ${pokedexId}:`, error);
+    return { preEvolutions: [], evolutions: [] };
+  }
+}
+
+/**
+ * Prüft, ob ein Ziel-Pokémon in der Evolution-Chain eines Quell-Pokémons ist
+ */
+export async function isInEvolutionChain(
+  sourcePokedexId: number,
+  targetPokedexId: number
+): Promise<boolean> {
+  const chain = await fetchEvolutionChain(sourcePokedexId);
+  const allEvolutions = [...chain.preEvolutions, ...chain.evolutions];
+  return allEvolutions.some(p => p.pokedexId === targetPokedexId);
+}

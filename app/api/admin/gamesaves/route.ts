@@ -4,17 +4,16 @@
  * POST /api/admin/gamesaves - Aktuelles Spiel speichern
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import {
+  withAdminAuthAndErrorHandling,
+  validateRequired,
+  success,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
-// GET: Alle Spielstände abrufen
 export async function GET() {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const gameSaves = await prisma.gameSave.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
@@ -23,59 +22,36 @@ export async function GET() {
         description: true,
         createdAt: true,
         updatedAt: true,
-        // data nicht laden (kann groß sein)
       },
     });
 
-    return NextResponse.json(gameSaves);
-  } catch (error) {
-    console.error('Error fetching game saves:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Laden der Spielstände' },
-      { status: 500 }
-    );
-  }
+    return success(gameSaves);
+  }, 'fetching game saves');
 }
 
-// POST: Aktuelles Spiel speichern
 export async function POST(request: NextRequest) {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const body = await request.json();
+    validateRequired(body, ['name']);
     const { name, description } = body;
 
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Name ist erforderlich' },
-        { status: 400 }
-      );
-    }
-
     // Exportiere alle Spieldaten
-    const players = await prisma.player.findMany({
-      include: {
-        encounters: {
-          include: {
-            pokemon: true,
-            route: true,
+    const [players, routes] = await Promise.all([
+      prisma.player.findMany({
+        include: {
+          encounters: {
+            include: { pokemon: true, route: true },
           },
         },
-      },
-    });
-
-    const routes = await prisma.route.findMany({
-      include: {
-        encounters: {
-          include: {
-            pokemon: true,
-            player: true,
+      }),
+      prisma.route.findMany({
+        include: {
+          encounters: {
+            include: { pokemon: true, player: true },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     const gameData = {
       players,
@@ -83,17 +59,15 @@ export async function POST(request: NextRequest) {
       savedAt: new Date().toISOString(),
     };
 
-    // Speichere als GameSave
     const gameSave = await prisma.gameSave.create({
       data: {
-        name,
-        description: description || null,
+        name: String(name).trim(),
+        description: description ? String(description).trim() : null,
         data: JSON.stringify(gameData),
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    return success({
       gameSave: {
         id: gameSave.id,
         name: gameSave.name,
@@ -101,12 +75,5 @@ export async function POST(request: NextRequest) {
         createdAt: gameSave.createdAt,
       },
     });
-  } catch (error) {
-    console.error('Error saving game:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Speichern des Spielstands' },
-      { status: 500 }
-    );
-  }
+  }, 'saving game');
 }
-

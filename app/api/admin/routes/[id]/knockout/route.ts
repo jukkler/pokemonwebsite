@@ -4,80 +4,54 @@
  * DELETE /api/admin/routes/[id]/knockout - Reaktiviert alle Encounters einer Route
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import {
+  withAdminAuthAndErrorHandling,
+  parseId,
+  validateRequired,
+  badRequest,
+  success,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
-// POST: Encounters K.O. setzen
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const routeId = parseInt(id);
+    const routeId = parseId(id, 'Routen-ID');
+    const body = await request.json();
 
-    if (isNaN(routeId)) {
-      return NextResponse.json({ error: 'Ungültige Routen-ID' }, { status: 400 });
-    }
+    validateRequired(body, ['causedBy', 'reason']);
+    const { causedBy, reason } = body;
 
-    const { causedBy, reason } = await request.json();
-
-    if (!causedBy || !reason) {
-      return NextResponse.json(
-        { error: 'Verursacher und Grund sind erforderlich' },
-        { status: 400 }
-      );
-    }
-
-    // Setze alle Encounters dieser Route K.O.
     const result = await prisma.encounter.updateMany({
       where: { routeId },
       data: {
         isKnockedOut: true,
-        koCausedBy: causedBy,
-        koReason: reason,
+        koCausedBy: String(causedBy).trim(),
+        koReason: String(reason).trim(),
         koDate: new Date(),
-        teamSlot: null, // Entferne aus Team
+        teamSlot: null,
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    return success({
       message: `${result.count} Pokémon wurden K.O. gesetzt`,
       count: result.count,
     });
-  } catch (error) {
-    console.error('Error knocking out encounters:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim K.O.-Setzen' },
-      { status: 500 }
-    );
-  }
+  }, 'knocking out encounters');
 }
 
-// DELETE: Encounters reaktivieren
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
-
+  return withAdminAuthAndErrorHandling(async () => {
     const { id } = await params;
-    const routeId = parseInt(id);
+    const routeId = parseId(id, 'Routen-ID');
 
-    if (isNaN(routeId)) {
-      return NextResponse.json({ error: 'Ungültige Routen-ID' }, { status: 400 });
-    }
-
-    // Reaktiviere alle Encounters dieser Route
     const result = await prisma.encounter.updateMany({
       where: { routeId },
       data: {
@@ -88,17 +62,9 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    return success({
       message: `${result.count} Pokémon wurden reaktiviert`,
       count: result.count,
     });
-  } catch (error) {
-    console.error('Error reactivating encounters:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Reaktivieren' },
-      { status: 500 }
-    );
-  }
+  }, 'reactivating encounters');
 }
-

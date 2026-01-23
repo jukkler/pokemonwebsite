@@ -10,8 +10,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pokemon}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Port nur intern für andere Container erreichbar (sicherer)
+    # ports:
+    #   - "5432:5432"
+    expose:
+      - "5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pokemon} -d ${POSTGRES_DB:-pokemon}"]
       interval: 10s

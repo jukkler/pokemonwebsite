@@ -20,6 +20,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Security: Verhindert Privilege Escalation
+    security_opt:
+      - no-new-privileges:true
 
   # Database Migration Service (runs once)
   migrate:
@@ -35,6 +38,8 @@ services:
         condition: service_healthy
     command: npx prisma db push --skip-generate
     restart: "no"
+    security_opt:
+      - no-new-privileges:true
 
   # Next.js Application
   app:
@@ -44,7 +49,7 @@ services:
     container_name: pokemon-app
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://pokemon:pokemon@db:5432/pokemon}
       - SESSION_SECRET=${SESSION_SECRET}
@@ -62,6 +67,24 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    # ================================
+    # Security Hardening
+    # ================================
+    # Verhindert Privilege Escalation
+    security_opt:
+      - no-new-privileges:true
+    # Read-only Root Filesystem (Container kann nicht beschrieben werden)
+    read_only: true
+    # Temporäre Verzeichnisse die beschreibbar sein müssen
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    # Memory Limit (verhindert DoS durch Memory-Exhaustion)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
 volumes:
   postgres_data:

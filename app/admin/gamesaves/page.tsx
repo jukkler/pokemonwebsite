@@ -31,7 +31,9 @@ export default function AdminGameSavesPage() {
     try {
       const res = await fetch('/api/admin/gamesaves');
       if (!res.ok) throw new Error('Fehler beim Laden');
-      const data: GameSave[] = await res.json();
+      const json = await res.json();
+      // API gibt { data: GameSave[], success: true } zurueck
+      const data: GameSave[] = json.data || [];
       setGameSaves(data);
     } catch (error) {
       setError(getErrorMessage(error));

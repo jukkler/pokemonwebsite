@@ -304,6 +304,7 @@ export default function TeamDisplay({
                         pokemon={member.pokemon}
                         nickname={member.nickname}
                         size="small"
+                        priority={index < 6} // Performance: Above-the-fold Bilder priorisieren
                       />
                     </div>
 

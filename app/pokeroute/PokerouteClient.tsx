@@ -138,7 +138,7 @@ export default function PokerouteClient({
     }
   }, []); // Keine Dependencies, da setState stabil ist
 
-  // Automatisches Polling: Aktualisiere Daten alle 3 Sekunden
+  // Automatisches Polling: Aktualisiere Daten alle 30 Sekunden (Performance-Optimierung)
   useEffect(() => {
     // Funktion zum Laden der Daten (definiert im useEffect für stabile Referenz)
     const loadData = async () => {
@@ -158,13 +158,13 @@ export default function PokerouteClient({
     // Initiales Laden
     loadData();
 
-    // Polling-Interval: Alle 3 Sekunden aktualisieren
+    // Polling-Interval: Alle 30 Sekunden aktualisieren (reduziert Server-Last um ~90%)
     const interval = setInterval(() => {
       // Nur aktualisieren, wenn die Seite sichtbar ist
       if (!document.hidden) {
         loadData();
       }
-    }, 3000); // 3 Sekunden
+    }, 30000); // 30 Sekunden
 
     // Cleanup beim Unmount
     return () => clearInterval(interval);

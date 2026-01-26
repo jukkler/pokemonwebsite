@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
         pathname: '/PokeAPI/**',
       },
     ],
+    // Performance: Moderne Bildformate für bessere Kompression
+    formats: ['image/avif', 'image/webp'],
+    // Performance: Längere Cache-Dauer für Sprites (30 Tage)
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
 };
 

@@ -28,6 +28,8 @@ model Route {
   order       Int            @default(0) // Sortierreihenfolge
   encounters  Encounter[]
   createdAt   DateTime       @default(now())
+  
+  @@index([order]) // Performance: Sortierung nach order
 }
 
 // Pokémon-Modell (gecacht von PokeAPI)
@@ -48,6 +50,10 @@ model Pokemon {
   encounters   Encounter[]
   teamMembers  TeamMember[]
   updatedAt    DateTime       @updatedAt
+  
+  // Performance: pokedexId ist bereits unique, aber expliziter Index für schnelle Reads
+  @@index([name])
+  @@index([nameGerman])
 }
 
 // Encounter = Gefangenes Pokémon eines Spielers auf einer Route
@@ -72,6 +78,12 @@ model Encounter {
   createdAt   DateTime @default(now())
   
   @@unique([playerId, routeId]) // Ein Spieler kann nur EIN Pokémon pro Route fangen
+  
+  // Performance-Indizes für häufige Joins und Queries
+  @@index([routeId])
+  @@index([playerId])
+  @@index([pokemonId])
+  @@index([teamSlot])
 }
 
 // DEPRECATED: TeamMember wird nicht mehr verwendet

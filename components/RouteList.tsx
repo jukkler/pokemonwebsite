@@ -1,11 +1,12 @@
 /**
  * Routen-Liste Komponente
  * Zeigt alle Routen mit den Encounters der Spieler an
+ * Performance: Mit React.memo für weniger Re-Renders
  */
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import Image from 'next/image';
 import PokemonCard from './PokemonCard';
 import PokemonStatsCard from './PokemonStatsCard';
@@ -342,7 +343,7 @@ function PokemonSearchInput({
 // Haupt-Komponente
 // =============================================================================
 
-export default function RouteList({
+const RouteList = memo(function RouteList({
   routes,
   players,
   isAdmin = false,
@@ -986,4 +987,6 @@ export default function RouteList({
       />
     </>
   );
-}
+});
+
+export default RouteList;

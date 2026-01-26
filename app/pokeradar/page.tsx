@@ -23,6 +23,7 @@ interface Pokemon {
   spDefense: number;
   speed: number;
   spriteUrl: string | null;
+  spriteGifUrl: string | null;
 }
 
 export default function PokeradarPage() {
@@ -66,6 +67,11 @@ export default function PokeradarPage() {
         setSelectedPokemon([...selectedPokemon, pokemon]);
       }
     }
+  };
+
+  // Pokémon aus der Auswahl entfernen
+  const removePokemon = (pokedexId: number) => {
+    setSelectedPokemon(selectedPokemon.filter((p) => p.pokedexId !== pokedexId));
   };
 
   const isSelected = (pokemon: Pokemon) =>
@@ -112,7 +118,7 @@ export default function PokeradarPage() {
                 </button>
               )}
             </div>
-            <PokemonRadarChart pokemon={selectedPokemon} colors={colors} />
+            <PokemonRadarChart pokemon={selectedPokemon} colors={colors} onRemove={removePokemon} />
           </div>
 
           {/* Stats Tabelle */}

@@ -1,6 +1,7 @@
 /**
  * Pokémon-Karte Komponente
  * Modernes Design mit farbigen Karten basierend auf Typ
+ * Performance: Mit React.memo für weniger Re-Renders
  */
 
 'use client';
@@ -9,7 +10,7 @@ import Image from 'next/image';
 import { parseTypes } from '@/lib/typeEffectiveness';
 import { getTypeColor } from '@/lib/design-tokens';
 import TypeBadge from './ui/TypeBadge';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
 import { getSpriteUrl } from '@/lib/sprite-utils';
 
@@ -36,9 +37,11 @@ interface PokemonCardProps {
   isFavorite?: boolean;
   onFavoriteToggle?: () => void;
   onClick?: () => void;
+  /** Performance: Priorität für Above-the-Fold Bilder */
+  priority?: boolean;
 }
 
-export default function PokemonCard({
+const PokemonCard = memo(function PokemonCard({
   pokemon,
   nickname,
   size = 'medium',
@@ -47,6 +50,7 @@ export default function PokemonCard({
   isFavorite = false,
   onFavoriteToggle,
   onClick,
+  priority = false,
 }: PokemonCardProps) {
   const types = parseTypes(pokemon.types);
   const primaryType = types[0] || 'normal';
@@ -126,6 +130,8 @@ export default function PokemonCard({
             fill
             className="object-contain"
             unoptimized={spriteMode === 'animated'}
+            priority={priority}
+            loading={priority ? undefined : 'lazy'}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded-lg">
@@ -185,5 +191,7 @@ export default function PokemonCard({
       )}
     </div>
   );
-}
+});
+
+export default PokemonCard;
 

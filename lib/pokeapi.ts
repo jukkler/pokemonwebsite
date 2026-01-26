@@ -368,9 +368,26 @@ export async function syncAllAvailablePokemon(
 
 /**
  * Holt alle gecachten Pokémon aus der Datenbank
+ * Performance: Nur für die Anzeige benötigte Felder selektieren
  */
 export async function getAllCachedPokemon() {
   return prisma.pokemon.findMany({
+    select: {
+      id: true,
+      pokedexId: true,
+      name: true,
+      nameGerman: true,
+      types: true,
+      hp: true,
+      attack: true,
+      defense: true,
+      spAttack: true,
+      spDefense: true,
+      speed: true,
+      spriteUrl: true,
+      spriteGifUrl: true,
+      // updatedAt wird für die Anzeige nicht benötigt
+    },
     orderBy: { pokedexId: 'asc' },
   });
 }

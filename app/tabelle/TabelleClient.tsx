@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSpriteMode } from '@/lib/contexts/SpriteContext';
 
 type PlayerInfo = {
   id: number;
@@ -19,6 +20,7 @@ type PlayerCell = {
   basePoints: number | null;
   status: EncounterStatus;
   spriteUrl: string | null;
+  spriteGifUrl: string | null;
 };
 
 export type RouteRow = {
@@ -47,6 +49,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
     direction: 'asc',
   });
   const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const { spriteMode } = useSpriteMode();
 
   const handleSort = (key: SortKey) => {
     setSort((prev) => {
@@ -135,11 +138,16 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
             .join(' / ')
         : null;
 
+    // Sprite-URL basierend auf dem Modus wählen
+    const displaySpriteUrl = spriteMode === 'animated' && cell.spriteGifUrl
+      ? cell.spriteGifUrl
+      : cell.spriteUrl;
+
     return (
       <div className="flex items-start gap-3">
-        {cell.spriteUrl && (
+        {displaySpriteUrl && (
           <img
-            src={cell.spriteUrl}
+            src={displaySpriteUrl}
             alt={displayName}
             className="w-16 h-16 object-contain flex-shrink-0"
           />

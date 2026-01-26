@@ -90,6 +90,7 @@ async function getTableData(): Promise<{
           basePoints,
           status,
           spriteUrl: pokemon.spriteUrl,
+          spriteGifUrl: pokemon.spriteGifUrl,
         };
       });
 

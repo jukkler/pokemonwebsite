@@ -9,6 +9,8 @@ import Image from 'next/image';
 import { parseTypes, calculateDefensiveEffectiveness } from '@/lib/typeEffectiveness';
 import { getTypeColor } from '@/lib/design-tokens';
 import TypeBadge from './ui/TypeBadge';
+import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import { getSpriteUrl } from '@/lib/sprite-utils';
 
 interface PokemonDetailProps {
   pokemon: {
@@ -17,6 +19,7 @@ interface PokemonDetailProps {
     nameGerman: string | null;
     types: string;
     spriteUrl: string | null;
+    spriteGifUrl?: string | null;
     hp: number;
     attack: number;
     defense: number;
@@ -39,6 +42,7 @@ interface PokemonDetailProps {
     nameGerman: string | null;
     level?: number;
     spriteUrl: string | null;
+    spriteGifUrl?: string | null;
     types: string;
   }>;
   onBack?: () => void;
@@ -62,6 +66,8 @@ export default function PokemonDetail({
   const types = parseTypes(pokemon.types);
   const primaryType = types[0] || 'normal';
   const typeColor = getTypeColor(primaryType);
+  const { spriteMode } = useSpriteMode();
+  const displaySpriteUrl = getSpriteUrl(pokemon, spriteMode);
   
   // Berechne Schwächen
   const defensiveEffectiveness = calculateDefensiveEffectiveness(types);
@@ -129,13 +135,13 @@ export default function PokemonDetail({
 
         {/* Pokémon-Bild */}
         <div className="relative w-48 h-48 mx-auto mb-4">
-          {pokemon.spriteUrl ? (
+          {displaySpriteUrl ? (
             <Image
-              src={pokemon.spriteUrl}
+              src={displaySpriteUrl}
               alt={pokemon.nameGerman || pokemon.name}
               fill
               className="object-contain"
-              unoptimized
+              unoptimized={spriteMode === 'animated'}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded-lg">
@@ -292,17 +298,18 @@ export default function PokemonDetail({
             <div className="space-y-4">
               {evolutions.map((evo, index) => {
                 const evoTypes = parseTypes(evo.types);
+                const evoSpriteUrl = getSpriteUrl(evo, spriteMode);
                 return (
                   <div key={evo.id} className="flex items-center gap-4">
                     <div className="flex-1 bg-gray-50 rounded-lg p-3 flex items-center gap-3">
                       <div className="relative w-16 h-16">
-                        {evo.spriteUrl ? (
+                        {evoSpriteUrl ? (
                           <Image
-                            src={evo.spriteUrl}
+                            src={evoSpriteUrl}
                             alt={evo.nameGerman || evo.name}
                             fill
                             className="object-contain"
-                            unoptimized
+                            unoptimized={spriteMode === 'animated'}
                           />
                         ) : (
                           <div className="w-full h-full bg-gray-200 rounded" />

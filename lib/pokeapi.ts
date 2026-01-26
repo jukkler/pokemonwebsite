@@ -33,6 +33,18 @@ interface PokeAPIPokemon {
       'official-artwork'?: {
         front_default?: string | null;
       };
+      showdown?: {
+        front_default?: string | null;
+      };
+    };
+    versions?: {
+      'generation-v'?: {
+        'black-white'?: {
+          animated?: {
+            front_default?: string | null;
+          };
+        };
+      };
     };
   };
 }
@@ -68,6 +80,7 @@ export interface EvolutionOption {
   name: string;
   nameGerman: string | null;
   spriteUrl: string | null;
+  spriteGifUrl: string | null;
 }
 
 export interface EvolutionChainResult {
@@ -133,16 +146,67 @@ async function fetchPokemonSpecies(id: number): Promise<string | null> {
 }
 
 /**
- * Holt und cached ein einzelnes Pokémon
+ * Ermittelt die GIF-Sprite-URL für ein Pokémon
+ * Versucht mehrere Quellen: API-Antwort und direkte GitHub-URL
  */
-export async function fetchPokemonById(id: number) {
+async function getGifSpriteUrl(
+  id: number, 
+  pokemonData: PokeAPIPokemon
+): Promise<string | null> {
+  // 1. Versuche aus der API-Antwort
+  const apiGifUrl = 
+    pokemonData.sprites.other?.showdown?.front_default ||
+    pokemonData.sprites.versions?.['generation-v']?.['black-white']?.animated?.front_default ||
+    null;
+  
+  if (apiGifUrl) {
+    return apiGifUrl;
+  }
+  
+  // 2. Versuche die direkte GitHub-URL (Showdown-Sprites)
+  const directGifUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`;
+  
+  try {
+    const response = await fetch(directGifUrl, { method: 'HEAD' });
+    if (response.ok) {
+      console.log(`Found GIF sprite for Pokemon #${id} via direct GitHub URL`);
+      return directGifUrl;
+    }
+  } catch {
+    // GIF existiert nicht oder Netzwerkfehler
+  }
+  
+  return null;
+}
+
+/**
+ * Holt und cached ein einzelnes Pokémon
+ * @param forceUpdate - Erzwingt ein Update auch wenn das Pokémon existiert
+ */
+export async function fetchPokemonById(id: number, forceUpdate: boolean = false) {
   try {
     // Prüfe ob bereits gecacht
     const existing = await prisma.pokemon.findUnique({
       where: { pokedexId: id },
     });
 
-    if (existing) {
+    // Wenn bereits vorhanden und kein Force-Update und GIF-URL existiert
+    if (existing && !forceUpdate && existing.spriteGifUrl) {
+      return existing;
+    }
+    
+    // Wenn bereits vorhanden aber GIF-URL fehlt, nur GIF-URL updaten
+    if (existing && !existing.spriteGifUrl && !forceUpdate) {
+      console.log(`Updating GIF sprite for Pokemon #${id}...`);
+      const pokemonData = await fetchPokemonFromAPI(id);
+      const spriteGifUrl = await getGifSpriteUrl(id, pokemonData);
+      
+      if (spriteGifUrl) {
+        return await prisma.pokemon.update({
+          where: { pokedexId: id },
+          data: { spriteGifUrl },
+        });
+      }
       return existing;
     }
 
@@ -170,6 +234,10 @@ export async function fetchPokemonById(id: number) {
       pokemonData.sprites.front_default ||
       null;
 
+    // GIF Sprite URL (Showdown oder Black-White animated)
+    // Verwendet mehrere Quellen inkl. direkter GitHub-URL für neuere Pokémon
+    const spriteGifUrl = await getGifSpriteUrl(id, pokemonData);
+
     // In Datenbank speichern
     const pokemon = await prisma.pokemon.upsert({
       where: { pokedexId: id },
@@ -184,6 +252,7 @@ export async function fetchPokemonById(id: number) {
         spDefense: stats.spDefense,
         speed: stats.speed,
         spriteUrl: spriteUrl,
+        spriteGifUrl: spriteGifUrl,
       },
       create: {
         pokedexId: id,
@@ -197,6 +266,7 @@ export async function fetchPokemonById(id: number) {
         spDefense: stats.spDefense,
         speed: stats.speed,
         spriteUrl: spriteUrl,
+        spriteGifUrl: spriteGifUrl,
       },
     });
 
@@ -313,6 +383,57 @@ export async function getCachedPokemonCount() {
 }
 
 /**
+ * Synchronisiert nur die GIF-URLs für alle Pokémon, die noch keine haben
+ * Schneller als ein vollständiger Re-Sync
+ */
+export async function syncGifSprites(
+  onProgress?: (current: number, total: number, updated: number) => void
+) {
+  // Finde alle Pokémon ohne GIF-URL
+  const pokemonWithoutGif = await prisma.pokemon.findMany({
+    where: { spriteGifUrl: null },
+    select: { pokedexId: true },
+    orderBy: { pokedexId: 'asc' },
+  });
+  
+  const total = pokemonWithoutGif.length;
+  let updated = 0;
+  
+  console.log(`Found ${total} Pokemon without GIF sprites`);
+  
+  for (let i = 0; i < total; i++) {
+    const { pokedexId } = pokemonWithoutGif[i];
+    
+    try {
+      const pokemonData = await fetchPokemonFromAPI(pokedexId);
+      const spriteGifUrl = await getGifSpriteUrl(pokedexId, pokemonData);
+      
+      if (spriteGifUrl) {
+        await prisma.pokemon.update({
+          where: { pokedexId },
+          data: { spriteGifUrl },
+        });
+        updated++;
+        console.log(`Updated GIF sprite for #${pokedexId}`);
+      } else {
+        console.log(`No GIF sprite found for #${pokedexId}`);
+      }
+      
+      if (onProgress) {
+        onProgress(i + 1, total, updated);
+      }
+      
+      // Rate Limiting (etwas länger wegen HEAD-Request)
+      await new Promise(resolve => setTimeout(resolve, 150));
+    } catch (error) {
+      console.error(`Failed to update GIF for Pokemon ${pokedexId}:`, error);
+    }
+  }
+  
+  return { total, updated };
+}
+
+/**
  * Extrahiert die Pokedex-ID aus einer PokeAPI Species-URL
  * z.B. "https://pokeapi.co/api/v2/pokemon-species/25/" -> 25
  */
@@ -405,6 +526,7 @@ export async function fetchEvolutionChain(pokedexId: number): Promise<EvolutionC
           name: pokemon.name,
           nameGerman: pokemon.nameGerman,
           spriteUrl: pokemon.spriteUrl,
+          spriteGifUrl: pokemon.spriteGifUrl,
         });
       } catch (error) {
         console.error(`Failed to fetch pre-evolution ${id}:`, error);
@@ -419,6 +541,7 @@ export async function fetchEvolutionChain(pokedexId: number): Promise<EvolutionC
           name: pokemon.name,
           nameGerman: pokemon.nameGerman,
           spriteUrl: pokemon.spriteUrl,
+          spriteGifUrl: pokemon.spriteGifUrl,
         });
       } catch (error) {
         console.error(`Failed to fetch evolution ${id}:`, error);

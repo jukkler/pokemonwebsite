@@ -9,7 +9,6 @@ import {
   withErrorHandling,
   validateRequired,
   badRequest,
-  internalError,
   success,
 } from '@/lib/api-utils';
 
@@ -29,9 +28,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Debug: Zeige ENV-Variablen Status (ohne sensible Daten)
+    const envDebug = {
+      adminUsernameSet: !!process.env.ADMIN_USERNAME,
+      adminPasswordSet: !!process.env.ADMIN_PASSWORD,
+      adminUsernameLength: process.env.ADMIN_USERNAME?.length || 0,
+      adminPasswordLength: process.env.ADMIN_PASSWORD?.length || 0,
+      inputUsernameLength: String(username).length,
+      inputPasswordLength: String(password).length,
+      usernameMatch: String(username) === (process.env.ADMIN_USERNAME || 'admin'),
+      passwordMatch: String(password) === (process.env.ADMIN_PASSWORD || 'admin'),
+    };
+    console.log('[Login Debug]', JSON.stringify(envDebug));
+
     // Credentials prüfen
     if (!validateAdminCredentials(String(username), String(password))) {
-      return NextResponse.json({ error: 'Ungültige Zugangsdaten' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Ungültige Zugangsdaten',
+        debug: envDebug // Temporär für Debugging
+      }, { status: 401 });
     }
 
     // Session setzen

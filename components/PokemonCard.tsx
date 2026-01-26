@@ -10,6 +10,8 @@ import { parseTypes } from '@/lib/typeEffectiveness';
 import { getTypeColor } from '@/lib/design-tokens';
 import TypeBadge from './ui/TypeBadge';
 import { useState } from 'react';
+import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import { getSpriteUrl } from '@/lib/sprite-utils';
 
 interface PokemonCardProps {
   pokemon: {
@@ -18,6 +20,7 @@ interface PokemonCardProps {
     nameGerman: string | null;
     types: string;
     spriteUrl: string | null;
+    spriteGifUrl?: string | null;
   };
   nickname?: string | null;
   size?: 'small' | 'medium' | 'large';
@@ -49,6 +52,8 @@ export default function PokemonCard({
   const primaryType = types[0] || 'normal';
   const typeColor = getTypeColor(primaryType);
   const [isHovered, setIsHovered] = useState(false);
+  const { spriteMode } = useSpriteMode();
+  const displaySpriteUrl = getSpriteUrl(pokemon, spriteMode);
   
   const sizeClasses = {
     small: {
@@ -114,13 +119,13 @@ export default function PokemonCard({
 
       {/* Pokémon-Bild */}
       <div className={`relative ${currentSize.image} mx-auto mb-3 transition-transform ${isHovered ? 'scale-110' : 'scale-100'}`}>
-        {pokemon.spriteUrl ? (
+        {displaySpriteUrl ? (
           <Image
-            src={pokemon.spriteUrl}
+            src={displaySpriteUrl}
             alt={pokemon.nameGerman || pokemon.name}
             fill
             className="object-contain"
-            unoptimized
+            unoptimized={spriteMode === 'animated'}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded-lg">
@@ -142,8 +147,8 @@ export default function PokemonCard({
         )}
       </div>
 
-      {/* Typ-Badges */}
-      <div className="flex justify-center gap-2 flex-wrap mt-auto">
+      {/* Typ-Badges - feste Mindesthöhe für konsistente Kartengröße */}
+      <div className={`flex flex-col items-center justify-end gap-1.5 mt-auto ${size === 'small' ? 'min-h-[52px]' : 'min-h-[60px]'}`}>
         {types.map((type) => (
           <TypeBadge key={type} type={type} size={size === 'small' ? 'sm' : 'md'} />
         ))}

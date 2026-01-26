@@ -15,6 +15,7 @@ model Player {
   id          Int            @id @default(autoincrement())
   name        String         @unique
   color       String         // Hex-Farbe für UI-Darstellung (z.B. "#FF0000")
+  avatar      String?        // Avatar-Key (z.B. "trainer-red") oder URL
   encounters  Encounter[]
   teamMembers TeamMember[]
   createdAt   DateTime       @default(now())
@@ -31,21 +32,22 @@ model Route {
 
 // Pokémon-Modell (gecacht von PokeAPI)
 model Pokemon {
-  id          Int            @id @default(autoincrement())
-  pokedexId   Int            @unique // National Dex Number (1-493 für Platin)
-  name        String         // Englischer Name
-  nameGerman  String?        // Deutscher Name (optional)
-  types       String         // JSON Array String: ["Grass", "Poison"]
-  hp          Int
-  attack      Int
-  defense     Int
-  spAttack    Int
-  spDefense   Int
-  speed       Int
-  spriteUrl   String?        // URL zum Sprite von PokeAPI
-  encounters  Encounter[]
-  teamMembers TeamMember[]
-  updatedAt   DateTime       @updatedAt
+  id           Int            @id @default(autoincrement())
+  pokedexId    Int            @unique // National Dex Number (1-493 für Platin)
+  name         String         // Englischer Name
+  nameGerman   String?        // Deutscher Name (optional)
+  types        String         // JSON Array String: ["Grass", "Poison"]
+  hp           Int
+  attack       Int
+  defense      Int
+  spAttack     Int
+  spDefense    Int
+  speed        Int
+  spriteUrl    String?        // URL zum statischen Sprite (Official Artwork)
+  spriteGifUrl String?        // URL zum animierten GIF-Sprite (Showdown)
+  encounters   Encounter[]
+  teamMembers  TeamMember[]
+  updatedAt    DateTime       @updatedAt
 }
 
 // Encounter = Gefangenes Pokémon eines Spielers auf einer Route

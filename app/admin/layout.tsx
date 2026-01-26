@@ -48,28 +48,10 @@ export default async function AdminLayout({
               Spieler
             </Link>
             <Link
-              href="/admin/routes"
-              className="whitespace-nowrap hover:text-gray-300 transition"
-            >
-              Routen
-            </Link>
-            <Link
-              href="/admin/encounters"
-              className="whitespace-nowrap hover:text-gray-300 transition"
-            >
-              Encounters
-            </Link>
-            <Link
-              href="/admin/team"
-              className="whitespace-nowrap hover:text-gray-300 transition"
-            >
-              Teams
-            </Link>
-            <Link
               href="/admin/pokemon"
               className="whitespace-nowrap hover:text-gray-300 transition"
             >
-              Pokémon-Cache
+              Pokemon-Cache
             </Link>
             <Link
               href="/admin/gamesaves"

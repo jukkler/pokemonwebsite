@@ -36,6 +36,7 @@ interface Player {
   id: number;
   name: string;
   color: string;
+  avatar: string | null;
   encounters: PlayerEncounter[];
 }
 
@@ -240,11 +241,13 @@ export default function PokerouteClient({
                 key={player.id}
                 playerName={player.name}
                 playerColor={player.color}
+                playerAvatar={player.avatar}
                 teamMembers={player.encounters}
                 routes={routes}
                 isAdmin={isAdmin}
                 onRemoveFromTeam={handleRemoveFromTeam}
                 onEvolution={reloadData}
+                pokemon={pokemon}
               />
             ))}
           </div>

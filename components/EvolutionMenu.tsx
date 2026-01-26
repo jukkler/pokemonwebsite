@@ -7,12 +7,15 @@
 
 import Image from 'next/image';
 import type { EvolutionChainResult, EvolutionOption } from '@/lib/types';
+import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import { getSpriteUrl } from '@/lib/sprite-utils';
 
 interface EvolutionMenuProps {
   evolutionData: EvolutionChainResult | null;
   isLoading: boolean;
   isEvolving: boolean;
   onEvolve: (targetPokedexId: number) => void;
+  onClose: () => void;
   menuRef?: React.RefObject<HTMLDivElement | null>;
   className?: string;
 }
@@ -22,9 +25,12 @@ interface EvolutionButtonProps {
   onClick: () => void;
   disabled: boolean;
   hoverColor: string;
+  spriteMode: 'static' | 'animated';
 }
 
-function EvolutionButton({ evolution, onClick, disabled, hoverColor }: EvolutionButtonProps) {
+function EvolutionButton({ evolution, onClick, disabled, hoverColor, spriteMode }: EvolutionButtonProps) {
+  const displaySpriteUrl = getSpriteUrl(evolution, spriteMode);
+  
   return (
     <button
       onClick={(e) => {
@@ -34,14 +40,14 @@ function EvolutionButton({ evolution, onClick, disabled, hoverColor }: Evolution
       disabled={disabled}
       className={`w-full px-3 py-2 text-left text-sm ${hoverColor} transition flex items-center gap-2 disabled:opacity-50`}
     >
-      {evolution.spriteUrl && (
+      {displaySpriteUrl && (
         <Image
-          src={evolution.spriteUrl}
+          src={displaySpriteUrl}
           alt={evolution.nameGerman || evolution.name}
           width={32}
           height={32}
           className="object-contain"
-          unoptimized
+          unoptimized={spriteMode === 'animated'}
         />
       )}
       <div>
@@ -57,17 +63,39 @@ export default function EvolutionMenu({
   isLoading,
   isEvolving,
   onEvolve,
+  onClose,
   menuRef,
   className = '',
 }: EvolutionMenuProps) {
+  const { spriteMode } = useSpriteMode();
+
+  // Close Button Component
+  const CloseButton = () => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+      className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition"
+      title="Schließen"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  );
+
   if (isLoading) {
     return (
       <div
         ref={menuRef}
         className={`bg-white border border-gray-200 rounded-lg shadow-xl min-w-[200px] ${className}`}
       >
-        <div className="p-4 text-center text-gray-500 text-sm">
-          Lade Evolutionen...
+        <div className="relative">
+          <CloseButton />
+          <div className="p-4 text-center text-gray-500 text-sm">
+            Lade Evolutionen...
+          </div>
         </div>
       </div>
     );
@@ -86,6 +114,10 @@ export default function EvolutionMenu({
       ref={menuRef}
       className={`bg-white border border-gray-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden ${className}`}
     >
+      <div className="relative">
+        <CloseButton />
+      </div>
+      
       {/* Entwickeln */}
       {hasEvolutions && (
         <div className="border-b border-gray-100">
@@ -99,6 +131,7 @@ export default function EvolutionMenu({
               onClick={() => onEvolve(evo.pokedexId)}
               disabled={isEvolving}
               hoverColor="hover:bg-green-50"
+              spriteMode={spriteMode}
             />
           ))}
         </div>
@@ -117,6 +150,7 @@ export default function EvolutionMenu({
               onClick={() => onEvolve(evo.pokedexId)}
               disabled={isEvolving}
               hoverColor="hover:bg-orange-50"
+              spriteMode={spriteMode}
             />
           ))}
         </div>

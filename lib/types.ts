@@ -46,6 +46,7 @@ export interface PokemonBase {
   nameGerman: string | null;
   types: string;
   spriteUrl: string | null;
+  spriteGifUrl?: string | null;
 }
 
 export interface Pokemon extends PokemonBase, PokemonStats {
@@ -68,6 +69,7 @@ export interface EvolutionOption {
   name: string;
   nameGerman: string | null;
   spriteUrl: string | null;
+  spriteGifUrl?: string | null;
 }
 
 export interface EvolutionChainResult {
@@ -83,6 +85,7 @@ export interface PlayerBase {
   id: number;
   name: string;
   color: string;
+  avatar?: string | null;
 }
 
 export interface Player extends PlayerBase {

@@ -23,6 +23,8 @@ export default function AdminPokemonPage() {
   const [syncProgress, setSyncProgress] = useState('');
   const [addPokedexId, setAddPokedexId] = useState('');
   const [adding, setAdding] = useState(false);
+  const [syncingGifs, setSyncingGifs] = useState(false);
+  const [gifSyncProgress, setGifSyncProgress] = useState('');
   const MAX_AVAILABLE = 1050; // Aktuell verfügbare Pokémon (Gen 1-9)
   const [liveProgress, setLiveProgress] = useState<{
     current: number;
@@ -159,6 +161,34 @@ export default function AdminPokemonPage() {
     }
   };
 
+  // GIF-Sprites synchronisieren
+  const handleSyncGifs = async () => {
+    if (!confirm('GIF-Sprites für alle Pokémon ohne animierte Sprites nachladen? Dies kann einige Minuten dauern.')) {
+      return;
+    }
+
+    setSyncingGifs(true);
+    setGifSyncProgress('GIF-Synchronisierung gestartet...');
+
+    try {
+      const res = await fetch('/api/admin/pokemon/sync-gifs', {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setGifSyncProgress(`Erfolgreich! ${data.updated} von ${data.total} GIF-Sprites aktualisiert.`);
+      } else {
+        setGifSyncProgress(`Fehler: ${data.error || 'Unbekannter Fehler'}`);
+      }
+    } catch (error) {
+      setGifSyncProgress(`Netzwerkfehler: ${getErrorMessage(error)}`);
+    } finally {
+      setSyncingGifs(false);
+    }
+  };
+
   // Einzelnes Pokémon hinzufügen
   const handleAddPokemon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,6 +305,34 @@ export default function AdminPokemonPage() {
             <p className="text-sm text-gray-500 mt-2">
               Lädt nur Pokémon von Gen 1-4 (Pokémon Platin). Dies kann 5-10 Minuten dauern.
             </p>
+          </div>
+
+          {/* GIF-Sprites nachladen */}
+          <div className="pt-4 border-t">
+            <button
+              onClick={handleSyncGifs}
+              disabled={syncingGifs || syncing}
+              className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {syncingGifs ? 'Synchronisiere GIFs...' : 'Animierte GIF-Sprites nachladen'}
+            </button>
+            <p className="text-sm text-gray-500 mt-2">
+              Lädt animierte Sprites (GIF) für alle Pokémon nach, die noch keine haben. 
+              Hinweis: GIF-Sprites sind nur für ältere Generationen verfügbar.
+            </p>
+            {gifSyncProgress && (
+              <div className={`mt-3 p-3 rounded-md ${
+                gifSyncProgress.startsWith('Fehler:') || gifSyncProgress.startsWith('Netzwerkfehler')
+                  ? 'bg-red-50 text-red-800'
+                  : 'bg-purple-50 text-purple-800'
+              }`}>
+                {gifSyncProgress}
+              </div>
+            )}
           </div>
 
           {/* Einzelnes Pokémon hinzufügen */}

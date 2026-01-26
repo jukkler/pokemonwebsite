@@ -78,6 +78,10 @@ services:
     # Temporäre Verzeichnisse die beschreibbar sein müssen
     tmpfs:
       - /tmp:noexec,nosuid,size=100m
+    # Persistente Volumes für Uploads und Image Cache
+    volumes:
+      - avatar_uploads:/app/public/uploads/avatars
+      - image_cache:/app/.next/cache
     # Memory Limit (verhindert DoS durch Memory-Exhaustion)
     deploy:
       resources:
@@ -88,4 +92,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  avatar_uploads:
+    driver: local
+  image_cache:
     driver: local

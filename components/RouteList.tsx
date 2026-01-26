@@ -5,17 +5,19 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import PokemonCard from './PokemonCard';
 import PokemonStatsCard from './PokemonStatsCard';
 import EvolutionMenu from './EvolutionMenu';
+import PokemonSwapDialog from './PokemonSwapDialog';
 import { Button, Dialog, DialogActions, FormField, Select, Textarea } from './ui';
 import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
-import { useOutsideClick } from '@/lib/hooks/useOutsideClick';
 import { calculateAverageStats, filterPokemonBySearch } from '@/lib/team-utils';
 import { parseTypes } from '@/lib/typeEffectiveness';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
+import { getAvatarUrl } from '@/lib/avatars';
 import type { EncounterWithMeta, PlayerBase, PokemonListItem } from '@/lib/types';
 
 // =============================================================================
@@ -41,6 +43,85 @@ interface RouteListProps {
 // Sub-Komponenten
 // =============================================================================
 
+interface EditableRouteNameProps {
+  route: Route;
+  isInactive: boolean;
+  isAdmin: boolean;
+  isEditing: boolean;
+  editValue: string;
+  onEditStart: () => void;
+  onEditChange: (value: string) => void;
+  onEditSave: () => void;
+  onEditCancel: () => void;
+  isProcessing: boolean;
+}
+
+function EditableRouteName({
+  route,
+  isInactive,
+  isAdmin,
+  isEditing,
+  editValue,
+  onEditStart,
+  onEditChange,
+  onEditSave,
+  onEditCancel,
+  isProcessing,
+}: EditableRouteNameProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onEditSave();
+    } else if (e.key === 'Escape') {
+      onEditCancel();
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => onEditChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={onEditSave}
+          disabled={isProcessing}
+          className="text-2xl font-semibold px-2 py-1 border border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <h3 className={`text-2xl font-semibold ${isInactive ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+        {route.name}
+      </h3>
+      {isAdmin && (
+        <button
+          onClick={onEditStart}
+          className="p-1 text-gray-400 hover:text-blue-600 transition opacity-0 group-hover:opacity-100"
+          title="Route umbenennen"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface RouteHeaderProps {
   route: Route;
   isInactive: boolean;
@@ -50,6 +131,19 @@ interface RouteHeaderProps {
   notCaughtInfo: EncounterWithMeta | null;
   currentSlot: number | null;
   routeAverage: { total: number } | null;
+  isAdmin: boolean;
+  isEditing: boolean;
+  editValue: string;
+  onEditStart: () => void;
+  onEditChange: (value: string) => void;
+  onEditSave: () => void;
+  onEditCancel: () => void;
+  onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  isProcessing: boolean;
 }
 
 function RouteHeader({
@@ -61,22 +155,84 @@ function RouteHeader({
   notCaughtInfo,
   currentSlot,
   routeAverage,
+  isAdmin,
+  isEditing,
+  editValue,
+  onEditStart,
+  onEditChange,
+  onEditSave,
+  onEditCancel,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+  isProcessing,
 }: RouteHeaderProps) {
   return (
-    <div className="flex items-center gap-3 flex-wrap">
-      <h3 className={`text-2xl font-semibold ${isInactive ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-        {route.name}
-      </h3>
+    <div className="flex items-center gap-3 flex-wrap group">
+      {/* Move Up/Down Buttons */}
+      {isAdmin && !isEditing && (
+        <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition">
+          <button
+            onClick={onMoveUp}
+            disabled={isProcessing || !canMoveUp}
+            className="p-0.5 text-gray-400 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Nach oben verschieben"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={isProcessing || !canMoveDown}
+            className="p-0.5 text-gray-400 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Nach unten verschieben"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      <EditableRouteName
+        route={route}
+        isInactive={isInactive}
+        isAdmin={isAdmin}
+        isEditing={isEditing}
+        editValue={editValue}
+        onEditStart={onEditStart}
+        onEditChange={onEditChange}
+        onEditSave={onEditSave}
+        onEditCancel={onEditCancel}
+        isProcessing={isProcessing}
+      />
+
+      {/* Delete Button */}
+      {isAdmin && !isEditing && (
+        <button
+          onClick={onDelete}
+          disabled={isProcessing}
+          className="p-1 text-gray-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+          title="Route loeschen"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      )}
       
       {isKnockedOut && koInfo && (
         <span className="text-sm bg-red-50 text-red-700 px-3 py-1.5 rounded-full font-medium border border-red-200">
-          💀 K.O. durch {koInfo.koCausedBy}
+          K.O. durch {koInfo.koCausedBy}
         </span>
       )}
       
       {isNotCaught && notCaughtInfo && (
         <span className="text-sm bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full font-medium border border-yellow-200">
-          ⚠️ Nicht gefangen durch {notCaughtInfo.notCaughtBy}
+          Nicht gefangen durch {notCaughtInfo.notCaughtBy}
         </span>
       )}
       
@@ -88,7 +244,7 @@ function RouteHeader({
       
       {routeAverage && !isInactive && (
         <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium border border-blue-200">
-          ⌀ Gesamt-BP: {routeAverage.total}
+          Gesamt-BP: {routeAverage.total}
         </span>
       )}
     </div>
@@ -103,8 +259,8 @@ interface StatusInfoBoxProps {
 function StatusInfoBox({ type, info }: StatusInfoBoxProps) {
   const isKo = type === 'ko';
   const colors = isKo 
-    ? { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-', icon: '💀' }
-    : { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-', icon: '⚠️' };
+    ? { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-', icon: '!' }
+    : { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-', icon: '!' };
 
   return (
     <div className={`mb-4 ${colors.bg} border ${colors.border} rounded-lg p-3 text-sm`}>
@@ -150,7 +306,7 @@ function PokemonSearchInput({
     <div className="relative min-w-[160px]">
       <input
         type="text"
-        placeholder="Pokémon suchen..."
+        placeholder="Pokemon suchen..."
         value={searchValue}
         onChange={(e) => onSearchChange(e.target.value)}
         disabled={isAdding}
@@ -175,7 +331,7 @@ function PokemonSearchInput({
       
       {searchValue && filteredPokemon.length === 0 && (
         <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="text-sm text-gray-500">Kein Pokémon gefunden</p>
+          <p className="text-sm text-gray-500">Kein Pokemon gefunden</p>
         </div>
       )}
     </div>
@@ -199,6 +355,15 @@ export default function RouteList({
   const [addPokemonSearch, setAddPokemonSearch] = useState<Record<string, string>>({});
   const [addingPokemon, setAddingPokemon] = useState<Record<string, boolean>>({});
   
+  // Route Edit State
+  const [editingRouteId, setEditingRouteId] = useState<number | null>(null);
+  const [editingRouteName, setEditingRouteName] = useState('');
+
+  // Pokemon Swap State
+  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const [swappingEncounter, setSwappingEncounter] = useState<EncounterWithMeta | null>(null);
+  const [swapping, setSwapping] = useState(false);
+  
   // Dialog State
   const [koDialogOpen, setKoDialogOpen] = useState(false);
   const [notCaughtDialogOpen, setNotCaughtDialogOpen] = useState(false);
@@ -210,7 +375,6 @@ export default function RouteList({
 
   // Evolution-Hook
   const evolution = useEvolutionMenu(onTeamUpdate);
-  useOutsideClick(evolution.menuRef, evolution.closeMenu, evolution.openEncounterId !== null);
 
   // Ermittle belegte Slots
   const usedSlots: Record<number, { routeId: number; routeName: string }> = {};
@@ -262,7 +426,7 @@ export default function RouteList({
   };
 
   const handleReactivate = async (routeId: number, type: 'ko' | 'notCaught') => {
-    if (!confirm('Möchtest du diese Route wirklich reaktivieren?')) return;
+    if (!confirm('Moechtest du diese Route wirklich reaktivieren?')) return;
     setProcessing(true);
     try {
       const endpoint = type === 'ko' ? 'knockout' : 'notcaught';
@@ -310,9 +474,134 @@ export default function RouteList({
       setAddPokemonSearch({ ...addPokemonSearch, [key]: '' });
       onTeamUpdate?.();
     } catch (error) {
-      alert(`Fehler beim Hinzufügen: ${getErrorMessage(error)}`);
+      alert(`Fehler beim Hinzufuegen: ${getErrorMessage(error)}`);
     } finally {
       setAddingPokemon({ ...addingPokemon, [key]: false });
+    }
+  };
+
+  // Route Edit Handlers
+  const handleEditRouteStart = (route: Route) => {
+    setEditingRouteId(route.id);
+    setEditingRouteName(route.name);
+  };
+
+  const handleEditRouteSave = async () => {
+    if (!editingRouteId || !editingRouteName.trim()) {
+      setEditingRouteId(null);
+      return;
+    }
+    
+    const originalRoute = routes.find(r => r.id === editingRouteId);
+    if (originalRoute && originalRoute.name === editingRouteName.trim()) {
+      setEditingRouteId(null);
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      await fetchJson(`/api/admin/routes/${editingRouteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingRouteName.trim() }),
+      });
+      setEditingRouteId(null);
+      onTeamUpdate?.();
+    } catch (error) {
+      alert(`Fehler beim Umbenennen: ${getErrorMessage(error)}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleEditRouteCancel = () => {
+    setEditingRouteId(null);
+    setEditingRouteName('');
+  };
+
+  // Route Delete Handler
+  const handleDeleteRoute = async (routeId: number, routeName: string) => {
+    if (!confirm(`Route "${routeName}" wirklich loeschen?\n\nAlle Encounters dieser Route werden ebenfalls geloescht!`)) {
+      return;
+    }
+    setProcessing(true);
+    try {
+      await fetchJson(`/api/admin/routes/${routeId}`, { method: 'DELETE' });
+      onTeamUpdate?.();
+    } catch (error) {
+      alert(`Fehler beim Loeschen: ${getErrorMessage(error)}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Pokemon Swap Handler
+  const handleSwapPokemon = async (newPokemonId: number) => {
+    if (!swappingEncounter) return;
+    setSwapping(true);
+    try {
+      await fetchJson(`/api/admin/encounters/${swappingEncounter.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pokemonId: newPokemonId }),
+      });
+      setSwapDialogOpen(false);
+      setSwappingEncounter(null);
+      onTeamUpdate?.();
+    } catch (error) {
+      alert(`Fehler beim Tauschen: ${getErrorMessage(error)}`);
+    } finally {
+      setSwapping(false);
+    }
+  };
+
+  // Pokemon Delete Handler
+  const handleDeleteEncounter = async (encounterId: number, pokemonName: string) => {
+    if (!confirm(`Pokemon "${pokemonName}" wirklich entfernen?`)) {
+      return;
+    }
+    setProcessing(true);
+    try {
+      await fetchJson(`/api/admin/encounters/${encounterId}`, { method: 'DELETE' });
+      onTeamUpdate?.();
+    } catch (error) {
+      alert(`Fehler beim Entfernen: ${getErrorMessage(error)}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Route Move Handler (Verschieben nach oben/unten)
+  const handleMoveRoute = async (routeId: number, direction: 'up' | 'down') => {
+    const currentIndex = routes.findIndex(r => r.id === routeId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= routes.length) return;
+
+    const currentRoute = routes[currentIndex];
+    const targetRoute = routes[targetIndex];
+
+    setProcessing(true);
+    try {
+      // Tausche die Order-Werte beider Routen
+      await Promise.all([
+        fetchJson(`/api/admin/routes/${currentRoute.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentRoute.name, order: targetRoute.order }),
+        }),
+        fetchJson(`/api/admin/routes/${targetRoute.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: targetRoute.name, order: currentRoute.order }),
+        }),
+      ]);
+      onTeamUpdate?.();
+    } catch (error) {
+      alert(`Fehler beim Verschieben: ${getErrorMessage(error)}`);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -324,7 +613,7 @@ export default function RouteList({
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 text-lg">
-          Noch keine Routen vorhanden. Admin kann Routen im Admin-Panel hinzufügen.
+          Noch keine Routen vorhanden. Admin kann Routen im Admin-Panel hinzufuegen.
         </p>
       </div>
     );
@@ -343,8 +632,9 @@ export default function RouteList({
           const isInactive = isKnockedOut || isNotCaught;
           const koInfo = isKnockedOut ? route.encounters[0] : null;
           const notCaughtInfo = isNotCaught ? route.encounters[0] : null;
+          const isEditingThisRoute = editingRouteId === route.id;
 
-          // Für konsistente Höhe
+          // Fuer konsistente Hoehe
           const maxTypesInRoute = route.encounters.length > 0
             ? Math.max(...route.encounters.map((e) => parseTypes(e.pokemon.types).length))
             : 1;
@@ -366,6 +656,19 @@ export default function RouteList({
                   notCaughtInfo={notCaughtInfo}
                   currentSlot={currentSlot}
                   routeAverage={routeAverage}
+                  isAdmin={isAdmin}
+                  isEditing={isEditingThisRoute}
+                  editValue={editingRouteName}
+                  onEditStart={() => handleEditRouteStart(route)}
+                  onEditChange={setEditingRouteName}
+                  onEditSave={handleEditRouteSave}
+                  onEditCancel={handleEditRouteCancel}
+                  onDelete={() => handleDeleteRoute(route.id, route.name)}
+                  onMoveUp={() => handleMoveRoute(route.id, 'up')}
+                  onMoveDown={() => handleMoveRoute(route.id, 'down')}
+                  canMoveUp={routes.findIndex(r => r.id === route.id) > 0}
+                  canMoveDown={routes.findIndex(r => r.id === route.id) < routes.length - 1}
+                  isProcessing={processing}
                 />
 
                 {/* Admin-Aktionen */}
@@ -377,7 +680,7 @@ export default function RouteList({
                         disabled={processing}
                         className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition text-sm disabled:opacity-50"
                       >
-                        🔄 Reaktivieren
+                        Reaktivieren
                       </button>
                     ) : isNotCaught ? (
                       <button
@@ -385,7 +688,7 @@ export default function RouteList({
                         disabled={processing}
                         className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition text-sm disabled:opacity-50"
                       >
-                        🔄 Reaktivieren
+                        Reaktivieren
                       </button>
                     ) : (
                       <>
@@ -399,7 +702,7 @@ export default function RouteList({
                           disabled={processing}
                           className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition text-sm disabled:opacity-50"
                         >
-                          💀 K.O.
+                          K.O.
                         </button>
                         <button
                           onClick={() => {
@@ -411,7 +714,7 @@ export default function RouteList({
                           disabled={processing}
                           className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md transition text-sm disabled:opacity-50"
                         >
-                          ⚠️ Nicht gefangen
+                          Nicht gefangen
                         </button>
                       </>
                     )}
@@ -473,7 +776,26 @@ export default function RouteList({
                   return (
                     <div key={player.id} className="flex-shrink-0">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: player.color }} />
+                        {/* Avatar oder Farbe */}
+                        {(() => {
+                          const avatarUrl = getAvatarUrl(player.avatar);
+                          if (avatarUrl) {
+                            return (
+                              <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                                <Image
+                                  src={avatarUrl}
+                                  alt={player.name}
+                                  width={24}
+                                  height={24}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: player.color }} />
+                          );
+                        })()}
                         <h4 className="font-semibold text-lg">{player.name}</h4>
                       </div>
 
@@ -481,7 +803,44 @@ export default function RouteList({
                         <div className="flex flex-wrap items-start gap-3 md:gap-2">
                           {playerEncounters.map((encounter) => (
                             <div key={encounter.id} className="flex flex-col w-[140px] flex-shrink-0">
-                              <div className={`relative group flex-1 ${minHeight}`}>
+                              <div className={`relative group ${minHeight}`}>
+                                {/* Admin Action Buttons */}
+                                {isAdmin && !isInactive && (
+                                  <div className="absolute top-1 right-1 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                    {/* Swap Button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSwappingEncounter(encounter);
+                                        setSwapDialogOpen(true);
+                                      }}
+                                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs w-6 h-6 rounded-md flex items-center justify-center shadow-sm"
+                                      title="Pokemon tauschen"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                      </svg>
+                                    </button>
+                                    {/* Delete Button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteEncounter(
+                                          encounter.id,
+                                          encounter.pokemon.nameGerman || encounter.pokemon.name
+                                        );
+                                      }}
+                                      disabled={processing}
+                                      className="bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-md flex items-center justify-center shadow-sm disabled:opacity-50"
+                                      title="Pokemon entfernen"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                )}
+                                
                                 <div
                                   className={`h-full ${minHeight} ${isAdmin && !isInactive ? 'cursor-pointer' : ''}`}
                                   onClick={() => {
@@ -493,15 +852,16 @@ export default function RouteList({
                                   <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="small" />
                                 </div>
 
-                                {/* Evolution-Menü */}
+                                {/* Evolution-Menue - direkt unter der Pokemon-Box als Overlay */}
                                 {isAdmin && evolution.openEncounterId === encounter.id && (
                                   <EvolutionMenu
                                     evolutionData={evolution.evolutionData}
                                     isLoading={evolution.isLoading}
                                     isEvolving={evolution.isEvolving}
                                     onEvolve={(targetId) => evolution.evolve(encounter.id, targetId)}
+                                    onClose={evolution.closeMenu}
                                     menuRef={evolution.menuRef}
-                                    className="absolute z-30 top-full left-0 mt-2"
+                                    className="absolute z-50 top-full left-0 mt-1"
                                   />
                                 )}
                               </div>
@@ -519,7 +879,7 @@ export default function RouteList({
                           isAdding={isAdding}
                         />
                       ) : (
-                        <p className="text-gray-400 text-sm italic min-w-[160px]">Noch kein Pokémon</p>
+                        <p className="text-gray-400 text-sm italic min-w-[160px]">Noch kein Pokemon</p>
                       )}
                     </div>
                   );
@@ -535,14 +895,14 @@ export default function RouteList({
         isOpen={koDialogOpen}
         onClose={() => setKoDialogOpen(false)}
         title="Route K.O. setzen"
-        titleIcon="💀"
+        titleIcon="!"
         titleColor="text-red-700"
-        description="Alle Pokémon dieser Route werden K.O. gesetzt und aus dem Team entfernt."
+        description="Alle Pokemon dieser Route werden K.O. gesetzt und aus dem Team entfernt."
         actions={
           <DialogActions
             onCancel={() => setKoDialogOpen(false)}
             onConfirm={handleKnockout}
-            confirmText="💀 K.O. setzen"
+            confirmText="K.O. setzen"
             confirmVariant="danger"
             isLoading={processing}
             disabled={!koCausedBy.trim() || !koReason.trim()}
@@ -554,7 +914,7 @@ export default function RouteList({
             value={koCausedBy}
             onChange={(e) => setKoCausedBy(e.target.value)}
             options={playerOptions}
-            placeholder="-- Spieler auswählen --"
+            placeholder="-- Spieler auswaehlen --"
             focusColor="focus:ring-red-500"
             disabled={processing}
           />
@@ -576,14 +936,14 @@ export default function RouteList({
         isOpen={notCaughtDialogOpen}
         onClose={() => setNotCaughtDialogOpen(false)}
         title="Route als Nicht gefangen markieren"
-        titleIcon="⚠️"
+        titleIcon="!"
         titleColor="text-yellow-700"
         description="Diese Route wird als Nicht gefangen markiert und aus dem Team entfernt."
         actions={
           <DialogActions
             onCancel={() => setNotCaughtDialogOpen(false)}
             onConfirm={handleNotCaught}
-            confirmText="⚠️ Als Nicht gefangen markieren"
+            confirmText="Als Nicht gefangen markieren"
             confirmVariant="warning"
             isLoading={processing}
             disabled={!notCaughtBy.trim()}
@@ -595,7 +955,7 @@ export default function RouteList({
             value={notCaughtBy}
             onChange={(e) => setNotCaughtBy(e.target.value)}
             options={playerOptions}
-            placeholder="-- Spieler auswählen --"
+            placeholder="-- Spieler auswaehlen --"
             focusColor="focus:ring-yellow-500"
             disabled={processing}
           />
@@ -611,6 +971,19 @@ export default function RouteList({
           />
         </FormField>
       </Dialog>
+
+      {/* Pokemon Swap Dialog */}
+      <PokemonSwapDialog
+        isOpen={swapDialogOpen}
+        onClose={() => {
+          setSwapDialogOpen(false);
+          setSwappingEncounter(null);
+        }}
+        onConfirm={handleSwapPokemon}
+        currentPokemon={swappingEncounter?.pokemon}
+        pokemon={pokemon}
+        isLoading={swapping}
+      />
     </>
   );
 }

@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { fetchJson } from '@/lib/fetchJson';
+import { useSpriteMode } from '@/lib/contexts/SpriteContext';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export default function Navigation() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { spriteMode, toggleSpriteMode } = useSpriteMode();
 
   // Auth-Status prüfen
   useEffect(() => {
@@ -118,6 +120,34 @@ export default function Navigation() {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Sprite-Modus Toggle */}
+            <button
+              onClick={toggleSpriteMode}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition text-sm font-medium ${
+                spriteMode === 'animated'
+                  ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title={spriteMode === 'animated' ? 'Animierte Sprites aktiv' : 'Statische Sprites aktiv'}
+            >
+              {spriteMode === 'animated' ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="hidden lg:inline">GIF</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="hidden lg:inline">Statisch</span>
+                </>
+              )}
+            </button>
+
             {!loading && (
               <>
                 {isAdmin ? (
@@ -207,6 +237,35 @@ export default function Navigation() {
                 Admin
               </Link>
             )}
+            {/* Sprite-Modus Toggle (Mobile) */}
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                onClick={toggleSpriteMode}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium ${
+                  spriteMode === 'animated'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {spriteMode === 'animated' ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Animierte Sprites (GIF)
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Statische Sprites
+                  </>
+                )}
+              </button>
+            </div>
+
             {!loading && (
               <div className="pt-4 border-t border-gray-200">
                 {isAdmin ? (

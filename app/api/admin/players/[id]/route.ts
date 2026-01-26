@@ -31,7 +31,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, avatar } = body;
 
     try {
       validateRequired(body, ['name', 'color']);
@@ -48,6 +48,7 @@ export async function PUT(
         data: {
           name: String(name).trim(),
           color: String(color).trim(),
+          avatar: avatar && avatar !== 'none' ? String(avatar).trim() : null,
         },
       });
 

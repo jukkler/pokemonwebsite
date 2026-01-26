@@ -38,7 +38,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   return withAdminAuthAndErrorHandling(async () => {
     const body = await request.json();
-    const { name, color } = body;
+    const { name, color, avatar } = body;
 
     // Validierung
     try {
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: String(name).trim(),
           color: String(color).trim(),
+          avatar: avatar && avatar !== 'none' ? String(avatar).trim() : null,
         },
       });
 

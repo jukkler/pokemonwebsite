@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import BottomNavigation from "@/components/BottomNavigation";
+import { SpriteProvider } from "@/lib/contexts/SpriteContext";
 
 const poppins = Poppins({
   weight: ['400', '500', '600'],
@@ -30,11 +31,13 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} font-sans antialiased`}
       >
-        <Navigation />
-        <main className="min-h-screen bg-gray-50 pb-16 md:pb-0">
-        {children}
-        </main>
-        <BottomNavigation />
+        <SpriteProvider>
+          <Navigation />
+          <main className="min-h-screen bg-gray-50 pb-16 md:pb-0">
+          {children}
+          </main>
+          <BottomNavigation />
+        </SpriteProvider>
       </body>
     </html>
   );

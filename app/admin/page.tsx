@@ -34,13 +34,13 @@ export default async function AdminDashboard() {
     {
       title: 'Routen',
       count: stats.routeCount,
-      href: '/admin/routes',
+      href: '/pokeroute',
       color: 'bg-green-500',
     },
     {
       title: 'Encounters',
       count: stats.encounterCount,
-      href: '/admin/encounters',
+      href: '/pokeroute',
       color: 'bg-purple-500',
     },
     {
@@ -90,24 +90,6 @@ export default async function AdminDashboard() {
             Spieler verwalten
           </Link>
           <Link
-            href="/admin/routes"
-            className="px-4 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition text-center"
-          >
-            Routen verwalten
-          </Link>
-          <Link
-            href="/admin/encounters"
-            className="px-4 py-3 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition text-center"
-          >
-            Encounters hinzufügen
-          </Link>
-          <Link
-            href="/admin/team"
-            className="px-4 py-3 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition text-center"
-          >
-            Teams bearbeiten
-          </Link>
-          <Link
             href="/admin/pokemon"
             className="px-4 py-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition text-center"
           >
@@ -127,9 +109,9 @@ export default async function AdminDashboard() {
           </Link>
           <Link
             href="/pokeroute"
-            className="px-4 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition text-center"
+            className="px-4 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition text-center"
           >
-            Zur öffentlichen Ansicht
+            🎮 Routen & Teams bearbeiten
           </Link>
         </div>
       </div>

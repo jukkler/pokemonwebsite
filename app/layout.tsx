@@ -14,11 +14,6 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "PokéTool by Lukas",
   description: "Dokumentation eines Parallel-Playthroughs",
-  icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
-  },
 };
 
 export default function RootLayout({
@@ -28,6 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de">
+      <head>
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any" />
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
+      </head>
       <body
         className={`${poppins.variable} font-sans antialiased`}
       >

@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import TeamDisplay from '@/components/TeamDisplay';
 import RouteList from '@/components/RouteList';
+import RunStatsPanel from '@/components/RunStatsPanel';
 import { fetchJson } from '@/lib/fetchJson';
 
 interface PlayerEncounter {
@@ -224,6 +225,9 @@ export default function PokerouteClient({
           PokéTool by Lukas
         </h1>
       </div>
+
+      {/* Run Statistiken */}
+      <RunStatsPanel />
 
       {/* Aktuelle Teams */}
       <div className="mb-8 md:mb-12">

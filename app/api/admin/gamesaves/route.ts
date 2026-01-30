@@ -20,6 +20,7 @@ export async function GET() {
         id: true,
         name: true,
         description: true,
+        gameVersionKey: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -33,10 +34,10 @@ export async function POST(request: NextRequest) {
   return withAdminAuthAndErrorHandling(async () => {
     const body = await request.json();
     validateRequired(body, ['name']);
-    const { name, description } = body;
+    const { name, description, gameVersionKey } = body;
 
-    // Exportiere alle Spieldaten
-    const [players, routes] = await Promise.all([
+    // Exportiere alle Spieldaten inkl. Run-Historie
+    const [players, routes, runs] = await Promise.all([
       prisma.player.findMany({
         include: {
           encounters: {
@@ -51,11 +52,19 @@ export async function POST(request: NextRequest) {
           },
         },
       }),
+      prisma.run.findMany({
+        include: {
+          playerStats: true,
+          encounters: true,
+        },
+        orderBy: { runNumber: 'asc' },
+      }),
     ]);
 
     const gameData = {
       players,
       routes,
+      runs,
       savedAt: new Date().toISOString(),
     };
 
@@ -63,6 +72,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: String(name).trim(),
         description: description ? String(description).trim() : null,
+        gameVersionKey: gameVersionKey || null,
         data: JSON.stringify(gameData),
       },
     });
@@ -72,6 +82,7 @@ export async function POST(request: NextRequest) {
         id: gameSave.id,
         name: gameSave.name,
         description: gameSave.description,
+        gameVersionKey: gameSave.gameVersionKey,
         createdAt: gameSave.createdAt,
       },
     });

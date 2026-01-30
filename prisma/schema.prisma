@@ -103,10 +103,72 @@ model TeamMember {
 
 // Spielstand-System: Speichert komplette Snapshots des Spiels
 model GameSave {
-  id          Int      @id @default(autoincrement())
-  name        String   // Name des Spielstands (z.B. "Pokémon Platin - Abgeschlossen")
-  description String?  // Optionale Beschreibung
-  data        String   // JSON-Dump aller Spieldaten (Players, Routes, Encounters)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  name           String   // Name des Spielstands (z.B. "Pokémon Platin - Abgeschlossen")
+  description    String?  // Optionale Beschreibung
+  data           String   // JSON-Dump aller Spieldaten (Players, Routes, Encounters)
+  gameVersionKey String?  // Optional: Welche Version wurde gespielt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// =============================================================================
+// Run-Tracking System
+// =============================================================================
+
+// Spielversionen (Gen 1-9)
+model GameVersion {
+  key        String @id // z.B. "platinum", "heartgold"
+  name       String // z.B. "Pokémon Platin"
+  generation Int    // 1-9
+  runs       Run[]
+}
+
+// Ein Run = Ein Durchlauf des Nuzlocke
+model Run {
+  id              Int              @id @default(autoincrement())
+  runNumber       Int              // Laufende Nummer (1, 2, 3, ...)
+  gameVersion     GameVersion?     @relation(fields: [gameVersionKey], references: [key])
+  gameVersionKey  String?          // FK zu GameVersion (optional für alte Daten)
+  status          String           @default("active") // "active", "failed", "completed"
+  loserPlayerName String?          // Name des Spielers der verloren hat
+  startedAt       DateTime         @default(now())
+  endedAt         DateTime?
+  playerStats     RunPlayerStats[]
+  encounters      RunEncounter[]   // Alle Encounters dieses Runs
+  
+  @@index([status])
+  @@index([gameVersionKey])
+}
+
+// Statistiken pro Spieler pro Run
+model RunPlayerStats {
+  id              Int     @id @default(autoincrement())
+  run             Run     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId           Int
+  playerName      String  // Name (nicht FK, da Spieler überschrieben werden können)
+  knockedOutCount Int     @default(0)
+  notCaughtCount  Int     @default(0)
+  isLoser         Boolean @default(false)
+  
+  @@unique([runId, playerName])
+  @@index([runId])
+  @@index([playerName])
+}
+
+// Gefangene Pokemon eines Runs (Snapshot beim Beenden)
+model RunEncounter {
+  id               Int     @id @default(autoincrement())
+  run              Run     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId            Int
+  playerName       String  // Spielername
+  pokemonPokedexId Int     // Pokedex-ID des Pokemon
+  pokemonName      String  // Name für Anzeige ohne Join
+  pokemonNameGerman String? // Deutscher Name
+  routeName        String  // Route wo gefangen
+  isKnockedOut     Boolean @default(false)
+  isNotCaught      Boolean @default(false)
+  
+  @@index([runId])
+  @@index([playerName])
 }

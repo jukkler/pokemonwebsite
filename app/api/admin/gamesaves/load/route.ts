@@ -38,8 +38,11 @@ export async function POST(request: NextRequest) {
     // Parse die Spieldaten
     const gameData = JSON.parse(gameSave.data);
 
-    // Lösche alle aktuellen Spieldaten (Cascade löscht auch Encounters)
+    // Lösche alle aktuellen Spieldaten (Cascade löscht auch Encounters, RunPlayerStats und RunEncounter)
     await prisma.$transaction([
+      prisma.runEncounter.deleteMany({}),
+      prisma.runPlayerStats.deleteMany({}),
+      prisma.run.deleteMany({}),
       prisma.encounter.deleteMany({}),
       prisma.route.deleteMany({}),
       prisma.player.deleteMany({}),
@@ -53,6 +56,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: player.name,
           color: player.color,
+          avatar: player.avatar || null,
         },
       });
       playerIdMap.set(player.id, newPlayer.id);
@@ -80,8 +84,65 @@ export async function POST(request: NextRequest) {
             pokemonId: encounter.pokemonId,
             nickname: encounter.nickname,
             teamSlot: encounter.teamSlot,
+            isKnockedOut: encounter.isKnockedOut || false,
+            koCausedBy: encounter.koCausedBy || null,
+            koReason: encounter.koReason || null,
+            koDate: encounter.koDate ? new Date(encounter.koDate) : null,
+            isNotCaught: encounter.isNotCaught || false,
+            notCaughtBy: encounter.notCaughtBy || null,
+            notCaughtReason: encounter.notCaughtReason || null,
+            notCaughtDate: encounter.notCaughtDate ? new Date(encounter.notCaughtDate) : null,
           },
         });
+      }
+    }
+
+    // 4. Runs, RunPlayerStats und RunEncounter importieren (falls vorhanden)
+    if (gameData.runs && Array.isArray(gameData.runs)) {
+      for (const run of gameData.runs) {
+        const newRun = await prisma.run.create({
+          data: {
+            runNumber: run.runNumber,
+            gameVersionKey: run.gameVersionKey || null,
+            status: run.status,
+            loserPlayerName: run.loserPlayerName || null,
+            startedAt: new Date(run.startedAt),
+            endedAt: run.endedAt ? new Date(run.endedAt) : null,
+          },
+        });
+
+        // PlayerStats für diesen Run importieren
+        if (run.playerStats && Array.isArray(run.playerStats)) {
+          for (const stat of run.playerStats) {
+            await prisma.runPlayerStats.create({
+              data: {
+                runId: newRun.id,
+                playerName: stat.playerName,
+                knockedOutCount: stat.knockedOutCount || 0,
+                notCaughtCount: stat.notCaughtCount || 0,
+                isLoser: stat.isLoser || false,
+              },
+            });
+          }
+        }
+
+        // RunEncounter für diesen Run importieren
+        if (run.encounters && Array.isArray(run.encounters)) {
+          for (const enc of run.encounters) {
+            await prisma.runEncounter.create({
+              data: {
+                runId: newRun.id,
+                playerName: enc.playerName,
+                pokemonPokedexId: enc.pokemonPokedexId,
+                pokemonName: enc.pokemonName,
+                pokemonNameGerman: enc.pokemonNameGerman || null,
+                routeName: enc.routeName,
+                isKnockedOut: enc.isKnockedOut || false,
+                isNotCaught: enc.isNotCaught || false,
+              },
+            });
+          }
+        }
       }
     }
 

@@ -104,6 +104,16 @@ export default function Navigation() {
               >
                 Tabelle
               </Link>
+              <Link
+                href="/statistik"
+                className={`px-4 py-2 rounded-lg transition font-medium ${
+                  isActive('/statistik')
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Statistik
+              </Link>
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -223,6 +233,15 @@ export default function Navigation() {
               }`}
             >
               Tabelle
+            </Link>
+            <Link
+              href="/statistik"
+              onClick={() => setMobileOpen(false)}
+              className={`block px-4 py-3 rounded-lg font-medium ${
+                isActive('/statistik') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Statistik
             </Link>
             {isAdmin && (
               <Link

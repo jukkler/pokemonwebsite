@@ -19,6 +19,17 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  // Rewrites: Leitet /uploads/avatars/* an die API-Route weiter,
+  // da Next.js standalone mode keine zur Laufzeit hinzugefügten
+  // Dateien aus public/ ausliefert.
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/avatars/:filename',
+        destination: '/api/uploads/avatars/:filename',
+      },
+    ];
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',

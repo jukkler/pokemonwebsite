@@ -1,12 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import { BentoCard } from '@/components/layout/BentoGrid';
 
 type PlayerInfo = {
   id: number;
   name: string;
   color: string;
+  avatar: string | null;
 };
 
 type EncounterStatus = 'ko' | 'notCaught' | null;
@@ -153,19 +156,19 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
           />
         )}
         <div className="flex flex-col">
-          <span className="font-semibold text-gray-900">{displayName}</span>
+          <span className="font-semibold text-[var(--foreground)]">{displayName}</span>
           {typeText && (
-            <span className="text-sm text-gray-600">{typeText}</span>
+            <span className="text-sm text-[var(--text-secondary)]">{typeText}</span>
           )}
-          <span className="text-sm font-medium text-purple-700">
+          <span className="text-sm font-medium text-purple-400">
             BP: {cell.basePoints ?? '-'}
           </span>
           {cell.status && (
             <span
               className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium border ${
                 cell.status === 'ko'
-                  ? 'bg-red-50 text-red-700 border-red-200'
-                  : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                  : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
               }`}
             >
               {cell.status === 'ko' ? 'K.O.' : 'Nicht gefangen'}
@@ -178,37 +181,43 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
 
   const getRowHighlight = (status: EncounterStatus) => {
     if (status === 'ko') {
-      return 'bg-red-50';
+      return 'bg-red-500/10';
     }
     if (status === 'notCaught') {
-      return 'bg-amber-50';
+      return 'bg-amber-500/10';
     }
     return '';
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <div className="mb-4 flex items-center justify-end gap-2">
-        <label htmlFor="only-available" className="text-sm font-medium text-gray-700">
-          Nur verfügbare Pokémon anzeigen
+    <BentoCard
+      span={{ sm: 1, md: 3, lg: 3 }}
+      className="animate-[scale-in_0.3s_ease-out]"
+    >
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">Encounter-Tabelle</h1>
+        <label htmlFor="only-available" className="flex items-center gap-3 cursor-pointer">
+          <span className="text-sm font-medium text-[var(--text-secondary)]">
+            Nur verfügbare Pokémon
+          </span>
+          <input
+            id="only-available"
+            type="checkbox"
+            checked={onlyAvailable}
+            onChange={(e) => setOnlyAvailable(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--border-default)] text-purple-600 focus:ring-purple-500 bg-[var(--background-secondary)]"
+          />
         </label>
-        <input
-          id="only-available"
-          type="checkbox"
-          checked={onlyAvailable}
-          onChange={(e) => setOnlyAvailable(e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-        />
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg border border-[var(--border-default)]">
         <table className="w-full text-left">
-          <thead>
-            <tr className="border-b">
+          <thead className="bg-[var(--card-bg-elevated)]">
+            <tr className="border-b border-[var(--border-default)]">
               <th className="px-4 py-3">
                 <button
                   type="button"
                   onClick={() => handleSort('route')}
-                  className="flex items-center gap-2 font-semibold text-gray-700"
+                  className="flex items-center gap-2 font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300"
                 >
                   Route
                   {sort.key === 'route' && (
@@ -221,8 +230,22 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
                   <button
                     type="button"
                     onClick={() => handleSort(`player-${index}`)}
-                    className="flex items-center gap-2 font-semibold text-gray-700"
+                    className="flex items-center gap-2 font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300"
                   >
+                    {player.avatar ? (
+                      <Image
+                        src={player.avatar}
+                        alt={player.name}
+                        width={24}
+                        height={24}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <div
+                        className="w-6 h-6 rounded-full"
+                        style={{ backgroundColor: player.color }}
+                      />
+                    )}
                     <span>{player.name}</span>
                     {sort.key === `player-${index}` && (
                       <span className="text-xs">
@@ -236,7 +259,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
                 <button
                   type="button"
                   onClick={() => handleSort('average')}
-                  className="flex items-center gap-2 font-semibold text-gray-700 ml-auto"
+                  className="flex items-center gap-2 font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300 ml-auto"
                 >
                   Durchschnitt Gesamt BP
                   {sort.key === 'average' && (
@@ -251,7 +274,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
               <tr>
                 <td
                   colSpan={players.length + 2}
-                  className="px-4 py-8 text-center text-gray-500"
+                  className="px-4 py-8 text-center text-[var(--text-secondary)]"
                 >
                   Keine Encounters gefunden.
                 </td>
@@ -260,9 +283,9 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
               sortedRows.map((row) => (
                 <tr
                   key={row.id}
-                  className={`border-b last:border-b-0 ${getRowHighlight(row.status)}`}
+                  className={`border-b border-[var(--border-default)] last:border-b-0 hover:bg-[var(--background-tertiary)] transition-colors duration-300 ${getRowHighlight(row.status)}`}
                 >
-                  <td className="px-4 py-3 font-medium text-gray-900">
+                  <td className="px-4 py-3 font-medium text-[var(--foreground)]">
                     {row.name}
                   </td>
                   {row.players.map((cell, index) => (
@@ -270,7 +293,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
                       {renderPlayerCell(cell)}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right font-semibold text-purple-800">
+                  <td className="px-4 py-3 text-right font-semibold text-purple-400">
                     {row.averageBasePoints !== null
                       ? Math.round(row.averageBasePoints)
                       : '-'}
@@ -281,7 +304,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
           </tbody>
         </table>
       </div>
-    </div>
+    </BentoCard>
   );
 }
 

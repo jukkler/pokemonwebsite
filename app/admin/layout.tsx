@@ -30,9 +30,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300">
       {/* Admin Navigation */}
-      <div className="bg-gray-800 text-white">
+      <div className="bg-[var(--background-tertiary)] text-[var(--foreground)] border-b border-[var(--border-default)]">
         <div className="container mx-auto px-4">
           <div className="flex items-center space-x-6 py-3 overflow-x-auto">
             <Link

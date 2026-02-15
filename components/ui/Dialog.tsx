@@ -1,9 +1,13 @@
 /**
  * Dialog Komponente
  * Modal-Dialog für Bestätigungen und Formulare
+ * Nutzt React Portal für korrekte Positionierung über allen Elementen
  */
 
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Button from './Button';
 
 interface DialogProps {
@@ -22,25 +26,36 @@ export default function Dialog({
   onClose,
   title,
   titleIcon,
-  titleColor = 'text-gray-900',
+  titleColor = 'text-[var(--foreground)]',
   description,
   children,
   actions,
 }: DialogProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-[var(--card-bg-elevated)] rounded-xl p-6 max-w-md w-full shadow-2xl border border-[var(--border-default)]">
         <h2 className={`text-2xl font-semibold mb-4 ${titleColor}`}>
           {titleIcon && <span className="mr-2">{titleIcon}</span>}
           {title}
         </h2>
-        
+
         {description && (
-          <p className="text-gray-600 mb-4">{description}</p>
+          <p className="text-[var(--text-secondary)] mb-4">{description}</p>
         )}
-        
+
         <div className="space-y-4">
           {children}
         </div>
@@ -51,7 +66,8 @@ export default function Dialog({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

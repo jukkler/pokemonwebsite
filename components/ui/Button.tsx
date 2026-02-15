@@ -22,8 +22,8 @@ export default function Button({
   
   const variantClasses = {
     primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 active:bg-blue-800',
-    secondary: 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50 focus:ring-blue-500 active:bg-blue-100',
-    disabled: 'bg-gray-300 text-gray-500 cursor-not-allowed',
+    secondary: 'bg-[var(--background-secondary)] text-[var(--foreground)] border-2 border-[var(--border-default)] hover:bg-[var(--background-tertiary)] focus:ring-blue-500',
+    disabled: 'bg-[var(--background-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed',
   };
 
   const isDisabled = disabled || variant === 'disabled';

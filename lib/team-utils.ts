@@ -113,25 +113,25 @@ export function countPlayerStats(
   const notCaughtRouteMap = new Map<string, string[]>();
 
   routes.forEach((route) => {
-    route.encounters.forEach((encounter) => {
-      const pokemonName = encounter.pokemon.nameGerman || encounter.pokemon.name;
+    // Zähle K.O. und Nicht-gefangen nur einmal pro Route (nicht pro Encounter)
+    const hasKo = route.encounters.some(e => e.isKnockedOut && e.koCausedBy === playerName);
+    const hasNotCaught = route.encounters.some(e => e.isNotCaught && e.notCaughtBy === playerName);
 
-      if (encounter.isKnockedOut && encounter.koCausedBy === playerName) {
-        koCount++;
-        if (!koRouteMap.has(route.name)) {
-          koRouteMap.set(route.name, []);
-        }
-        koRouteMap.get(route.name)!.push(pokemonName);
-      }
+    if (hasKo) {
+      koCount++;
+      const pokemonNames = route.encounters
+        .filter(e => e.isKnockedOut)
+        .map(e => e.pokemon.nameGerman || e.pokemon.name);
+      koRouteMap.set(route.name, pokemonNames);
+    }
 
-      if (encounter.isNotCaught && encounter.notCaughtBy === playerName) {
-        notCaughtCount++;
-        if (!notCaughtRouteMap.has(route.name)) {
-          notCaughtRouteMap.set(route.name, []);
-        }
-        notCaughtRouteMap.get(route.name)!.push(pokemonName);
-      }
-    });
+    if (hasNotCaught) {
+      notCaughtCount++;
+      const pokemonNames = route.encounters
+        .filter(e => e.isNotCaught)
+        .map(e => e.pokemon.nameGerman || e.pokemon.name);
+      notCaughtRouteMap.set(route.name, pokemonNames);
+    }
   });
 
   return {

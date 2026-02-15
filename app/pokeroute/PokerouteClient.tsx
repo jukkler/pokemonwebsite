@@ -9,6 +9,9 @@ import TeamDisplay from '@/components/TeamDisplay';
 import RouteList from '@/components/RouteList';
 import RunStatsPanel from '@/components/RunStatsPanel';
 import { fetchJson } from '@/lib/fetchJson';
+import { getAvatarUrl } from '@/lib/avatars';
+import Image from 'next/image';
+import { BentoGrid, BentoCard } from '@/components/layout/BentoGrid';
 
 interface PlayerEncounter {
   id: number;
@@ -139,7 +142,7 @@ export default function PokerouteClient({
     }
   }, []); // Keine Dependencies, da setState stabil ist
 
-  // Automatisches Polling: Aktualisiere Daten alle 30 Sekunden (Performance-Optimierung)
+  // Automatisches Polling: Aktualisiere Daten regelmäßig
   useEffect(() => {
     // Funktion zum Laden der Daten (definiert im useEffect für stabile Referenz)
     const loadData = async () => {
@@ -159,13 +162,13 @@ export default function PokerouteClient({
     // Initiales Laden
     loadData();
 
-    // Polling-Interval: Alle 30 Sekunden aktualisieren (reduziert Server-Last um ~90%)
+    // Polling-Interval: Jede Sekunde aktualisieren für Echtzeit-Experience
     const interval = setInterval(() => {
       // Nur aktualisieren, wenn die Seite sichtbar ist
       if (!document.hidden) {
         loadData();
       }
-    }, 30000); // 30 Sekunden
+    }, 1000); // 1 Sekunde für Echtzeit-Updates
 
     // Cleanup beim Unmount
     return () => clearInterval(interval);
@@ -218,31 +221,74 @@ export default function PokerouteClient({
   };
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-7xl">
+    <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-screen-2xl">
       {/* Header */}
       <div className="mb-6 md:mb-8">
-        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-2">
+        <h1 className="text-3xl md:text-4xl font-semibold text-[var(--foreground)] mb-2">
           PokéTool by Lukas
         </h1>
       </div>
 
-      {/* Run Statistiken */}
-      <RunStatsPanel />
-
-      {/* Aktuelle Teams */}
-      <div className="mb-8 md:mb-12">
-        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6">Aktuelle Teams</h2>
+      {/* Bento Grid Layout */}
+      <BentoGrid>
+        {/* Spieler Teams - links (2 Spalten), untereinander */}
         {players.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <p className="text-gray-500 text-lg">
-              Noch keine Spieler vorhanden. Admin kann Spieler im Admin-Panel hinzufügen.
-            </p>
-          </div>
+          <BentoCard
+            span={{ sm: 1, md: 2, lg: 2 }}
+            className="animate-[scale-in_0.3s_ease-out] lg:row-start-1"
+          >
+            <div className="flex flex-col items-center justify-center py-12">
+              <svg className="w-16 h-16 text-[var(--text-tertiary)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <p className="text-[var(--text-secondary)] text-lg">
+                Noch keine Spieler vorhanden. Admin kann Spieler im Admin-Panel hinzufügen.
+              </p>
+            </div>
+          </BentoCard>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
-            {players.map((player) => (
-              <TeamDisplay
+          players.map((player, index) => {
+            // Explizite Row-Klassen für jedes Player-Item
+            const rowClass = index === 0 ? 'lg:row-start-1' : index === 1 ? 'lg:row-start-2' : 'lg:row-start-3';
+            return (
+              <BentoCard
                 key={player.id}
+                span={{ sm: 1, md: 2, lg: 2 }}
+                playerColor={player.color}
+                className={`stagger-${(index % 6) + 1} animate-[scale-in_0.3s_ease-out] lg:col-span-2 ${rowClass}`}
+              >
+              <div className="flex items-center gap-2.5 mb-3">
+                {(() => {
+                  const avatarUrl = getAvatarUrl(player.avatar);
+                  return avatarUrl ? (
+                    <div
+                      className="relative w-8 h-8 rounded-full overflow-hidden ring-2 transition-all duration-300 hover:ring-4"
+                      style={{
+                        ringColor: player.color,
+                        '--tw-ring-color': player.color,
+                        boxShadow: `0 0 12px ${player.color}40`
+                      } as React.CSSProperties}
+                    >
+                      <Image
+                        src={avatarUrl}
+                        alt={player.name}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(var(--player-color-rgb),0.5)]"
+                      style={{ backgroundColor: player.color }}
+                    />
+                  );
+                })()}
+                <h2 className="text-xl font-bold text-[var(--foreground)]">
+                  {player.name}
+                </h2>
+              </div>
+              <TeamDisplay
                 playerName={player.name}
                 playerColor={player.color}
                 playerAvatar={player.avatar}
@@ -253,40 +299,54 @@ export default function PokerouteClient({
                 onEvolution={reloadData}
                 pokemon={pokemon}
               />
-            ))}
-          </div>
+              </BentoCard>
+            );
+          })
         )}
-      </div>
 
-      {/* Routen */}
-      <div>
-        <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6">Routen & Encounters</h2>
-        <RouteList 
-          routes={routes}
-          players={players}
-          isAdmin={isAdmin}
-          onTeamUpdate={reloadData}
-          pokemon={pokemon}
-        />
-      </div>
+        {/* Live Stats Sidebar - rechts (1 Spalte), über 3 Reihen */}
+        <BentoCard
+          span={{ sm: 1, md: 1, lg: 1 }}
+          variant="glass"
+          className="order-first lg:order-none lg:col-start-3 lg:col-span-1 lg:row-start-1 lg:row-[span_3_/_span_3] animate-[scale-in_0.3s_ease-out]"
+        >
+          <h2 className="text-xl font-bold mb-4 text-[var(--foreground)]">Live Stats</h2>
+          <RunStatsPanel />
+        </BentoCard>
 
-      {/* Admin: Neue Route erstellen (am Seitenende) */}
+        {/* Routen Übersicht - unten (volle Breite) */}
+        <BentoCard
+          span={{ sm: 1, md: 3, lg: 3 }}
+          className="animate-[scale-in_0.3s_ease-out] stagger-3 lg:col-span-3 lg:row-start-4"
+        >
+          <h2 className="text-xl font-bold mb-4 text-[var(--foreground)]">Routen & Encounters</h2>
+          <RouteList
+            routes={routes}
+            players={players}
+            isAdmin={isAdmin}
+            onTeamUpdate={reloadData}
+            pokemon={pokemon}
+          />
+        </BentoCard>
+      </BentoGrid>
+
+      {/* Admin: Neue Route erstellen (außerhalb Bento Grid) */}
       {isAdmin && (
-        <div className="mt-8 bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Route erstellen</h3>
+        <div className="mt-8 bg-[var(--card-bg)] rounded-xl shadow-md p-6 border border-[var(--border-default)] transition-all duration-300 hover:border-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+          <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Neue Route erstellen</h3>
           <form onSubmit={handleCreateRoute} className="flex gap-2">
             <input
               type="text"
               value={newRouteName}
               onChange={(e) => setNewRouteName(e.target.value)}
               placeholder="Routenname eingeben..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="flex-1 px-3 py-2 border border-[var(--border-default)] bg-[var(--background-secondary)] text-[var(--foreground)] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
               disabled={isCreatingRoute}
             />
             <button
               type="submit"
               disabled={isCreatingRoute || !newRouteName.trim()}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium whitespace-nowrap"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-medium whitespace-nowrap"
             >
               {isCreatingRoute ? 'Erstelle...' : '+ Route erstellen'}
             </button>

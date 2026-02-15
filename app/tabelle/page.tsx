@@ -14,6 +14,7 @@ type PlayerInfo = {
   id: number;
   name: string;
   color: string;
+  avatar: string | null;
 };
 
 type EncounterStatus = 'ko' | 'notCaught' | null;
@@ -29,6 +30,7 @@ async function getTableData(): Promise<{
           id: true,
           name: true,
           color: true,
+          avatar: true,
         },
         orderBy: { createdAt: 'asc' },
       }),
@@ -130,8 +132,7 @@ export default async function TabellePage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 mb-2">
           Übersicht
         </p>
-        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">Tabelle</h1>
-        <p className="text-gray-600 max-w-3xl">
+        <p className="text-[var(--text-secondary)] max-w-3xl">
           Vergleich aller gefangenen Pokémon je Route. Die Spalten zeigen das
           aktuell gefangene Pokémon pro Spieler inklusive Typen und
           Basispunkte (Summe aller Statuswerte). Der Durchschnitt berechnet

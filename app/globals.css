@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../styles/animations.css";
 
 /**
  * Design System - CSS Custom Properties
@@ -7,16 +8,42 @@
  */
 
 :root {
+  /* ========================================
+   * LIGHT THEME (Default)
+   * ======================================== */
+
   /* Base Colors */
   --background: #ffffff;
+  --background-secondary: #f9fafb;
+  --background-tertiary: #f3f4f6;
   --foreground: #171717;
-  
+
+  /* Card Backgrounds */
+  --card-bg: #ffffff;
+  --card-bg-elevated: #f9fafb;
+
+  /* Borders */
+  --border-default: #e5e7eb;
+
+  /* Text Colors */
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  /* Glassmorphism (Light) */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-blur: 12px;
+
+  /* Player Color System (dynamisch überschrieben) */
+  --player-color: #3B82F6;
+  --player-color-rgb: 59, 130, 246;
+
   /* Primary Colors */
   --color-primary-blue: #3B82F6;
   --color-primary-red: #EF4444;
   --color-primary-black: #000000;
   --color-primary-white: #FFFFFF;
-  
+
   /* Pokemon Type Colors */
   --type-water: #3B82F6;
   --type-dragon: #2563EB;
@@ -36,7 +63,7 @@
   --type-ground: #D97706;
   --type-poison: #A855F7;
   --type-flying: #60A5FA;
-  
+
   /* Spacing Scale */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -45,7 +72,7 @@
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
   --spacing-3xl: 70px;
-  
+
   /* Font Sizes */
   --font-size-xs: 12px;
   --font-size-sm: 14px;
@@ -54,37 +81,102 @@
   --font-size-xl: 20px;
   --font-size-2xl: 24px;
   --font-size-3xl: 32px;
-  
+
   /* Border Radius */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-full: 9999px;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  
+
   /* Z-Index Scale */
   --z-dropdown: 20;
   --z-sticky: 30;
   --z-modal: 50;
   --z-tooltip: 60;
+
+  /* Bento Grid System */
+  --spacing-bento-gap: 16px;
+  --spacing-bento-card: 24px;
+  --spacing-bento-inner: 12px;
+
+  /* Border Radius (Bento) */
+  --radius-card: 16px;
+  --radius-inner: 12px;
+  --radius-button: 8px;
+}
+
+/* ========================================
+ * DARK THEME
+ * ======================================== */
+.dark {
+  /* Base Colors */
+  --background: #111113;
+  --background-secondary: #1a1a1e;
+  --background-tertiary: #242428;
+  --foreground: #ffffff;
+
+  /* Card Backgrounds */
+  --card-bg: #1a1a1e;
+  --card-bg-elevated: #242428;
+
+  /* Borders */
+  --border-default: #2a2a2e;
+
+  /* Text Colors */
+  --text-secondary: #a0a0a8;
+  --text-tertiary: #6a6a72;
+
+  /* Glassmorphism (Dark) */
+  --glass-bg: rgba(26, 26, 30, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Shadows (lighter for dark theme) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-poppins);
+  --font-sans: var(--font-inter);
+
+  /* Bento Grid Utilities */
+  --spacing-bento-gap: 16px;
+  --spacing-bento-card: 24px;
+
+  /* Border Radius System */
+  --radius-card: 16px;
+  --radius-inner: 12px;
+  --radius-button: 8px;
 }
 
+/* ========================================
+ * BODY STYLING
+ * ======================================== */
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Noise Texture Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* Utility Classes */

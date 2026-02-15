@@ -11,9 +11,10 @@ import PokemonCard from './PokemonCard';
 import EvolutionMenu from './EvolutionMenu';
 import PokemonSwapDialog from './PokemonSwapDialog';
 import TypeBadge from './ui/TypeBadge';
+import DefensiveCoverageMatrix from './DefensiveCoverageMatrix';
 import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
 import { getAvatarUrl } from '@/lib/avatars';
-import { calculateAverageStats, analyzeTeamMatchups, countPlayerStats, createTeamSlots } from '@/lib/team-utils';
+import { calculateAverageStats, countPlayerStats, createTeamSlots } from '@/lib/team-utils';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
 import type { TeamEncounter, RouteWithEncounters, TooltipItem, PokemonListItem } from '@/lib/types';
@@ -35,14 +36,14 @@ function Tooltip({ items, children }: TooltipProps) {
   }
 
   const tooltipContent = (
-    <div className="bg-gray-900 text-white text-sm rounded-lg shadow-lg p-3 max-w-xs max-h-64 overflow-y-auto">
+    <div className="bg-[var(--card-bg-elevated)] text-[var(--foreground)] text-sm rounded-lg shadow-xl border border-[var(--border-default)] p-3 max-w-xs max-h-64 overflow-y-auto">
       {isOpen && (
         <button
           onClick={(e) => {
             e.stopPropagation();
             setIsOpen(false);
           }}
-          className="absolute top-2 right-2 text-white hover:text-gray-300 transition"
+          className="absolute top-2 right-2 text-[var(--foreground)] hover:text-[var(--text-secondary)] transition"
           aria-label="Tooltip schliessen"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,12 +55,9 @@ function Tooltip({ items, children }: TooltipProps) {
         {items.map((item, index) => (
           <div key={index}>
             <div className="font-semibold">{item.routeName}:</div>
-            <div className="ml-2 text-gray-300">{item.pokemonNames.join(', ')}</div>
+            <div className="ml-2 text-[var(--text-secondary)]">{item.pokemonNames.join(', ')}</div>
           </div>
         ))}
-      </div>
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-        <div className="border-4 border-transparent border-t-gray-900" />
       </div>
     </div>
   );
@@ -90,7 +88,7 @@ interface MatchupSectionProps {
 function MatchupSection({ title, types, emptyMessage }: MatchupSectionProps) {
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">{title}</h3>
+      <h3 className="text-sm font-semibold text-[var(--foreground)] mb-3">{title}</h3>
       {types.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {types.map((type) => (
@@ -159,7 +157,6 @@ export default function TeamDisplay({
   const slots = createTeamSlots(teamMembers);
   const filledMembers = slots.filter((slot): slot is TeamEncounter => slot !== null);
   const teamAverage = calculateAverageStats(filledMembers);
-  const { noResistances, noEffectiveAttacks } = analyzeTeamMatchups(filledMembers);
   const { koCount, notCaughtCount, knockedOutPokemon, notCaughtPokemon } = countPlayerStats(playerName, routes);
 
   // Swap Handler
@@ -184,78 +181,53 @@ export default function TeamDisplay({
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-md p-4 md:p-5 border border-gray-200 overflow-visible">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Avatar oder Farbe */}
-            {(() => {
-              const avatarUrl = getAvatarUrl(playerAvatar);
-              if (avatarUrl) {
-                return (
-                  <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100">
-                    <Image
-                      src={avatarUrl}
-                      alt={playerName}
-                      width={32}
-                      height={32}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                );
-              }
-              return (
-                <div
-                  className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
-                  style={{ backgroundColor: playerColor }}
-                />
-              );
-            })()}
-            <h2 className="text-2xl font-semibold text-gray-900">{playerName}</h2>
-            
+      <div className="overflow-visible">
+        {/* Stats Header - kompakter */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {teamAverage && (
-              <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium border border-blue-200">
+              <span className="text-xs bg-blue-500/20 text-blue-400 px-2.5 py-1 rounded-full font-medium border border-blue-500/30">
                 Gesamt-BP: {teamAverage.total}
               </span>
             )}
-            
+
             {koCount > 0 && (
               <Tooltip items={knockedOutPokemon}>
-                <span className="text-sm bg-red-50 text-red-700 px-3 py-1.5 rounded-full font-medium border border-red-200 cursor-help">
-                  K.O.s: {koCount}
+                <span className="text-xs bg-red-500/20 text-red-400 px-2.5 py-1 rounded-full font-medium border border-red-500/30 cursor-help">
+                  💀 {koCount}
                 </span>
               </Tooltip>
             )}
-            
+
             {notCaughtCount > 0 && (
               <Tooltip items={notCaughtPokemon}>
-                <span className="text-sm bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full font-medium border border-yellow-200 cursor-help">
-                  Nicht gefangen: {notCaughtCount}
+                <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2.5 py-1 rounded-full font-medium border border-yellow-500/30 cursor-help">
+                  ❌ {notCaughtCount}
                 </span>
               </Tooltip>
             )}
           </div>
-          
+
           {teamAverage && (
-            <div className="text-sm font-medium text-gray-600">
-              {teamAverage.count} von 6 Pokemon
+            <div className="text-xs font-medium text-[var(--text-secondary)]">
+              {teamAverage.count}/6 Pokemon
             </div>
           )}
         </div>
 
-        {/* Team-Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-2 overflow-visible">
+        {/* Team-Grid - Horizontal Layout auf Desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 overflow-visible">
           {slots.map((member, index) => (
             <div key={index} className="flex flex-col overflow-visible">
-              <div className="relative group flex-1 min-h-[220px] overflow-visible">
+              <div className="relative group flex-1 overflow-visible">
                 {/* Slot-Nummer */}
-                <div className="absolute top-1 left-1 bg-gray-900 text-white text-xs px-2 py-1 rounded-md z-10 font-medium">
+                <div className="absolute top-1 left-1 bg-gray-900/90 text-white text-[10px] px-1.5 py-0.5 rounded z-10 font-medium">
                   Slot {index + 1}
                 </div>
 
                 {/* Admin Action Buttons */}
                 {isAdmin && member && (
-                  <div className="absolute top-1 right-1 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                  <div className="absolute top-1 right-1 z-10 flex gap-0.5 opacity-0 group-hover:opacity-100 transition">
                     {/* Swap Button */}
                     {pokemon.length > 0 && (
                       <button
@@ -264,10 +236,10 @@ export default function TeamDisplay({
                           setSwappingMember(member);
                           setSwapDialogOpen(true);
                         }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs w-6 h-6 rounded-md flex items-center justify-center shadow-sm"
+                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs w-5 h-5 rounded flex items-center justify-center shadow-sm"
                         title="Pokemon tauschen"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
                       </button>
@@ -279,10 +251,10 @@ export default function TeamDisplay({
                           e.stopPropagation();
                           onRemoveFromTeam(member.route.id);
                         }}
-                        className="bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-md flex items-center justify-center shadow-sm"
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs w-5 h-5 rounded flex items-center justify-center shadow-sm"
                         title="Aus Team entfernen"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -293,7 +265,7 @@ export default function TeamDisplay({
                 {member ? (
                   <>
                     <div
-                      className={`h-full min-h-[220px] ${isAdmin ? 'cursor-pointer' : ''}`}
+                      className={`h-full ${isAdmin ? 'cursor-pointer' : ''}`}
                       onClick={() => {
                         if (isAdmin) {
                           evolution.openMenu(member.id, member.pokemon.pokedexId);
@@ -303,8 +275,18 @@ export default function TeamDisplay({
                       <PokemonCard
                         pokemon={member.pokemon}
                         nickname={member.nickname}
-                        size="small"
+                        size="tiny"
                         priority={index < 6} // Performance: Above-the-fold Bilder priorisieren
+                        stats={{
+                          hp: member.pokemon.hp,
+                          attack: member.pokemon.attack,
+                          defense: member.pokemon.defense,
+                          spAttack: member.pokemon.spAttack,
+                          spDefense: member.pokemon.spDefense,
+                          speed: member.pokemon.speed,
+                        }}
+                        showBPSum={true}
+                        showStatsOnHover={true}
                       />
                     </div>
 
@@ -322,29 +304,30 @@ export default function TeamDisplay({
                     )}
                   </>
                 ) : (
-                  <div className="bg-gray-50 rounded-xl p-4 h-full min-h-[220px] flex items-center justify-center border-2 border-dashed border-gray-300">
-                    <span className="text-gray-400 text-sm font-medium">Leer</span>
+                  <div className="bg-[var(--background-tertiary)] rounded-xl p-3 min-h-[180px] flex items-center justify-center border-2 border-dashed border-[var(--border-default)] transition-all duration-300 hover:border-[var(--player-color)] hover:bg-[var(--background-secondary)]">
+                    <span className="text-[var(--text-tertiary)] text-xs font-medium">Leer</span>
                   </div>
                 )}
               </div>
               
-              {/* Routen-Name */}
-              <div className="mt-2 min-h-[32px] flex items-start justify-center">
-                <p className="text-xs text-center text-gray-600 font-medium leading-tight">
-                  {member ? member.route.name : ''}
-                </p>
-              </div>
+              {/* Routen-Name - nur anzeigen wenn vorhanden */}
+              {member && member.route.name && (
+                <div className="mt-1.5 flex items-start justify-center">
+                  <p className="text-[10px] text-center text-[var(--text-secondary)] font-medium leading-tight line-clamp-2">
+                    {member.route.name}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Matchup-Analyse */}
-        {teamAverage && noEffectiveAttacks.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <MatchupSection
-              title="Keine effektiven Attacken"
-              types={noEffectiveAttacks}
-              emptyMessage="Fuer alle Typen existiert eine effektive Attacke."
+        {/* Defensive Coverage Matrix */}
+        {filledMembers.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-[var(--border-default)]">
+            <DefensiveCoverageMatrix
+              teamMembers={filledMembers}
+              playerColor={playerColor}
             />
           </div>
         )}

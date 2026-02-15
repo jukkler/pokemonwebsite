@@ -220,38 +220,38 @@ export default function AdminPokemonPage() {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">
+      <h1 className="text-4xl font-bold text-[var(--foreground)] mb-8">
         Pokémon-Cache verwalten
       </h1>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+        <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+          <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-2">
             Gecachte Pokémon
           </h3>
-          <p className="text-4xl font-bold text-red-600">{count}</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-4xl font-bold text-red-400">{count}</p>
+          <p className="text-sm text-[var(--text-tertiary)] mt-1">
             von {MAX_AVAILABLE} (Gen 1-9)
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+        <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+          <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-2">
             Fortschritt
           </h3>
           <div className="flex items-end gap-2">
-            <p className="text-4xl font-bold text-blue-600">
+            <p className="text-4xl font-bold text-blue-400">
               {((count / MAX_AVAILABLE) * 100).toFixed(1)}%
             </p>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+          <div className="w-full bg-[var(--background-secondary)] rounded-full h-2 mt-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
+              className="bg-blue-500 h-2 rounded-full transition-all"
               style={{ width: `${Math.min((count / MAX_AVAILABLE) * 100, 100)}%` }}
             />
           </div>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-[var(--text-secondary)] mt-2">
             Live-Status:{' '}
             {liveProgress.current}/{liveProgress.total}{' '}
             {liveProgress.isRunning ? '(läuft …)' : '(inaktiv)'}
@@ -260,8 +260,8 @@ export default function AdminPokemonPage() {
       </div>
 
       {/* Sync-Aktionen */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-4">Synchronisierung</h2>
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 mb-8 border border-[var(--border-default)]">
+        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Synchronisierung</h2>
 
         <div className="space-y-4">
           {/* Vollständige Synchronisierung - Alle verfügbaren */}
@@ -269,20 +269,20 @@ export default function AdminPokemonPage() {
             <button
               onClick={handleSyncAll}
               disabled={syncing}
-              className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {syncing
                 ? 'Synchronisiere...'
                 : `Alle verfügbaren Pokémon synchronisieren (1-${MAX_AVAILABLE})`}
             </button>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-[var(--text-tertiary)] mt-2">
               Lädt alle verfügbaren Pokémon von Gen 1-9 von der PokeAPI. Dies kann 15-20 Minuten dauern.
             </p>
             {syncProgress && (
-              <div className={`mt-3 p-3 rounded-md whitespace-pre-wrap ${
+              <div className={`mt-3 p-3 rounded-md whitespace-pre-wrap border ${
                 syncProgress.startsWith('Fehler:') || syncProgress.startsWith('Netzwerkfehler')
-                  ? 'bg-red-50 text-red-800'
-                  : 'bg-blue-50 text-blue-800'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                  : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
               }`}>
                 <div className="max-h-48 overflow-y-auto">
                   {syncProgress}
@@ -292,27 +292,27 @@ export default function AdminPokemonPage() {
           </div>
 
           {/* Nur Gen 1-4 Synchronisierung */}
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-[var(--border-default)]">
             <button
               onClick={handleSyncPlatinum}
               disabled={syncing}
-              className="px-6 py-3 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {syncing
                 ? 'Synchronisiere...'
                 : 'Nur Gen 1-4 synchronisieren (1-493)'}
             </button>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-[var(--text-tertiary)] mt-2">
               Lädt nur Pokémon von Gen 1-4 (Pokémon Platin). Dies kann 5-10 Minuten dauern.
             </p>
           </div>
 
           {/* GIF-Sprites nachladen */}
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-[var(--border-default)]">
             <button
               onClick={handleSyncGifs}
               disabled={syncingGifs || syncing}
-              className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border border-purple-500/30 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -320,15 +320,15 @@ export default function AdminPokemonPage() {
               </svg>
               {syncingGifs ? 'Synchronisiere GIFs...' : 'Animierte GIF-Sprites nachladen'}
             </button>
-            <p className="text-sm text-gray-500 mt-2">
-              Lädt animierte Sprites (GIF) für alle Pokémon nach, die noch keine haben. 
+            <p className="text-sm text-[var(--text-tertiary)] mt-2">
+              Lädt animierte Sprites (GIF) für alle Pokémon nach, die noch keine haben.
               Hinweis: GIF-Sprites sind nur für ältere Generationen verfügbar.
             </p>
             {gifSyncProgress && (
-              <div className={`mt-3 p-3 rounded-md ${
+              <div className={`mt-3 p-3 rounded-md border ${
                 gifSyncProgress.startsWith('Fehler:') || gifSyncProgress.startsWith('Netzwerkfehler')
-                  ? 'bg-red-50 text-red-800'
-                  : 'bg-purple-50 text-purple-800'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                  : 'bg-purple-500/20 text-purple-400 border-purple-500/30'
               }`}>
                 {gifSyncProgress}
               </div>
@@ -336,8 +336,8 @@ export default function AdminPokemonPage() {
           </div>
 
           {/* Einzelnes Pokémon hinzufügen */}
-          <div className="pt-4 border-t">
-            <h3 className="text-lg font-semibold mb-2">
+          <div className="pt-4 border-t border-[var(--border-default)]">
+            <h3 className="text-lg font-semibold mb-2 text-[var(--foreground)]">
               Einzelnes Pokémon hinzufügen
             </h3>
             <form onSubmit={handleAddPokemon} className="flex gap-2">
@@ -349,12 +349,12 @@ export default function AdminPokemonPage() {
                 value={addPokedexId}
                 onChange={(e) => setAddPokedexId(e.target.value)}
                 placeholder={`Pokedex-Nummer (1-${MAX_AVAILABLE})`}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="flex-1 px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-red-500"
               />
               <button
                 type="submit"
                 disabled={adding}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
+                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-md transition disabled:opacity-50"
               >
                 {adding ? 'Lädt...' : 'Hinzufügen'}
               </button>
@@ -364,36 +364,36 @@ export default function AdminPokemonPage() {
       </div>
 
       {/* Pokémon-Liste */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Gecachte Pokémon</h2>
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Gecachte Pokémon</h2>
 
         {loading ? (
-          <p className="text-gray-500">Lädt...</p>
+          <p className="text-[var(--text-tertiary)]">Lädt...</p>
         ) : pokemon.length === 0 ? (
-          <p className="text-gray-500">
+          <p className="text-[var(--text-tertiary)]">
             Noch keine Pokémon im Cache. Klicke auf &quot;Alle Pokémon
             synchronisieren&quot; um zu starten.
           </p>
         ) : (
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">#</th>
-                  <th className="text-left py-2 px-4">Name (Deutsch)</th>
-                  <th className="text-left py-2 px-4">Name (Englisch)</th>
-                  <th className="text-left py-2 px-4">Zuletzt aktualisiert</th>
+              <thead className="sticky top-0 bg-[var(--card-bg)]">
+                <tr className="border-b border-[var(--border-default)]">
+                  <th className="text-left py-2 px-4 text-[var(--text-secondary)]">#</th>
+                  <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Name (Deutsch)</th>
+                  <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Name (Englisch)</th>
+                  <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Zuletzt aktualisiert</th>
                 </tr>
               </thead>
               <tbody>
                 {pokemon.map((p) => (
-                  <tr key={p.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-4">#{p.pokedexId}</td>
-                    <td className="py-2 px-4 font-semibold">
+                  <tr key={p.id} className="border-b border-[var(--border-default)] hover:bg-[var(--background-secondary)]">
+                    <td className="py-2 px-4 text-[var(--foreground)]">#{p.pokedexId}</td>
+                    <td className="py-2 px-4 font-semibold text-[var(--foreground)]">
                       {p.nameGerman || '-'}
                     </td>
-                    <td className="py-2 px-4">{p.name}</td>
-                    <td className="py-2 px-4 text-gray-500">
+                    <td className="py-2 px-4 text-[var(--foreground)]">{p.name}</td>
+                    <td className="py-2 px-4 text-[var(--text-tertiary)]">
                       {new Date(p.updatedAt).toLocaleDateString('de-DE')}
                     </td>
                   </tr>

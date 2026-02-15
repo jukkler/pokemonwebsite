@@ -47,18 +47,21 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       // 1. Falls es einen aktiven Run gibt, beende ihn und speichere Statistiken
       if (activeRun) {
-        // Spieler-Statistiken speichern
+        // Spieler-Statistiken speichern (zähle verursachte K.O.s/Nicht-gefangen)
         const playerStatsData = players.map(player => {
-          const playerEncounters = encounters.filter(e => e.playerId === player.id);
-          const knockedOutCount = playerEncounters.filter(e => e.isKnockedOut).length;
-          const notCaughtCount = playerEncounters.filter(e => e.isNotCaught).length;
+          const koRoutes = new Set(
+            encounters.filter(e => e.koCausedBy === player.name).map(e => e.routeId)
+          );
+          const notCaughtRoutes = new Set(
+            encounters.filter(e => e.notCaughtBy === player.name).map(e => e.routeId)
+          );
           const isLoser = loserPlayerName === player.name;
 
           return {
             runId: activeRun.id,
             playerName: player.name,
-            knockedOutCount,
-            notCaughtCount,
+            knockedOutCount: koRoutes.size,
+            notCaughtCount: notCaughtRoutes.size,
             isLoser,
           };
         });

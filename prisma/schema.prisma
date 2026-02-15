@@ -134,9 +134,12 @@ model Run {
   loserPlayerName String?          // Name des Spielers der verloren hat
   startedAt       DateTime         @default(now())
   endedAt         DateTime?
+  badgesEarned    Int              @default(0) // Anzahl erhaltener Orden (0-8)
+  pausedAt        DateTime?        // Zeitpunkt der letzten Pause (null = läuft)
+  totalPausedMs   Int              @default(0) // Gesamte pausierte Zeit in Millisekunden
   playerStats     RunPlayerStats[]
   encounters      RunEncounter[]   // Alle Encounters dieses Runs
-  
+
   @@index([status])
   @@index([gameVersionKey])
 }

@@ -330,7 +330,7 @@ export default function AdminGameSavesPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-gray-500">Lade Daten...</p>
+        <p className="text-[var(--text-tertiary)]">Lade Daten...</p>
       </div>
     );
   }
@@ -338,30 +338,30 @@ export default function AdminGameSavesPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-red-600">Fehler: {error}</p>
+        <p className="text-red-400">Fehler: {error}</p>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">Spielstände & Runs</h1>
-      <p className="text-gray-600 mb-6">Verwalte Spielstände und Nuzlocke-Runs</p>
+      <h1 className="text-4xl font-bold text-[var(--foreground)] mb-2">Spielstände & Runs</h1>
+      <p className="text-[var(--text-secondary)] mb-6">Verwalte Spielstände und Nuzlocke-Runs</p>
 
       {/* Aktueller Run Status */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-2xl font-bold mb-4">Aktueller Run</h2>
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 mb-6 border border-[var(--border-default)]">
+        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Aktueller Run</h2>
         
         {activeRun ? (
           <div className="flex items-center justify-between">
             <div>
               <p className="text-lg">
-                <span className="font-bold text-green-600">Run #{activeRun.runNumber}</span>
+                <span className="font-bold text-green-400">Run #{activeRun.runNumber}</span>
                 {activeRun.gameVersion && (
-                  <span className="ml-2 text-gray-600">- {activeRun.gameVersion.name}</span>
+                  <span className="ml-2 text-[var(--text-secondary)]">- {activeRun.gameVersion.name}</span>
                 )}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-[var(--text-tertiary)]">
                 Gestartet: {new Date(activeRun.startedAt).toLocaleDateString('de-DE')}
               </p>
             </div>
@@ -369,14 +369,14 @@ export default function AdminGameSavesPage() {
               <button
                 onClick={() => setShowRestartRunDialog(true)}
                 disabled={processing}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition disabled:opacity-50 font-semibold"
+                className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 rounded-lg transition disabled:opacity-50 font-semibold"
               >
                 🔄 Run neu starten
               </button>
               <button
                 onClick={() => setShowEndRunDialog(true)}
                 disabled={processing}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-50 font-semibold"
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition disabled:opacity-50 font-semibold"
               >
                 ❌ Run beenden
               </button>
@@ -384,11 +384,11 @@ export default function AdminGameSavesPage() {
           </div>
         ) : (
           <div className="flex items-center justify-between">
-            <p className="text-gray-500">Kein aktiver Run. Starte einen neuen Run!</p>
+            <p className="text-[var(--text-tertiary)]">Kein aktiver Run. Starte einen neuen Run!</p>
             <button
               onClick={() => setShowStartRunDialog(true)}
               disabled={processing}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition disabled:opacity-50 font-semibold"
+              className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition disabled:opacity-50 font-semibold"
             >
               ▶️ Neuen Run starten
             </button>
@@ -398,33 +398,33 @@ export default function AdminGameSavesPage() {
 
       {/* Run History */}
       {historicalRuns.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4">Run-Historie ({historicalRuns.length})</h2>
+        <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 mb-6 border border-[var(--border-default)]">
+          <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Run-Historie ({historicalRuns.length})</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b">
-                  <th className="py-2 px-4">Run</th>
-                  <th className="py-2 px-4">Spiel</th>
-                  <th className="py-2 px-4">Status</th>
-                  <th className="py-2 px-4">Verlierer</th>
-                  <th className="py-2 px-4">Datum</th>
+                <tr className="border-b border-[var(--border-default)]">
+                  <th className="py-2 px-4 text-[var(--text-secondary)]">Run</th>
+                  <th className="py-2 px-4 text-[var(--text-secondary)]">Spiel</th>
+                  <th className="py-2 px-4 text-[var(--text-secondary)]">Status</th>
+                  <th className="py-2 px-4 text-[var(--text-secondary)]">Verlierer</th>
+                  <th className="py-2 px-4 text-[var(--text-secondary)]">Datum</th>
                 </tr>
               </thead>
               <tbody>
                 {historicalRuns.map((run) => (
-                  <tr key={run.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-4 font-bold">#{run.runNumber}</td>
-                    <td className="py-2 px-4">{run.gameVersion?.name || '-'}</td>
+                  <tr key={run.id} className="border-b border-[var(--border-default)] hover:bg-[var(--background-secondary)]">
+                    <td className="py-2 px-4 font-bold text-[var(--foreground)]">#{run.runNumber}</td>
+                    <td className="py-2 px-4 text-[var(--foreground)]">{run.gameVersion?.name || '-'}</td>
                     <td className="py-2 px-4">
-                      <span className={`px-2 py-1 rounded text-sm ${
-                        run.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                      <span className={`px-2 py-1 rounded text-sm border ${
+                        run.status === 'failed' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'
                       }`}>
                         {run.status === 'failed' ? 'Gescheitert' : 'Abgeschlossen'}
                       </span>
                     </td>
-                    <td className="py-2 px-4">{run.loserPlayerName || '-'}</td>
-                    <td className="py-2 px-4 text-sm text-gray-500">
+                    <td className="py-2 px-4 text-[var(--foreground)]">{run.loserPlayerName || '-'}</td>
+                    <td className="py-2 px-4 text-sm text-[var(--text-tertiary)]">
                       {run.endedAt ? new Date(run.endedAt).toLocaleDateString('de-DE') : '-'}
                     </td>
                   </tr>
@@ -440,31 +440,31 @@ export default function AdminGameSavesPage() {
         <button
           onClick={() => setShowSaveDialog(true)}
           disabled={processing}
-          className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition disabled:opacity-50 font-semibold"
+          className="px-6 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition disabled:opacity-50 font-semibold"
         >
           💾 Aktuelles Spiel speichern
         </button>
       </div>
 
       {/* Game Saves List */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
-        <div className="px-6 py-4 bg-gray-50 border-b">
-          <h2 className="text-xl font-bold">Gespeicherte Spielstände ({gameSaves.length})</h2>
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden mb-6 border border-[var(--border-default)]">
+        <div className="px-6 py-4 bg-[var(--background-secondary)] border-b border-[var(--border-default)]">
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Gespeicherte Spielstände ({gameSaves.length})</h2>
         </div>
 
         {gameSaves.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-12 text-center text-[var(--text-tertiary)]">
             <p className="text-lg mb-2">📦 Noch keine Spielstände vorhanden</p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-[var(--border-default)]">
             {gameSaves.map((save) => (
-              <div key={save.id} className="p-6 hover:bg-gray-50 transition">
+              <div key={save.id} className="p-6 hover:bg-[var(--background-secondary)] transition">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{save.name}</h3>
-                    {save.description && <p className="text-gray-600 mb-2">{save.description}</p>}
-                    <div className="flex gap-4 text-sm text-gray-500">
+                    <h3 className="text-xl font-bold text-[var(--foreground)] mb-1">{save.name}</h3>
+                    {save.description && <p className="text-[var(--text-secondary)] mb-2">{save.description}</p>}
+                    <div className="flex gap-4 text-sm text-[var(--text-tertiary)]">
                       <span>📅 {new Date(save.createdAt).toLocaleString('de-DE')}</span>
                       {save.gameVersionKey && (
                         <span>🎮 {gameVersions.find(v => v.key === save.gameVersionKey)?.name}</span>
@@ -474,7 +474,7 @@ export default function AdminGameSavesPage() {
                   <div className="flex flex-wrap gap-2 ml-4">
                     <button
                       onClick={() => handleDownloadSave(save.id)}
-                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition text-sm font-semibold"
+                      className="px-4 py-2 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md transition text-sm font-semibold"
                       disabled={processing}
                     >
                       ⬇️ Download
@@ -482,14 +482,14 @@ export default function AdminGameSavesPage() {
                     <button
                       onClick={() => handleLoadGame(save.id, save.name)}
                       disabled={processing}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 text-sm font-semibold"
+                      className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-md transition disabled:opacity-50 text-sm font-semibold"
                     >
                       📂 Laden
                     </button>
                     <button
                       onClick={() => handleDeleteSave(save.id, save.name)}
                       disabled={processing}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition disabled:opacity-50 text-sm font-semibold"
+                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-md transition disabled:opacity-50 text-sm font-semibold"
                     >
                       🗑️ Löschen
                     </button>
@@ -502,36 +502,36 @@ export default function AdminGameSavesPage() {
       </div>
 
       {/* Upload Section */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Spielstand importieren</h2>
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Spielstand importieren</h2>
         <form className="space-y-4" onSubmit={handleUploadSave}>
-          {uploadError && <div className="bg-red-50 text-red-700 p-3 rounded-md">{uploadError}</div>}
+          {uploadError && <div className="bg-red-500/20 text-red-400 p-3 rounded-md border border-red-500/30">{uploadError}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Datei *</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Datei *</label>
             <input
               type="file"
               accept="application/json"
               onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-gray-600"
+              className="w-full text-sm text-[var(--foreground)]"
             />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Name (optional)</label>
               <input
                 type="text"
                 value={uploadName}
                 onChange={(e) => setUploadName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung (optional)</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Beschreibung (optional)</label>
               <input
                 type="text"
                 value={uploadDescription}
                 onChange={(e) => setUploadDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
               />
             </div>
           </div>
@@ -539,7 +539,7 @@ export default function AdminGameSavesPage() {
             <button
               type="submit"
               disabled={uploading}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 font-semibold"
+              className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-md transition disabled:opacity-50 font-semibold"
             >
               {uploading ? 'Importiere...' : 'Importieren'}
             </button>
@@ -552,25 +552,25 @@ export default function AdminGameSavesPage() {
       {/* Save Dialog */}
       {showSaveDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Spielstand speichern</h2>
+          <div className="bg-[var(--card-bg)] rounded-lg p-6 max-w-md w-full mx-4 border border-[var(--border-default)]">
+            <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Spielstand speichern</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Name *</label>
                 <input
                   type="text"
                   value={saveName}
                   onChange={(e) => setSaveName(e.target.value)}
                   placeholder="z.B. Pokémon Platin - Nach Arena 4"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Spielversion</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Spielversion</label>
                 <select
                   value={saveGameVersion}
                   onChange={(e) => setSaveGameVersion(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
                 >
                   <option value="">-- Keine Version --</option>
                   {Object.entries(versionsByGen).map(([gen, versions]) => (
@@ -583,18 +583,18 @@ export default function AdminGameSavesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung (optional)</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Beschreibung (optional)</label>
                 <textarea
                   value={saveDescription}
                   onChange={(e) => setSaveDescription(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
                 />
               </div>
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => { setShowSaveDialog(false); setSaveName(''); setSaveDescription(''); setSaveGameVersion(''); }}
-                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md"
                   disabled={processing}
                 >
                   Abbrechen
@@ -602,7 +602,7 @@ export default function AdminGameSavesPage() {
                 <button
                   onClick={handleSaveGame}
                   disabled={processing}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-md disabled:opacity-50"
                 >
                   {processing ? 'Speichere...' : 'Speichern'}
                 </button>
@@ -615,15 +615,15 @@ export default function AdminGameSavesPage() {
       {/* Start Run Dialog */}
       {showStartRunDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Neuen Run starten</h2>
+          <div className="bg-[var(--card-bg)] rounded-lg p-6 max-w-md w-full mx-4 border border-[var(--border-default)]">
+            <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Neuen Run starten</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Spielversion</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Spielversion</label>
                 <select
                   value={newRunGameVersion}
                   onChange={(e) => setNewRunGameVersion(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
                 >
                   <option value="">-- Keine Version --</option>
                   {Object.entries(versionsByGen).map(([gen, versions]) => (
@@ -638,7 +638,7 @@ export default function AdminGameSavesPage() {
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => { setShowStartRunDialog(false); setNewRunGameVersion(''); }}
-                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md"
                   disabled={processing}
                 >
                   Abbrechen
@@ -646,7 +646,7 @@ export default function AdminGameSavesPage() {
                 <button
                   onClick={handleStartRun}
                   disabled={processing}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-md disabled:opacity-50"
                 >
                   {processing ? 'Starte...' : 'Run starten'}
                 </button>
@@ -659,14 +659,14 @@ export default function AdminGameSavesPage() {
       {/* End Run Dialog */}
       {showEndRunDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Run beenden</h2>
-            <p className="text-gray-600 mb-4">Wer hat den Run verloren?</p>
+          <div className="bg-[var(--card-bg)] rounded-lg p-6 max-w-md w-full mx-4 border border-[var(--border-default)]">
+            <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Run beenden</h2>
+            <p className="text-[var(--text-secondary)] mb-4">Wer hat den Run verloren?</p>
             <div className="space-y-4">
               <select
                 value={selectedLoser}
                 onChange={(e) => setSelectedLoser(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
               >
                 <option value="">-- Spieler auswählen --</option>
                 {players.map((p) => (
@@ -676,7 +676,7 @@ export default function AdminGameSavesPage() {
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => { setShowEndRunDialog(false); setSelectedLoser(''); }}
-                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md"
                   disabled={processing}
                 >
                   Abbrechen
@@ -684,7 +684,7 @@ export default function AdminGameSavesPage() {
                 <button
                   onClick={handleEndRun}
                   disabled={processing || !selectedLoser}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-md disabled:opacity-50"
                 >
                   {processing ? 'Beende...' : 'Run beenden'}
                 </button>
@@ -697,17 +697,17 @@ export default function AdminGameSavesPage() {
       {/* Restart Run Dialog */}
       {showRestartRunDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Run neu starten</h2>
-            <p className="text-gray-600 mb-2">Der aktuelle Run wird als gescheitert markiert.</p>
-            <p className="text-gray-600 mb-4">Spieler bleiben erhalten, Routen und Encounters werden gelöscht.</p>
+          <div className="bg-[var(--card-bg)] rounded-lg p-6 max-w-md w-full mx-4 border border-[var(--border-default)]">
+            <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Run neu starten</h2>
+            <p className="text-[var(--text-secondary)] mb-2">Der aktuelle Run wird als gescheitert markiert.</p>
+            <p className="text-[var(--text-secondary)] mb-4">Spieler bleiben erhalten, Routen und Encounters werden gelöscht.</p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Wer hat verloren? *</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Wer hat verloren? *</label>
                 <select
                   value={selectedLoser}
                   onChange={(e) => setSelectedLoser(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
                 >
                   <option value="">-- Spieler auswählen --</option>
                   {players.map((p) => (
@@ -716,11 +716,11 @@ export default function AdminGameSavesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Spielversion für neuen Run</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Spielversion für neuen Run</label>
                 <select
                   value={newRunGameVersion}
                   onChange={(e) => setNewRunGameVersion(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)]"
                 >
                   <option value="">-- Gleiche Version beibehalten --</option>
                   {Object.entries(versionsByGen).map(([gen, versions]) => (
@@ -735,7 +735,7 @@ export default function AdminGameSavesPage() {
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => { setShowRestartRunDialog(false); setSelectedLoser(''); setNewRunGameVersion(''); }}
-                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md"
                   disabled={processing}
                 >
                   Abbrechen
@@ -743,7 +743,7 @@ export default function AdminGameSavesPage() {
                 <button
                   onClick={handleRestartRun}
                   disabled={processing || !selectedLoser}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 rounded-md disabled:opacity-50"
                 >
                   {processing ? 'Starte neu...' : 'Run neu starten'}
                 </button>

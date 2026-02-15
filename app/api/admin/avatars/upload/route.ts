@@ -9,9 +9,10 @@ import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { withAdminAuth, success, badRequest, internalError } from '@/lib/api-utils';
+import { processAvatar, type CropArea } from '@/lib/image-processing';
 
-// Maximale Dateigröße: 500KB
-const MAX_FILE_SIZE = 500 * 1024;
+// Maximale Dateigröße: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // Erlaubte Dateitypen
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
 
       // Dateigröße prüfen
       if (file.size > MAX_FILE_SIZE) {
-        return badRequest('Datei zu groß. Maximum: 500KB');
+        return badRequest('Datei zu groß. Maximum: 10MB');
       }
 
       // Upload-Verzeichnis erstellen falls nicht vorhanden
@@ -42,17 +43,33 @@ export async function POST(request: NextRequest) {
         await mkdir(uploadDir, { recursive: true });
       }
 
-      // Einzigartigen Dateinamen generieren
-      const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(2, 8);
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
-      const filename = `avatar-${timestamp}-${randomStr}.${ext}`;
+      // Crop-Daten aus FormData extrahieren (optional)
+      const cropData = formData.get('crop');
+      let cropArea: CropArea | undefined;
 
-      // Datei speichern
+      if (cropData && typeof cropData === 'string') {
+        try {
+          cropArea = JSON.parse(cropData) as CropArea;
+        } catch (err) {
+          return badRequest('Ungültige Crop-Daten');
+        }
+      }
+
+      // Datei einlesen
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
+
+      // Bildverarbeitung: Crop, Resize, WebP-Konvertierung
+      const processedBuffer = await processAvatar(buffer, cropArea);
+
+      // Einzigartigen Dateinamen generieren (immer .webp)
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const filename = `avatar-${timestamp}-${randomStr}.webp`;
+
+      // Verarbeitetes Bild speichern
       const filepath = path.join(uploadDir, filename);
-      await writeFile(filepath, buffer);
+      await writeFile(filepath, processedBuffer);
 
       // URL zurückgeben
       const url = `/uploads/avatars/${filename}`;

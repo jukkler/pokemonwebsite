@@ -8,6 +8,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { AVATAR_OPTIONS, getAvatarUrl } from '@/lib/avatars';
+import AvatarCropModal from '@/components/AvatarCropModal';
+import { CropArea } from '@/lib/image-processing';
 
 interface Player {
   id: number;
@@ -35,6 +37,9 @@ export default function AdminPlayersPage() {
   const [uploadedAvatars, setUploadedAvatars] = useState<UploadedAvatar[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [selectedImageForCrop, setSelectedImageForCrop] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Spieler laden
   const loadPlayers = useCallback(async () => {
@@ -62,17 +67,44 @@ export default function AdminPlayersPage() {
     }
   }, []);
 
-  // Avatar hochladen
+  // Avatar hochladen - öffnet Crop-Modal
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setError('');
+
+    // Validierung: 10MB Max
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      setError('Datei zu groß. Maximum: 10MB');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Bild als Data URL einlesen für Crop-Preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImageForCrop(reader.result as string);
+      setSelectedFile(file);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Crop abgeschlossen - Upload mit Crop-Koordinaten
+  const handleCropComplete = async (cropArea: CropArea) => {
+    if (!selectedFile) return;
 
     setUploading(true);
     setError('');
 
     try {
       const formDataUpload = new FormData();
-      formDataUpload.append('avatar', file);
+      formDataUpload.append('avatar', selectedFile);
+      formDataUpload.append('crop', JSON.stringify(cropArea));
 
       const res = await fetch('/api/admin/avatars/upload', {
         method: 'POST',
@@ -86,6 +118,11 @@ export default function AdminPlayersPage() {
         const newAvatar = { filename: data.data.filename, url: data.data.url };
         setUploadedAvatars(prev => [...prev, newAvatar]);
         setFormData(prev => ({ ...prev, avatar: data.data.url }));
+
+        // Modal schließen
+        setCropModalOpen(false);
+        setSelectedImageForCrop(null);
+        setSelectedFile(null);
       } else {
         setError(data.error || 'Fehler beim Hochladen');
       }
@@ -97,6 +134,16 @@ export default function AdminPlayersPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // Crop abbrechen
+  const handleCropCancel = () => {
+    setCropModalOpen(false);
+    setSelectedImageForCrop(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -197,23 +244,23 @@ export default function AdminPlayersPage() {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">
+      <h1 className="text-4xl font-bold text-[var(--foreground)] mb-8">
         Spieler verwalten
       </h1>
 
       {/* Formular */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-4">
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 mb-8 border border-[var(--border-default)]">
+        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">
           {editingId ? 'Spieler bearbeiten' : 'Neuer Spieler'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-800 p-3 rounded-md">{error}</div>
+            <div className="bg-red-500/20 text-red-400 p-3 rounded-md border border-red-500/30">{error}</div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
               Name
             </label>
             <input
@@ -223,12 +270,12 @@ export default function AdminPlayersPage() {
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-[var(--background-secondary)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
               Farbe
             </label>
             <div className="flex items-center gap-4">
@@ -240,17 +287,17 @@ export default function AdminPlayersPage() {
                 }
                 className="h-10 w-20 cursor-pointer rounded-md"
               />
-              <span className="text-sm text-gray-600">{formData.color}</span>
+              <span className="text-sm text-[var(--text-secondary)]">{formData.color}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Avatar
             </label>
-            
+
             {/* Vordefinierte Avatare */}
-            <p className="text-xs text-gray-500 mb-2">Vordefinierte Avatare:</p>
+            <p className="text-xs text-[var(--text-tertiary)] mb-2">Vordefinierte Avatare:</p>
             <div className="flex flex-wrap gap-2 mb-4">
               {AVATAR_OPTIONS.map((avatar) => (
                 <button
@@ -259,8 +306,8 @@ export default function AdminPlayersPage() {
                   onClick={() => setFormData({ ...formData, avatar: avatar.key })}
                   className={`relative w-14 h-14 rounded-lg border-2 transition flex items-center justify-center ${
                     formData.avatar === avatar.key
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-400'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-[var(--border-default)] hover:border-[var(--border-hover)]'
                   }`}
                   title={avatar.label}
                 >
@@ -273,7 +320,7 @@ export default function AdminPlayersPage() {
                       className="object-contain"
                     />
                   ) : (
-                    <span className="text-gray-400 text-xs">Ohne</span>
+                    <span className="text-[var(--text-tertiary)] text-xs">Ohne</span>
                   )}
                   {formData.avatar === avatar.key && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -289,7 +336,7 @@ export default function AdminPlayersPage() {
             {/* Hochgeladene Avatare */}
             {uploadedAvatars.length > 0 && (
               <>
-                <p className="text-xs text-gray-500 mb-2">Eigene Avatare:</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Eigene Avatare:</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {uploadedAvatars.map((avatar) => (
                     <div key={avatar.filename} className="relative group">
@@ -298,8 +345,8 @@ export default function AdminPlayersPage() {
                         onClick={() => setFormData({ ...formData, avatar: avatar.url })}
                         className={`relative w-14 h-14 rounded-lg border-2 transition flex items-center justify-center overflow-hidden ${
                           formData.avatar === avatar.url
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-400'
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : 'border-[var(--border-default)] hover:border-[var(--border-hover)]'
                         }`}
                       >
                         <Image
@@ -308,6 +355,7 @@ export default function AdminPlayersPage() {
                           width={48}
                           height={48}
                           className="object-cover"
+                          unoptimized
                         />
                         {formData.avatar === avatar.url && (
                           <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -346,14 +394,14 @@ export default function AdminPlayersPage() {
                 htmlFor="avatar-upload"
                 className={`px-4 py-2 rounded-md cursor-pointer transition ${
                   uploading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                    ? 'bg-[var(--background-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'
+                    : 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
                 }`}
               >
                 {uploading ? 'Lädt...' : '📤 Eigenen Avatar hochladen'}
               </label>
-              <span className="text-xs text-gray-500">
-                PNG, JPG, GIF oder WebP (max. 500KB)
+              <span className="text-xs text-[var(--text-tertiary)]">
+                PNG, JPG, GIF oder WebP (max. 10MB)
               </span>
             </div>
           </div>
@@ -361,7 +409,7 @@ export default function AdminPlayersPage() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+              className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-md transition"
             >
               {editingId ? 'Aktualisieren' : 'Erstellen'}
             </button>
@@ -369,7 +417,7 @@ export default function AdminPlayersPage() {
               <button
                 type="button"
                 onClick={cancelEdit}
-                className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition"
+                className="px-4 py-2 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md transition"
               >
                 Abbrechen
               </button>
@@ -379,30 +427,30 @@ export default function AdminPlayersPage() {
       </div>
 
       {/* Liste */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Spieler-Liste</h2>
+      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Spieler-Liste</h2>
 
         {loading ? (
-          <p className="text-gray-500">Lädt...</p>
+          <p className="text-[var(--text-tertiary)]">Lädt...</p>
         ) : players.length === 0 ? (
-          <p className="text-gray-500">Noch keine Spieler vorhanden</p>
+          <p className="text-[var(--text-tertiary)]">Noch keine Spieler vorhanden</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">Spieler</th>
-                  <th className="text-left py-2 px-4">Farbe</th>
-                  <th className="text-center py-2 px-4">Encounters</th>
-                  <th className="text-center py-2 px-4">Team</th>
-                  <th className="text-right py-2 px-4">Aktionen</th>
+                <tr className="border-b border-[var(--border-default)]">
+                  <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Spieler</th>
+                  <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Farbe</th>
+                  <th className="text-center py-2 px-4 text-[var(--text-secondary)]">Encounters</th>
+                  <th className="text-center py-2 px-4 text-[var(--text-secondary)]">Team</th>
+                  <th className="text-right py-2 px-4 text-[var(--text-secondary)]">Aktionen</th>
                 </tr>
               </thead>
               <tbody>
                 {players.map((player) => {
                   const avatarUrl = getAvatarUrl(player.avatar);
                   return (
-                  <tr key={player.id} className="border-b hover:bg-gray-50">
+                  <tr key={player.id} className="border-b border-[var(--border-default)] hover:bg-[var(--background-secondary)]">
                     <td className="py-2 px-4">
                       <div className="flex items-center gap-3">
                         {avatarUrl ? (
@@ -419,7 +467,7 @@ export default function AdminPlayersPage() {
                             style={{ backgroundColor: player.color }}
                           />
                         )}
-                        <span className="font-medium">{player.name}</span>
+                        <span className="font-medium text-[var(--foreground)]">{player.name}</span>
                       </div>
                     </td>
                     <td className="py-2 px-4">
@@ -428,27 +476,27 @@ export default function AdminPlayersPage() {
                           className="w-6 h-6 rounded-full border"
                           style={{ backgroundColor: player.color }}
                         />
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-[var(--text-secondary)]">
                           {player.color}
                         </span>
                       </div>
                     </td>
-                    <td className="py-2 px-4 text-center">
+                    <td className="py-2 px-4 text-center text-[var(--foreground)]">
                       {player._count?.encounters || 0}
                     </td>
-                    <td className="py-2 px-4 text-center">
+                    <td className="py-2 px-4 text-center text-[var(--foreground)]">
                       {player._count?.teamMembers || 0}/6
                     </td>
                     <td className="py-2 px-4 text-right">
                       <button
                         onClick={() => startEdit(player)}
-                        className="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition mr-2"
+                        className="px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 rounded-md transition mr-2"
                       >
                         Bearbeiten
                       </button>
                       <button
                         onClick={() => handleDelete(player.id)}
-                        className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                        className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-md transition"
                       >
                         Löschen
                       </button>
@@ -461,6 +509,15 @@ export default function AdminPlayersPage() {
           </div>
         )}
       </div>
+
+      {/* Crop-Modal */}
+      {cropModalOpen && selectedImageForCrop && (
+        <AvatarCropModal
+          imageSrc={selectedImageForCrop}
+          onComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }

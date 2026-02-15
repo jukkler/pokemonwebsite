@@ -36,7 +36,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: npx prisma db push --skip-generate
+    command: npx prisma db push --skip-generate --accept-data-loss
     restart: "no"
     security_opt:
       - no-new-privileges:true

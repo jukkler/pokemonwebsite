@@ -60,7 +60,7 @@ export async function GET() {
     // Stelle sicher, dass teamSlot included ist
     return NextResponse.json(routes, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+        'Cache-Control': 'public, s-maxage=2, stale-while-revalidate=5',
       },
     });
   } catch (error) {

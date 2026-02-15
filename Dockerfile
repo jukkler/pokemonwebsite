@@ -1,10 +1,13 @@
 # ================================
 # Stage 1: Dependencies
 # ================================
-FROM node:20-alpine AS deps
+FROM node:20-slim AS deps
 
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine
-RUN apk add --no-cache libc6-compat
+# Install dependencies for Prisma and Sharp
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -17,7 +20,7 @@ RUN npm ci
 # ================================
 # Stage 2: Builder
 # ================================
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -40,7 +43,10 @@ RUN npm run build
 # ================================
 # Stage 3: Runner (Production)
 # ================================
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
+
+# Install OpenSSL for Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -49,31 +55,38 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
-# Set correct permissions for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
 # Copy standalone build output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Set correct permissions for prerender cache
+RUN mkdir -p .next
+RUN chown -R nextjs:nodejs .next
+
+# Create uploads directory with correct permissions
+RUN mkdir -p ./public/uploads/avatars
+RUN chown -R nextjs:nodejs ./public/uploads
 
 # Copy Prisma Client (needed for database operations at runtime)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-USER nextjs
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application
+# Use entrypoint to handle permissions and user switching
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server.js"]

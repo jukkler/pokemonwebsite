@@ -51,8 +51,8 @@ function EvolutionButton({ evolution, onClick, disabled, hoverColor, spriteMode 
         />
       )}
       <div>
-        <span className="font-medium">{evolution.nameGerman || evolution.name}</span>
-        <span className="text-gray-400 text-xs ml-1">#{evolution.pokedexId}</span>
+        <span className="font-medium text-[var(--foreground)]">{evolution.nameGerman || evolution.name}</span>
+        <span className="text-[var(--text-tertiary)] text-xs ml-1">#{evolution.pokedexId}</span>
       </div>
     </button>
   );
@@ -76,7 +76,7 @@ export default function EvolutionMenu({
         e.stopPropagation();
         onClose();
       }}
-      className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition"
+      className="absolute top-1 right-1 p-1 text-[var(--text-tertiary)] hover:text-[var(--foreground)] hover:bg-[var(--background-secondary)] rounded transition"
       title="Schließen"
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,11 +89,11 @@ export default function EvolutionMenu({
     return (
       <div
         ref={menuRef}
-        className={`bg-white border border-gray-200 rounded-lg shadow-xl min-w-[200px] ${className}`}
+        className={`bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg shadow-xl min-w-[200px] ${className}`}
       >
         <div className="relative">
           <CloseButton />
-          <div className="p-4 text-center text-gray-500 text-sm">
+          <div className="p-4 text-center text-[var(--text-secondary)] text-sm">
             Lade Evolutionen...
           </div>
         </div>
@@ -112,7 +112,7 @@ export default function EvolutionMenu({
   return (
     <div
       ref={menuRef}
-      className={`bg-white border border-gray-200 rounded-lg shadow-xl min-w-[200px] overflow-hidden ${className}`}
+      className={`bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg shadow-xl min-w-[200px] overflow-hidden ${className}`}
     >
       <div className="relative">
         <CloseButton />
@@ -120,8 +120,8 @@ export default function EvolutionMenu({
       
       {/* Entwickeln */}
       {hasEvolutions && (
-        <div className="border-b border-gray-100">
-          <div className="px-3 py-2 bg-green-50 text-green-800 text-xs font-semibold flex items-center gap-1">
+        <div className="border-b border-[var(--border-default)]">
+          <div className="px-3 py-2 bg-green-500/10 text-green-400 border-b border-green-500/30 text-xs font-semibold flex items-center gap-1">
             <span>⬆️</span> Entwickeln zu
           </div>
           {evolutionData.evolutions.map((evo) => (
@@ -130,7 +130,7 @@ export default function EvolutionMenu({
               evolution={evo}
               onClick={() => onEvolve(evo.pokedexId)}
               disabled={isEvolving}
-              hoverColor="hover:bg-green-50"
+              hoverColor="hover:bg-green-500/20"
               spriteMode={spriteMode}
             />
           ))}
@@ -140,7 +140,7 @@ export default function EvolutionMenu({
       {/* Zurückentwickeln */}
       {hasPreEvolutions && (
         <div>
-          <div className="px-3 py-2 bg-orange-50 text-orange-800 text-xs font-semibold flex items-center gap-1">
+          <div className="px-3 py-2 bg-orange-500/10 text-orange-400 border-b border-orange-500/30 text-xs font-semibold flex items-center gap-1">
             <span>⬇️</span> Zurückentwickeln zu
           </div>
           {evolutionData.preEvolutions.map((evo) => (
@@ -149,7 +149,7 @@ export default function EvolutionMenu({
               evolution={evo}
               onClick={() => onEvolve(evo.pokedexId)}
               disabled={isEvolving}
-              hoverColor="hover:bg-orange-50"
+              hoverColor="hover:bg-orange-500/20"
               spriteMode={spriteMode}
             />
           ))}
@@ -158,7 +158,7 @@ export default function EvolutionMenu({
 
       {/* Keine Evolutionen */}
       {hasNoOptions && (
-        <div className="p-4 text-center text-gray-500 text-sm">
+        <div className="p-4 text-center text-[var(--text-secondary)] text-sm">
           Keine Evolutionen verfügbar
         </div>
       )}

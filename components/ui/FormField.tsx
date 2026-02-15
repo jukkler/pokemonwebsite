@@ -12,15 +12,15 @@ interface FormFieldProps {
   className?: string;
 }
 
-export default function FormField({ 
-  label, 
-  required = false, 
+export default function FormField({
+  label,
+  required = false,
   children,
-  className = '' 
+  className = ''
 }: FormFieldProps) {
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
         {label} {required && '*'}
       </label>
       {children}
@@ -35,16 +35,16 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   focusColor?: string;
 }
 
-export function Select({ 
-  options, 
+export function Select({
+  options,
   placeholder = '-- Auswählen --',
   focusColor = 'focus:ring-blue-500',
   className = '',
-  ...props 
+  ...props
 }: SelectProps) {
   return (
     <select
-      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${focusColor} ${className}`}
+      className={`w-full px-3 py-2 bg-[var(--background-secondary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 ${focusColor} ${className}`}
       {...props}
     >
       <option value="">{placeholder}</option>
@@ -62,14 +62,14 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   focusColor?: string;
 }
 
-export function Textarea({ 
+export function Textarea({
   focusColor = 'focus:ring-blue-500',
   className = '',
-  ...props 
+  ...props
 }: TextareaProps) {
   return (
     <textarea
-      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${focusColor} ${className}`}
+      className={`w-full px-3 py-2 bg-[var(--background-secondary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 ${focusColor} ${className}`}
       {...props}
     />
   );

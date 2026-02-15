@@ -1,9 +1,10 @@
 /**
  * TypeBadge-Komponente
- * Ovale Badges mit Typ-Farbe und Icon
+ * Ovale Badges mit Typ-Farbe und SVG-Icon
  */
 
-import { getTypeColor, getGermanTypeName, getTypeIcon } from '@/lib/design-tokens';
+import Image from 'next/image';
+import { getTypeColor, getGermanTypeName } from '@/lib/design-tokens';
 
 interface TypeBadgeProps {
   type: string;
@@ -20,7 +21,7 @@ export default function TypeBadge({
 }: TypeBadgeProps) {
   const typeColor = getTypeColor(type);
   const typeName = getGermanTypeName(type);
-  const typeIcon = getTypeIcon(type);
+  const normalizedType = type.toLowerCase();
 
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',
@@ -28,12 +29,30 @@ export default function TypeBadge({
     lg: 'px-4 py-2 text-base',
   };
 
+  const iconSizes = {
+    sm: 14,
+    md: 16,
+    lg: 20,
+  };
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-semibold text-white ${sizeClasses[size]} ${className}`}
-      style={{ backgroundColor: typeColor }}
+      className={`inline-flex items-center gap-1.5 rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:brightness-110 border-2 ${sizeClasses[size]} ${className}`}
+      style={{
+        backgroundColor: `${typeColor}30`, // 30% opacity
+        borderColor: `${typeColor}80`,     // 80% opacity
+        color: 'var(--foreground)',
+      }}
     >
-      {showIcon && <span className="text-white">{typeIcon}</span>}
+      {showIcon && (
+        <Image
+          src={`/icons/types/${normalizedType}.svg`}
+          alt={`${normalizedType} type`}
+          width={iconSizes[size]}
+          height={iconSizes[size]}
+          className="opacity-90"
+        />
+      )}
       <span>{typeName}</span>
     </span>
   );

@@ -6,6 +6,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 interface PlayerAggregatedStats {
   playerName: string;
   totalKnockedOut: number;
@@ -67,11 +69,17 @@ export async function GET() {
       });
 
       currentRunStats = players.map(player => {
-        const playerEncounters = encounters.filter(e => e.playerId === player.id);
+        // Zähle K.O.s/Nicht-gefangen die dieser Spieler VERURSACHT hat (unique Routen)
+        const koRoutes = new Set(
+          encounters.filter(e => e.koCausedBy === player.name).map(e => e.routeId)
+        );
+        const notCaughtRoutes = new Set(
+          encounters.filter(e => e.notCaughtBy === player.name).map(e => e.routeId)
+        );
         return {
           playerName: player.name,
-          totalKnockedOut: playerEncounters.filter(e => e.isKnockedOut).length,
-          totalNotCaught: playerEncounters.filter(e => e.isNotCaught).length,
+          totalKnockedOut: koRoutes.size,
+          totalNotCaught: notCaughtRoutes.size,
           runsLost: 0,
         };
       });
@@ -83,6 +91,9 @@ export async function GET() {
         runNumber: activeRun.runNumber,
         gameVersion: activeRun.gameVersion,
         startedAt: activeRun.startedAt,
+        pausedAt: activeRun.pausedAt,
+        totalPausedMs: activeRun.totalPausedMs,
+        badgesEarned: activeRun.badgesEarned,
       } : null,
       totalRuns: runs.length,
       failedRuns: failedRunsCount,
@@ -91,7 +102,7 @@ export async function GET() {
       currentRunStats,
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {

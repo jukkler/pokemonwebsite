@@ -11,6 +11,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { fetchJson } from '@/lib/fetchJson';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -58,58 +59,58 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm hidden md:block">
+    <nav className="sticky top-0 z-30 bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] border-b border-[var(--glass-border)] hidden md:block">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link href="/pokeroute" className="flex items-center hover:opacity-80 transition">
-              <Image 
-                src="https://upload.wikimedia.org/wikipedia/commons/5/53/Pok%C3%A9_Ball_icon.svg" 
-                alt="Poké Ball" 
+            <Link href="/pokeroute" className="flex items-center hover:opacity-80 transition-opacity duration-300">
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/5/53/Pok%C3%A9_Ball_icon.svg"
+                alt="Poké Ball"
                 width={32}
                 height={32}
                 priority
               />
-              <span className="ml-2 text-xl font-semibold text-gray-900">PokéTool</span>
+              <span className="ml-2 text-xl font-semibold text-[var(--foreground)]">PokéTool</span>
             </Link>
 
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2 bg-[var(--card-bg)] rounded-full p-1 border border-[var(--border-default)]">
               <Link
                 href="/pokeroute"
-                className={`px-4 py-2 rounded-lg transition font-medium ${
+                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
                   isActive('/pokeroute')
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
                 }`}
               >
                 Routen
               </Link>
               <Link
                 href="/pokeradar"
-                className={`px-4 py-2 rounded-lg transition font-medium ${
+                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
                   isActive('/pokeradar')
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
                 }`}
               >
                 Vergleich
               </Link>
               <Link
                 href="/tabelle"
-                className={`px-4 py-2 rounded-lg transition font-medium ${
+                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
                   isActive('/tabelle')
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
                 }`}
               >
                 Tabelle
               </Link>
               <Link
                 href="/statistik"
-                className={`px-4 py-2 rounded-lg transition font-medium ${
+                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
                   isActive('/statistik')
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
                 }`}
               >
                 Statistik
@@ -117,10 +118,10 @@ export default function Navigation() {
               {isAdmin && (
                 <Link
                   href="/admin"
-                  className={`px-4 py-2 rounded-lg transition font-medium ${
+                  className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
                     pathname?.startsWith('/admin')
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
                   }`}
                 >
                   Admin
@@ -130,6 +131,9 @@ export default function Navigation() {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Sprite-Modus Toggle */}
             <button
               onClick={toggleSpriteMode}

@@ -1,0 +1,510 @@
+Pokémon Red/Blue
+
+Gym 1: Lv 14
+Gym 2: Lv 21
+Gym 3: Lv 24
+Gym 4: Lv 29
+Gym 5: Lv 43
+Gym 6: Lv 43
+Gym 7: Lv 47
+Gym 8: Lv 50
+
+Elite Four 1: Lv 56
+Elite Four 2: Lv 58
+Elite Four 3: Lv 60
+Elite Four 4: Lv 62
+
+Champion: Lv 65
+Pokémon Yellow
+
+Gym 1: Lv 12
+Gym 2: Lv 21
+Gym 3: Lv 28
+Gym 4: Lv 32
+Gym 5: Lv 50
+Gym 6: Lv 50
+Gym 7: Lv 54
+Gym 8: Lv 55
+
+Elite Four 1: Lv 56
+Elite Four 2: Lv 58
+Elite Four 3: Lv 60
+Elite Four 4: Lv 62
+
+Champion: Lv 65
+Pokémon Gold/Silver
+
+Note that Gym 7 has a lower level cap than Gym 6.
+
+Gym 1: Lv 9
+Gym 2: Lv 16
+Gym 3: Lv 20
+Gym 4: Lv 25
+Gym 5: Lv 30
+Gym 6: Lv 35
+Gym 7: Lv 31
+Gym 8: Lv 40
+
+Elite Four 1: Lv 42
+Elite Four 2: Lv 44
+Elite Four 3: Lv 46
+Elite Four 4: Lv 47
+
+Champion: Lv 50
+
+Pewter City Gym: Lv 44
+Cerulean City Gym: Lv 47
+Vermillion City Gym: Lv 45
+Celadon City Gym: Lv 46
+Fuchsia City Gym: Lv 39 (note the drop from previous Gyms)
+Saffron City Gym: Lv 48
+Seafoam Island Gym: Lv 50
+Viridian City Gym: Lv 58
+
+Red: Lv 81
+Pokémon Crystal
+
+Note that Gym 7 has a lower level cap than Gym 6.
+
+Gym 1: Lv 9
+Gym 2: Lv 16
+Gym 3: Lv 20
+Gym 4: Lv 25
+Gym 5: Lv 30
+Gym 6: Lv 35
+Gym 7: Lv 31
+Gym 8: Lv 40
+
+Elite Four 1: Lv 42
+Elite Four 2: Lv 44
+Elite Four 3: Lv 46
+Elite Four 4: Lv 47
+
+Champion: Lv 50
+
+Pewter City Gym: Lv 44
+Cerulean City Gym: Lv 47
+Vermillion City Gym: Lv 45
+Celadon City Gym: Lv 46
+Fuchsia City Gym: Lv 39 (note the drop from previous Gyms)
+Saffron City Gym: Lv 48
+Seafoam Island Gym: Lv 50
+Viridian City Gym: Lv 58
+
+Red: Lv 81
+Pokémon Ruby/Sapphire
+
+Gym 1: Lv 15
+Gym 2: Lv 18
+Gym 3: Lv 23
+Gym 4: Lv 28
+Gym 5: Lv 31
+Gym 6: Lv 33
+Gym 7: Lv 42
+Gym 8: Lv 43
+
+Elite Four 1: Lv 49
+Elite Four 2: Lv 51
+Elite Four 3: Lv 53
+Elite Four 4: Lv 55
+
+Champion: Lv 58
+Pokémon Emerald
+
+Gym 1: Lv 15
+Gym 2: Lv 19
+Gym 3: Lv 24
+Gym 4: Lv 29
+Gym 5: Lv 31
+Gym 6: Lv 33
+Gym 7: Lv 42
+Gym 8: Lv 46
+
+Elite Four 1: Lv 49
+Elite Four 2: Lv 51
+Elite Four 3: Lv 53
+Elite Four 4: Lv 55
+
+Champion: Lv 58
+
+Meteor Falls: Lv 78
+Pokémon FireRed/LeafGreen
+
+Gym 1: Lv 14
+Gym 2: Lv 21
+Gym 3: Lv 24
+Gym 4: Lv 29
+Gym 5: Lv 43
+Gym 6: Lv 43
+Gym 7: Lv 47
+Gym 8: Lv 50
+
+Elite Four 1: Lv 54
+Elite Four 2: Lv 56
+Elite Four 3: Lv 58
+Elite Four 4: Lv 60
+
+Champion: Lv 63
+Pokémon Diamond/Pearl
+
+Gym 1: Lv 14
+Gym 2: Lv 22
+Gym 3: Lv 30
+Gym 4: Lv 30
+Gym 5: Lv 36
+Gym 6: Lv 39
+Gym 7: Lv 42
+Gym 8: Lv 49
+
+Elite Four 1: Lv 57
+Elite Four 2: Lv 59
+Elite Four 3: Lv 61
+Elite Four 4: Lv 63
+
+Champion: Lv 66
+Pokémon Platinum
+
+Gym 1: Lv 14
+Gym 2: Lv 22
+Gym 3: Lv 26
+Gym 4: Lv 32
+Gym 5: Lv 37
+Gym 6: Lv 41
+Gym 7: Lv 44
+Gym 8: Lv 50
+
+Elite Four 1: Lv 53
+Elite Four 2: Lv 55
+Elite Four 3: Lv 57
+Elite Four 4: Lv 59
+
+Champion: Lv 62
+Pokémon HeartGold/SoulSilver
+
+Gym 1: Lv 13
+Gym 2: Lv 17
+Gym 3: Lv 19
+Gym 4: Lv 25
+Gym 5: Lv 31
+Gym 6: Lv 35
+Gym 7: Lv 34
+Gym 8: Lv 41
+
+Elite Four 1: Lv 42
+Elite Four 2: Lv 44
+Elite Four 3: Lv 46
+Elite Four 4: Lv 47
+
+Champion: Lv 50
+
+(Note that the Kanto Gyms do not follow a strict upward progression for level caps. The order of these gyms is flexible, so players must decide how to handle Kanto Gyms if they choose to do so.)
+Pewter City Gym: Lv 54
+Cerulean City Gym: Lv 54
+Vermillion City Gym: Lv 53
+Celadon City Gym: Lv 56
+Fuchsia City Gym: Lv 50
+Saffron City Gym: Lv 55
+Seafoam Island Gym: Lv 59
+Viridian City Gym: Lv 60
+Red: Lv 88
+Pokémon Black/White
+
+Gym 1: Lv 14
+Gym 2: Lv 20
+Gym 3: Lv 23
+Gym 4: Lv 27
+Gym 5: Lv 31
+Gym 6: Lv 35
+Gym 7: Lv 39
+Gym 8: Lv 43
+
+Pokémon League: Lv 50
+
+Team Plasma Castle N: Lv 52
+Team Plasma Castle Ghetsis: Lv 54
+
+Elite Four Rematch: Lv 73
+
+Champion: Lv 77
+
+Undella Trainer: Lv 77
+Pokémon Black/White 2
+
+Gym 1: Lv 13
+Gym 2: Lv 18
+Gym 3: Lv 24
+Gym 4: Lv 30
+Gym 5: Lv 33
+Gym 6: Lv 39
+Gym 7: Lv 48
+Gym 8: Lv 51
+
+Pokémon League: Lv 58
+
+Champion: 59
+
+Elite Four Rematch: Lv 74
+
+Champion Rematch: Lv 78
+Pokémon X/Y
+
+Gym 1: Lv 12
+Gym 2: Lv 25
+Gym 3: Lv 32
+Gym 4: Lv 34
+Gym 5: Lv 37
+Gym 6: Lv 42
+Gym 7: Lv 48
+Gym 8: Lv 59
+
+Elite Four: Lv 65
+Champion: Lv 68
+
+Elite Four Rematch: Lv 74
+Champion Rematch: Lv 78
+Pokémon Omega Ruby/Alpha Sapphire
+
+Gym 1: Lv 14
+Gym 2: Lv 16
+Gym 3: Lv 21
+Gym 4: Lv 28
+Gym 5: Lv 30
+Gym 6: Lv 35
+Gym 7: Lv 45
+Gym 8: Lv 46
+
+Elite Four 1: Lv 52
+Elite Four 2: Lv 53
+Elite Four 3: Lv 54
+Elite Four 4: Lv 55
+
+Champion: Lv 59
+
+Elite Four 1 Rematch: Lv 72
+Elite Four 2 Rematch: Lv 73
+Elite Four 3 Rematch: Lv 74
+Elite Four 4 Rematch: Lv 75
+Champion Rematch: 79
+Pokémon Sun/Moon
+
+This section is still in progress. Sun and Moon have a different structure than other mainline Pokémon games, making it more complicated to identify level caps for a Hardcore Nuzlocke. In the meantime, reference Serebii for information on the Island Trials and Grand Trials.
+Pokémon Ultra Sun/Ultra Moon
+
+Similar to Sun and Moon versions, Ultra Sun and Ultra Moon’s modified format makes identifying level caps for a Hardcore Nuzlocke more complicated. These level caps have been included for your information, but be sure to check with other sources and use your own experience with the games to determine which level caps to use and which battles to consider.
+
+Teacher Emily: Lv 10
+Ilima: Lv 12
+Hala: Lv 16
+Lana: Lv 20
+Kiawe: Lv 22
+Mallow: Lv 24
+Olivia: Lv 28
+Sophocles: Lv 33
+Acerola: Lv 35
+Nanu: Lv 44
+Poni Canyon: Lv 49
+Ultra Necrozma: Lv 60
+Mina: Lv 55
+Hapu: Lv 54
+
+Elite Four: Lv 57
+
+Champion: 60
+Pokémon Sword/Shield
+
+Gym 1: Lv 20
+Gym 2: Lv 24
+Gym 3: Lv 27
+Gym 4: Lv 36
+Gym 5: Lv 38
+Gym 6: Lv 42
+Gym 7: Lv 46
+Gym 8: Lv 48
+
+Marnie: Lv 49
+Hop: Lv 49
+Bede: Lv 53
+Nessa: Lv 53
+Bea/Allister: Lv 54
+Raihan: Lv 55
+
+Champion Leon: Lv 65
+Pokémon Scarlet/Violet
+
+Victory Road
+
+Bug Gym: Lv 15
+Grass Gym: Lv 17
+Electric Gym: Lv 24
+Water Gym: Lv 30
+Normal Gym: Lv 36
+Ghost Gym: Lv 42
+Psychic Gym: Lv 45
+Ice Gym: Lv 48
+
+Final Elite Four Member: Lv 61
+
+Champion: Lv 62
+
+Nemona: Lv 66
+
+Path of Titans
+
+Rock Titan: Lv 16
+Flying Titan: Lv 19
+Steel Titan: Lv 28
+Ground Titan: Lv 44
+Dragon Titan: Lv 55
+
+Arven: Lv 63
+
+Starfall Street
+
+Dark Team Star: Lv 21
+Fire Team Star: Lv 27
+Poison Team Star: Lv 33
+Fairy Team Star: Lv 51
+Fighting Team Star: Lv 56
+
+“Big Boss”: Lv 63
+
+Final Battle: Lv 67 (this battle is not available until after completing the first three paths. You will be forced to battle multiple strong opponents once starting this path and before reaching the final boss battle itself, so keep that in mind if you are concerned about overlevelling. You may also decide to simply allow overlevelling once you’ve started the mission, depending on your personal feelings and ruleset.)
+Legends: Z-A
+
+(Note: Rogue Battle level caps are highlighted to make the list more readable. Some players may choose to include these level caps in their run, some may count only the promotion matches – both are included for the reader’s convenience.)
+
+Promotion Match 1: Lv 9
+Promotion Match 2: Lv 15
+Promotion Match 3: Lv 21
+Promotion Match 4: Lv 24
+Promotion Match 5: Lv 32
+* Rogue Battles Set 1: Lv 34 *
+Promotion Match 6: Lv 39
+* Rogue Battles Set 2: Lv 41 *
+Promotion Match 7: Lv 47
+* Rogue Battles Set 3: Lv 48 *
+Promotion Match 8: Lv 52
+* Rogue Battles Set 4: Lv 53 *
+Promotion Match 9: Lv 59
+* Rogue Battles Set 5: Lv 59 *
+Promotion Match 10: Lv 63
+Promotion Match 11: Lv 64
+
+Postgame Rival: Lv 72
+Postgame Boss: Lv 80
+Postgame Legendary: Lv 84
+Pokémon Renegade Platinum
+
+Gym 1: Lv 16
+Gym 2: Lv 26
+Gym 3: Lv 33
+Gym 4: Lv 39
+Gym 5: Lv 44
+Gym 6: Lv 53
+Gym 7: Lv 56
+Gym 8: Lv 62
+
+Elite Four 1: Lv 72
+Elite Four 2: Lv 73
+Elite Four 3: Lv 74
+Elite Four 4: Lv 75
+
+Champion: Lv 78
+Pokémon Volt White/Blaze Black
+
+Gym 1: Lv 14
+Gym 2: Lv 20
+Gym 3: Lv 30
+Gym 4: Lv 38
+Gym 5: Lv 44
+Gym 6: Lv 56
+Gym 7: Lv 63
+Gym 8: Volt White Lv 65 – Blaze Black Lv 66
+
+Elite Four: Lv 73
+Ghetsis: Lv 77
+
+Elite Four Rematch: Lv 93
+Champion: Lv 100
+Pokémon Volt White/Blaze Black 2 Redux (Normal)
+
+Gym 1: Lv 13
+Gym 2: Lv 20
+Gym 3: Lv 27
+Gym 4: Lv 36
+Gym 5: Lv 43
+Gym 6: Lv 52
+Gym 7: Lv 60
+Gym 8: Lv 64
+
+Ghetsis: Lv 68
+Elite Four: Lv 74
+Champion: Lv: 75
+Pokémon Volt White/Blaze Black 2 Redux (Challenge)
+
+Gym 1: Lv 14
+Gym 2: Lv 21
+Gym 3: Lv 29
+Gym 4: Lv 38
+Gym 5: Lv 45
+Gym 6: Lv 55
+Gym 7: Lv 64
+Gym 8: Lv 68
+
+Ghetsis: Lv 72
+Elite Four: Lv 78
+Champion: Lv: 79
+Pokémon Sacred Gold/Storm Silver
+
+Gym 1: Lv 15
+Gym 2: Lv 21
+Gym 3: Lv 24
+Gym 4: Lv 29
+Gym 5: Lv 35
+Gym 6: Lv 40
+Gym 7: Lv 43
+Gym 8: Lv 50
+
+Elite Four: Lv 55
+Champion: Lv 60
+
+
+Pewter City Gym: Lv 61
+Cerulean City Gym: Lv 62
+Vermillion City Gym: Lv 63
+Fuchsia City Gym: Lv 64
+Celadon City Gym: Lv 65
+Saffron City Gym: Lv 66
+Cinnabar Island Gym: Lv 68
+Viridian City Gym: Lv 70
+
+Red: Lv 94
+Pokémon Rising Ruby/Sinking Sapphire
+
+Gym 1: Lv 16
+Gym 2: Lv 19
+Gym 3: Lv 28
+Gym 4: Lv 38
+Gym 5: Lv 42
+Gym 6: Lv 50
+Gym 7: Lv 62
+Gym 8: Lv 67
+
+
+Elite Four 1: Lv 72
+Elite Four 2: Lv 73
+Elite Four 3: Lv 74
+Elite Four 4: Lv 75
+Champion: Lv: 79
+Pokémon Emerald Kaizo
+
+Gym 1: Lv 15 (16*)
+Gym 2: Lv 19 (20*)
+Gym 3: Lv 29
+Gym 4: Lv 42
+Gym 5: Lv 48
+Gym 6: Lv 55
+Gym 7: Lv 70
+Gym 8: Lv 77
+
+Pokémon League: Lv 100

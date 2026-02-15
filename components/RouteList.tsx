@@ -97,7 +97,7 @@ function EditableRouteName({
           onKeyDown={handleKeyDown}
           onBlur={onEditSave}
           disabled={isProcessing}
-          className="text-2xl font-semibold px-2 py-1 border border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-2xl font-semibold px-2 py-1 bg-[var(--background-secondary)] text-[var(--foreground)] border border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
     );
@@ -105,13 +105,13 @@ function EditableRouteName({
 
   return (
     <div className="flex items-center gap-2">
-      <h3 className={`text-2xl font-semibold ${isInactive ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+      <h3 className={`text-2xl font-semibold ${isInactive ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--foreground)]'}`}>
         {route.name}
       </h3>
       {isAdmin && (
         <button
           onClick={onEditStart}
-          className="p-1 text-gray-400 hover:text-blue-600 transition opacity-0 group-hover:opacity-100"
+          className="p-1 text-[var(--text-tertiary)] hover:text-[var(--player-color)] transition opacity-0 group-hover:opacity-100"
           title="Route umbenennen"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@ function RouteHeader({
           <button
             onClick={onMoveUp}
             disabled={isProcessing || !canMoveUp}
-            className="p-0.5 text-gray-400 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-0.5 text-[var(--text-tertiary)] hover:text-blue-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
             title="Nach oben verschieben"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +188,7 @@ function RouteHeader({
           <button
             onClick={onMoveDown}
             disabled={isProcessing || !canMoveDown}
-            className="p-0.5 text-gray-400 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-0.5 text-[var(--text-tertiary)] hover:text-blue-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
             title="Nach unten verschieben"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +216,7 @@ function RouteHeader({
         <button
           onClick={onDelete}
           disabled={isProcessing}
-          className="p-1 text-gray-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+          className="p-1 text-[var(--text-tertiary)] hover:text-red-500 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
           title="Route loeschen"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,25 +226,25 @@ function RouteHeader({
       )}
       
       {isKnockedOut && koInfo && (
-        <span className="text-sm bg-red-50 text-red-700 px-3 py-1.5 rounded-full font-medium border border-red-200">
-          K.O. durch {koInfo.koCausedBy}
+        <span className="text-xs bg-red-500/20 text-red-400 px-2.5 py-1 rounded-full font-medium border border-red-500/30">
+          💀 {koInfo.koCausedBy}
         </span>
       )}
-      
+
       {isNotCaught && notCaughtInfo && (
-        <span className="text-sm bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full font-medium border border-yellow-200">
-          Nicht gefangen durch {notCaughtInfo.notCaughtBy}
+        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2.5 py-1 rounded-full font-medium border border-yellow-500/30">
+          ❌ {notCaughtInfo.notCaughtBy}
         </span>
       )}
-      
+
       {currentSlot && !isInactive && (
-        <span className="text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-full font-medium border border-green-200">
+        <span className="text-xs bg-green-500/20 text-green-400 px-2.5 py-1 rounded-full font-medium border border-green-500/30">
           Im Team (Slot {currentSlot})
         </span>
       )}
-      
+
       {routeAverage && !isInactive && (
-        <span className="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium border border-blue-200">
+        <span className="text-xs bg-blue-500/20 text-blue-400 px-2.5 py-1 rounded-full font-medium border border-blue-500/30">
           Gesamt-BP: {routeAverage.total}
         </span>
       )}
@@ -259,26 +259,26 @@ interface StatusInfoBoxProps {
 
 function StatusInfoBox({ type, info }: StatusInfoBoxProps) {
   const isKo = type === 'ko';
-  const colors = isKo 
-    ? { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-', icon: '!' }
-    : { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-', icon: '!' };
+  const colors = isKo
+    ? { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400', icon: '💀' }
+    : { bg: 'bg-yellow-500/20', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '❌' };
 
   return (
     <div className={`mb-4 ${colors.bg} border ${colors.border} rounded-lg p-3 text-sm`}>
       <div className="flex items-start gap-2">
-        <span className={`${colors.text}700 font-bold`}>{colors.icon}</span>
+        <span className="font-bold text-lg">{colors.icon}</span>
         <div className="flex-1">
-          <p className={`${colors.text}900 font-bold`}>
+          <p className={`${colors.text} font-bold`}>
             {isKo ? 'Diese Route ist K.O.' : 'Auf dieser Route wurde nicht gefangen'}
           </p>
-          <p className={`${colors.text}700 mt-1`}>
+          <p className={`${colors.text} mt-1`}>
             <strong>Verursacher:</strong> {isKo ? info.koCausedBy : info.notCaughtBy}
           </p>
-          <p className={`${colors.text}700`}>
+          <p className={`${colors.text}`}>
             <strong>Grund:</strong> {isKo ? info.koReason : info.notCaughtReason}
           </p>
           {(isKo ? info.koDate : info.notCaughtDate) && (
-            <p className={`${colors.text}600 text-xs mt-1`}>
+            <p className={`${colors.text} opacity-70 text-xs mt-1`}>
               {new Date((isKo ? info.koDate : info.notCaughtDate)!).toLocaleString('de-DE')}
             </p>
           )}
@@ -311,28 +311,28 @@ function PokemonSearchInput({
         value={searchValue}
         onChange={(e) => onSearchChange(e.target.value)}
         disabled={isAdding}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-3 py-2 bg-[var(--background-secondary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
-      
+
       {searchValue && filteredPokemon.length > 0 && (
-        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-20 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {filteredPokemon.map((p) => (
             <button
               key={p.id}
               onClick={() => onSelect(p.id)}
               disabled={isAdding}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition flex items-center gap-2 disabled:opacity-50"
+              className="w-full px-3 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--background-secondary)] transition flex items-center gap-2 disabled:opacity-50"
             >
-              <span className="text-gray-500">#{p.pokedexId}</span>
+              <span className="text-[var(--text-secondary)]">#{p.pokedexId}</span>
               <span className="font-medium">{p.nameGerman || p.name}</span>
             </button>
           ))}
         </div>
       )}
-      
+
       {searchValue && filteredPokemon.length === 0 && (
-        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="text-sm text-gray-500">Kein Pokemon gefunden</p>
+        <div className="absolute z-20 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg p-3">
+          <p className="text-sm text-[var(--text-secondary)]">Kein Pokemon gefunden</p>
         </div>
       )}
     </div>
@@ -418,7 +418,7 @@ const RouteList = memo(function RouteList({
         body: JSON.stringify({ causedBy: koCausedBy, reason: koReason }),
       });
       setKoDialogOpen(false);
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim K.O.-Eintrag: ${getErrorMessage(error)}`);
     } finally {
@@ -432,7 +432,7 @@ const RouteList = memo(function RouteList({
     try {
       const endpoint = type === 'ko' ? 'knockout' : 'notcaught';
       await fetchJson(`/api/admin/routes/${routeId}/${endpoint}`, { method: 'DELETE' });
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Reaktivieren: ${getErrorMessage(error)}`);
     } finally {
@@ -455,7 +455,7 @@ const RouteList = memo(function RouteList({
       setNotCaughtDialogOpen(false);
       setNotCaughtBy('');
       setNotCaughtReason('');
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Nicht-gefangen-Eintrag: ${getErrorMessage(error)}`);
     } finally {
@@ -473,7 +473,7 @@ const RouteList = memo(function RouteList({
         body: JSON.stringify({ routeId, playerId, pokemonId }),
       });
       setAddPokemonSearch({ ...addPokemonSearch, [key]: '' });
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Hinzufuegen: ${getErrorMessage(error)}`);
     } finally {
@@ -492,7 +492,7 @@ const RouteList = memo(function RouteList({
       setEditingRouteId(null);
       return;
     }
-    
+
     const originalRoute = routes.find(r => r.id === editingRouteId);
     if (originalRoute && originalRoute.name === editingRouteName.trim()) {
       setEditingRouteId(null);
@@ -507,7 +507,7 @@ const RouteList = memo(function RouteList({
         body: JSON.stringify({ name: editingRouteName.trim() }),
       });
       setEditingRouteId(null);
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Umbenennen: ${getErrorMessage(error)}`);
     } finally {
@@ -528,7 +528,7 @@ const RouteList = memo(function RouteList({
     setProcessing(true);
     try {
       await fetchJson(`/api/admin/routes/${routeId}`, { method: 'DELETE' });
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Loeschen: ${getErrorMessage(error)}`);
     } finally {
@@ -548,7 +548,7 @@ const RouteList = memo(function RouteList({
       });
       setSwapDialogOpen(false);
       setSwappingEncounter(null);
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Tauschen: ${getErrorMessage(error)}`);
     } finally {
@@ -564,7 +564,7 @@ const RouteList = memo(function RouteList({
     setProcessing(true);
     try {
       await fetchJson(`/api/admin/encounters/${encounterId}`, { method: 'DELETE' });
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Entfernen: ${getErrorMessage(error)}`);
     } finally {
@@ -598,7 +598,7 @@ const RouteList = memo(function RouteList({
           body: JSON.stringify({ name: targetRoute.name, order: currentRoute.order }),
         }),
       ]);
-      onTeamUpdate?.();
+      await onTeamUpdate?.(); // Warte auf Daten-Reload
     } catch (error) {
       alert(`Fehler beim Verschieben: ${getErrorMessage(error)}`);
     } finally {
@@ -613,7 +613,7 @@ const RouteList = memo(function RouteList({
   if (routes.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 text-lg">
+        <p className="text-[var(--text-secondary)] text-lg">
           Noch keine Routen vorhanden. Admin kann Routen im Admin-Panel hinzufuegen.
         </p>
       </div>
@@ -644,10 +644,10 @@ const RouteList = memo(function RouteList({
           return (
             <div
               key={route.id}
-              className={`bg-white rounded-xl shadow-md p-6 border border-gray-200 ${isInactive ? 'opacity-60 bg-gray-50' : ''}`}
+              className={`bg-[var(--card-bg)] rounded-xl shadow-md p-6 border border-[var(--border-default)] transition-all duration-300 ${isInactive ? 'opacity-60 bg-[var(--background-secondary)]' : ''}`}
             >
               {/* Header */}
-              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
+              <div className="flex items-center justify-between mb-4 border-b border-[var(--border-default)] pb-3">
                 <RouteHeader
                   route={route}
                   isInactive={isInactive}
@@ -789,6 +789,7 @@ const RouteList = memo(function RouteList({
                                   width={24}
                                   height={24}
                                   className="object-cover w-full h-full"
+                                  unoptimized
                                 />
                               </div>
                             );
@@ -797,11 +798,11 @@ const RouteList = memo(function RouteList({
                             <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: player.color }} />
                           );
                         })()}
-                        <h4 className="font-semibold text-lg">{player.name}</h4>
+                        <h4 className="font-semibold text-lg text-[var(--foreground)]">{player.name}</h4>
                       </div>
 
                       {hasEncounter ? (
-                        <div className="flex flex-wrap items-start gap-3 md:gap-2">
+                        <div className="flex flex-wrap items-stretch gap-3 md:gap-2">
                           {playerEncounters.map((encounter) => (
                             <div key={encounter.id} className="flex flex-col w-[140px] flex-shrink-0">
                               <div className={`relative group ${minHeight}`}>
@@ -880,7 +881,7 @@ const RouteList = memo(function RouteList({
                           isAdding={isAdding}
                         />
                       ) : (
-                        <p className="text-gray-400 text-sm italic min-w-[160px]">Noch kein Pokemon</p>
+                        <p className="text-[var(--text-tertiary)] text-sm italic min-w-[160px]">Noch kein Pokemon</p>
                       )}
                     </div>
                   );

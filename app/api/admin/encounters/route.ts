@@ -81,14 +81,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // FEATURE: Auto-Inherit teamSlot
+    // Strategie 1: Prüfe ob andere Spieler auf dieser Route einen teamSlot haben
+    // Strategie 2: Prüfe ob DIESER Spieler auf anderen Routen ein Muster hat
+    const existingEncountersOnRoute = await prisma.encounter.findMany({
+      where: {
+        routeId: parsedRouteId,
+        teamSlot: { not: null },
+      },
+      select: {
+        teamSlot: true,
+        playerId: true,
+      },
+    });
+
+    let inheritedTeamSlot: number | null = null;
+
+    if (existingEncountersOnRoute.length > 0) {
+      const teamSlots = existingEncountersOnRoute.map((e) => e.teamSlot);
+      const uniqueSlots = [...new Set(teamSlots)];
+
+      // Wenn alle anderen Spieler denselben Slot verwenden, übernehme ihn
+      if (uniqueSlots.length === 1 && uniqueSlots[0] !== null) {
+        inheritedTeamSlot = uniqueSlots[0];
+      }
+    }
+
     try {
-      // Encounter erstellen
+      // Encounter erstellen (mit automatisch übernommenem teamSlot, falls vorhanden)
       const encounter = await prisma.encounter.create({
         data: {
           playerId: parsedPlayerId,
           routeId: parsedRouteId,
           pokemonId: parsedPokemonId,
           nickname: nickname ? String(nickname).trim() : null,
+          teamSlot: inheritedTeamSlot,
         },
         include: {
           player: true,

@@ -239,6 +239,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
                         width={24}
                         height={24}
                         className="rounded-full"
+                        unoptimized
                       />
                     ) : (
                       <div

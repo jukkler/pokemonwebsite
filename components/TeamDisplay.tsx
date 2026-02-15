@@ -5,7 +5,8 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import PokemonCard from './PokemonCard';
 import EvolutionMenu from './EvolutionMenu';
@@ -30,6 +31,41 @@ interface TooltipProps {
 
 function Tooltip({ items, children }: TooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPosition({
+      top: rect.top + window.scrollY,
+      left: rect.left + rect.width / 2,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isOpen || isHovered) {
+      updatePosition();
+    }
+  }, [isOpen, isHovered, updatePosition]);
+
+  // Schließe bei Klick außerhalb
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [isOpen]);
 
   if (items.length === 0) {
     return <>{children}</>;
@@ -62,18 +98,30 @@ function Tooltip({ items, children }: TooltipProps) {
     </div>
   );
 
+  const showTooltip = (isOpen || isHovered) && mounted && position;
+
   return (
-    <div className="relative group">
-      <div onClick={() => setIsOpen(!isOpen)}>{children}</div>
-      {!isOpen && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+    <div
+      ref={triggerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => setIsOpen(!isOpen)}
+      className="cursor-help"
+    >
+      {children}
+      {showTooltip && createPortal(
+        <div
+          className="absolute z-[9998]"
+          style={{
+            top: position.top,
+            left: position.left,
+            transform: 'translate(-50%, -100%) translateY(-8px)',
+            pointerEvents: isOpen ? 'auto' : 'none',
+          }}
+        >
           {tooltipContent}
-        </div>
-      )}
-      {isOpen && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 relative">
-          {tooltipContent}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

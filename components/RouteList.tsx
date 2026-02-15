@@ -315,7 +315,7 @@ function PokemonSearchInput({
       />
 
       {searchValue && filteredPokemon.length > 0 && (
-        <div className="absolute z-20 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {filteredPokemon.map((p) => (
             <button
               key={p.id}
@@ -331,7 +331,7 @@ function PokemonSearchInput({
       )}
 
       {searchValue && filteredPokemon.length === 0 && (
-        <div className="absolute z-20 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg p-3">
+        <div className="absolute z-50 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg p-3">
           <p className="text-sm text-[var(--text-secondary)]">Kein Pokemon gefunden</p>
         </div>
       )}

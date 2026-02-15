@@ -1,21 +1,19 @@
 /**
  * API Route: Update Badge Count
- * POST /api/runs/badges - Aktualisiert den Orden-Zähler des aktiven Runs
+ * POST /api/runs/badges - Aktualisiert den Orden-Zähler des aktiven Runs (Admin-geschützt)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { withAdminAuthAndErrorHandling, success, badRequest, notFound } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 import { getBadgesForGame } from '@/lib/badge-data';
 
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminAuthAndErrorHandling(async () => {
     const { action } = await request.json();
 
     if (action !== 'increment' && action !== 'decrement') {
-      return NextResponse.json(
-        { error: 'Ungültige Aktion. Erlaubt: increment, decrement' },
-        { status: 400 }
-      );
+      return badRequest('Ungültige Aktion. Erlaubt: increment, decrement');
     }
 
     const activeRun = await prisma.run.findFirst({
@@ -24,13 +22,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!activeRun) {
-      return NextResponse.json(
-        { error: 'Kein aktiver Run gefunden' },
-        { status: 404 }
-      );
+      return notFound('Kein aktiver Run gefunden');
     }
 
-    // Maximale Badges basierend auf Spielversion
     const badges = activeRun.gameVersionKey
       ? getBadgesForGame(activeRun.gameVersionKey)
       : null;
@@ -48,15 +42,6 @@ export async function POST(request: NextRequest) {
       data: { badgesEarned: newCount },
     });
 
-    return NextResponse.json({
-      success: true,
-      badgesEarned: newCount,
-    });
-  } catch (error) {
-    console.error('Error updating badges:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Aktualisieren der Orden' },
-      { status: 500 }
-    );
-  }
+    return success({ badgesEarned: newCount });
+  }, 'updating badges');
 }

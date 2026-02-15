@@ -38,7 +38,11 @@ interface RunStats {
   aggregatedPlayerStats: PlayerStats[];
 }
 
-export default function RunStatsPanel() {
+interface RunStatsPanelProps {
+  isAdmin?: boolean;
+}
+
+export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
   const [stats, setStats] = useState<RunStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(true);
@@ -207,29 +211,29 @@ export default function RunStatsPanel() {
                 )}
               </div>
 
-              {/* Pause/Play Button */}
-              <button
-                onClick={togglePause}
-                disabled={pauseLoading}
-                className={`p-1.5 rounded-lg transition-all duration-300 ${
-                  pauseLoading
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-[var(--background-tertiary)] hover:scale-110'
-                }`}
-                title={stats.activeRun?.pausedAt ? 'Timer fortsetzen' : 'Timer pausieren'}
-              >
-                {stats.activeRun?.pausedAt ? (
-                  // Play Icon
-                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                ) : (
-                  // Pause Icon
-                  <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                  </svg>
-                )}
-              </button>
+              {/* Pause/Play Button - nur für Admins */}
+              {isAdmin && (
+                <button
+                  onClick={togglePause}
+                  disabled={pauseLoading}
+                  className={`p-1.5 rounded-lg transition-all duration-300 ${
+                    pauseLoading
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:bg-[var(--background-tertiary)] hover:scale-110'
+                  }`}
+                  title={stats.activeRun?.pausedAt ? 'Timer fortsetzen' : 'Timer pausieren'}
+                >
+                  {stats.activeRun?.pausedAt ? (
+                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -311,7 +315,7 @@ export default function RunStatsPanel() {
         <BadgeProgressTracker
           gameVersionKey={activeRun.gameVersion?.key ?? null}
           badgesEarned={activeRun.badgesEarned ?? 0}
-          onBadgeClick={handleBadgeClick}
+          onBadgeClick={isAdmin ? handleBadgeClick : undefined}
         />
       )}
     </>

@@ -311,7 +311,7 @@ export default function PokerouteClient({
           className="order-first lg:order-none lg:col-start-3 lg:col-span-1 lg:row-start-1 lg:row-[span_3_/_span_3] animate-[scale-in_0.3s_ease-out]"
         >
           <h2 className="text-xl font-bold mb-4 text-[var(--foreground)]">Live Stats</h2>
-          <RunStatsPanel />
+          <RunStatsPanel isAdmin={isAdmin} />
         </BentoCard>
 
         {/* Routen Übersicht - unten (volle Breite) */}

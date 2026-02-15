@@ -1,14 +1,14 @@
 /**
  * API Route: Toggle Run Pause
- * POST /api/runs/pause - Pausiert oder setzt den aktiven Run fort
+ * POST /api/runs/pause - Pausiert oder setzt den aktiven Run fort (Admin-geschützt)
  */
 
 import { NextResponse } from 'next/server';
+import { withAdminAuthAndErrorHandling, success } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 export async function POST() {
-  try {
-    // Hole aktiven Run
+  return withAdminAuthAndErrorHandling(async () => {
     const activeRun = await prisma.run.findFirst({
       where: { status: 'active' },
       orderBy: { startedAt: 'desc' },
@@ -23,11 +23,8 @@ export async function POST() {
 
     const now = new Date();
 
-    // Toggle Pause-Status
     if (activeRun.pausedAt) {
-      // Run ist pausiert → fortsetzen
       const pauseDuration = now.getTime() - new Date(activeRun.pausedAt).getTime();
-
       await prisma.run.update({
         where: { id: activeRun.id },
         data: {
@@ -35,32 +32,13 @@ export async function POST() {
           totalPausedMs: activeRun.totalPausedMs + pauseDuration,
         },
       });
-
-      return NextResponse.json({
-        success: true,
-        action: 'resumed',
-        message: 'Run fortgesetzt',
-      });
+      return success({ action: 'resumed', message: 'Run fortgesetzt' });
     } else {
-      // Run läuft → pausieren
       await prisma.run.update({
         where: { id: activeRun.id },
-        data: {
-          pausedAt: now,
-        },
+        data: { pausedAt: now },
       });
-
-      return NextResponse.json({
-        success: true,
-        action: 'paused',
-        message: 'Run pausiert',
-      });
+      return success({ action: 'paused', message: 'Run pausiert' });
     }
-  } catch (error) {
-    console.error('Error toggling run pause:', error);
-    return NextResponse.json(
-      { error: 'Fehler beim Pausieren/Fortsetzen' },
-      { status: 500 }
-    );
-  }
+  }, 'toggling run pause');
 }

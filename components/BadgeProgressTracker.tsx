@@ -10,7 +10,7 @@ import { getBadgesForGame, getLevelCapsForGame } from '@/lib/badge-data';
 interface BadgeProgressTrackerProps {
   gameVersionKey: string | null;
   badgesEarned: number;
-  onBadgeClick: (newCount: number) => void;
+  onBadgeClick?: (newCount: number) => void;
 }
 
 export default function BadgeProgressTracker({
@@ -41,7 +41,7 @@ export default function BadgeProgressTracker({
           const isLastEarned = isEarned && index === badgesEarned - 1;
           const isLast = index === badges.length - 1;
           const cap = levelCaps?.[index];
-          const isClickable = isNext || isLastEarned;
+          const isClickable = onBadgeClick && (isNext || isLastEarned);
 
           return (
             <div key={`${badge.key}-${index}`} className="flex items-stretch">
@@ -50,6 +50,7 @@ export default function BadgeProgressTracker({
                 {/* Node (Kreis-Punkt auf der Linie) */}
                 <button
                   onClick={() => {
+                    if (!onBadgeClick) return;
                     if (isNext) onBadgeClick(badgesEarned + 1);
                     else if (isLastEarned) onBadgeClick(badgesEarned - 1);
                   }}
@@ -79,6 +80,7 @@ export default function BadgeProgressTracker({
               {/* Rechte Spalte: Badge-Icon + Info */}
               <button
                 onClick={() => {
+                  if (!onBadgeClick) return;
                   if (isNext) onBadgeClick(badgesEarned + 1);
                   else if (isLastEarned) onBadgeClick(badgesEarned - 1);
                 }}

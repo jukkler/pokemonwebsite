@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import Button from './Button';
 
@@ -31,13 +31,8 @@ export default function Dialog({
   children,
   actions,
 }: DialogProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!isOpen || !mounted) return null;
+  const canUsePortal = typeof document !== 'undefined';
+  if (!isOpen || !canUsePortal) return null;
 
   return createPortal(
     <div

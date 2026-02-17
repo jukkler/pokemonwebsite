@@ -168,7 +168,7 @@ export default function PokerouteClient({
       if (!document.hidden) {
         loadData();
       }
-    }, 1000); // 1 Sekunde für Echtzeit-Updates
+    }, 1000);
 
     // Cleanup beim Unmount
     return () => clearInterval(interval);
@@ -222,13 +222,6 @@ export default function PokerouteClient({
 
   return (
     <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-screen-2xl">
-      {/* Header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-3xl md:text-4xl font-semibold text-[var(--foreground)] mb-2">
-          PokéTool by Lukas
-        </h1>
-      </div>
-
       {/* Bento Grid Layout */}
       <BentoGrid>
         {/* Spieler Teams - links (2 Spalten), untereinander */}
@@ -291,7 +284,6 @@ export default function PokerouteClient({
               <TeamDisplay
                 playerName={player.name}
                 playerColor={player.color}
-                playerAvatar={player.avatar}
                 teamMembers={player.encounters}
                 routes={routes}
                 isAdmin={isAdmin}

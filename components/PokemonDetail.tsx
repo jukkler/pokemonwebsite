@@ -72,8 +72,6 @@ export default function PokemonDetail({
   // Berechne Schwächen
   const defensiveEffectiveness = calculateDefensiveEffectiveness(types);
   const weaknesses = defensiveEffectiveness['2x'] || [];
-  const resistances = defensiveEffectiveness['0.5x'] || [];
-  const immunities = defensiveEffectiveness['0x'] || [];
 
   const totalStats = pokemon.hp + pokemon.attack + pokemon.defense + 
                      pokemon.spAttack + pokemon.spDefense + pokemon.speed;

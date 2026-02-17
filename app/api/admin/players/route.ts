@@ -23,7 +23,6 @@ export async function GET() {
         _count: {
           select: {
             encounters: true,
-            teamMembers: true,
           },
         },
       },

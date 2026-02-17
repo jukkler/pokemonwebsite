@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { withAdminAuth } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
 interface CSVRow {
@@ -54,15 +54,72 @@ interface PokeAPIPokemonResponse {
   };
 }
 
+type CsvDelimiter = ';' | ',';
+
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Unbekannter Fehler';
 
-export async function POST(request: NextRequest) {
-  try {
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
+function parseCsvContent(content: string, delimiter: CsvDelimiter): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+
+    if (char === '"') {
+      // Escaped quote ("")
+      if (inQuotes && content[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
     }
 
+    if (char === delimiter && !inQuotes) {
+      row.push(cell.trim());
+      cell = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && content[i + 1] === '\n') {
+        i++;
+      }
+      row.push(cell.trim());
+      rows.push(row);
+      row = [];
+      cell = '';
+      continue;
+    }
+
+    cell += char;
+  }
+
+  if (inQuotes) {
+    throw new Error('Ungültiges CSV: Nicht geschlossene Anführungszeichen');
+  }
+
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell.trim());
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function detectDelimiter(headerLine: string): CsvDelimiter {
+  const semicolonColumns = parseCsvContent(headerLine, ';')[0]?.length ?? 0;
+  const commaColumns = parseCsvContent(headerLine, ',')[0]?.length ?? 0;
+  return semicolonColumns > commaColumns ? ';' : ',';
+}
+
+export async function POST(request: NextRequest) {
+  return withAdminAuth(async () => {
+    try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -72,17 +129,33 @@ export async function POST(request: NextRequest) {
 
     // CSV-Datei einlesen
     const text = await file.text();
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
-
-    if (lines.length < 2) {
+    const firstNonEmptyLine =
+      text.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
+    if (!firstNonEmptyLine) {
       return NextResponse.json({ error: 'CSV-Datei ist leer oder hat keine Daten' }, { status: 400 });
     }
 
     // Erkenne Trennzeichen (Semikolon oder Komma)
-    const delimiter = lines[0].includes(';') ? ';' : ',';
+    const delimiter = detectDelimiter(firstNonEmptyLine);
+
+    let parsedRows: string[][];
+    try {
+      parsedRows = parseCsvContent(text, delimiter).filter(
+        (row) => row.some((cell) => cell.trim().length > 0)
+      );
+    } catch (error) {
+      return NextResponse.json(
+        { error: `CSV-Parsing fehlgeschlagen: ${getErrorMessage(error)}` },
+        { status: 400 }
+      );
+    }
+
+    if (parsedRows.length < 2) {
+      return NextResponse.json({ error: 'CSV-Datei ist leer oder hat keine Daten' }, { status: 400 });
+    }
 
     // Header parsen
-    const header = lines[0].split(delimiter).map(h => h.trim());
+    const header = parsedRows[0].map((h) => h.trim());
     
     // Format-Erkennung: Pivot-Format (Route;Spieler1;Spieler2;...) oder Standard-Format (Route,Spieler,Pokemon,...)
     const isPivotFormat = header.length > 2 && header[0].toLowerCase().match(/route/i);
@@ -93,11 +166,8 @@ export async function POST(request: NextRequest) {
       // PIVOT-FORMAT: Route;Thorben;Lukas;Timo
       const playerNames = header.slice(1); // Alle Spalten außer der ersten sind Spieler
 
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line) continue;
-
-        const cells = line.split(delimiter).map(c => c.trim());
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cells = parsedRows[i];
         const route = cells[0];
 
         if (!route) {
@@ -130,11 +200,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line) continue;
-
-        const cells = line.split(delimiter).map(c => c.trim());
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cells = parsedRows[i];
         
         const route = cells[routeIdx];
         const player = cells[playerIdx];
@@ -274,8 +341,8 @@ export async function POST(request: NextRequest) {
                       console.log(`✓ Gefunden: ${row.pokemon} = ID ${foundId} (${displayName})`);
                       break;
                     }
-                  } catch {
-                    // Überspringe Fehler bei einzelnen IDs
+                  } catch (err) {
+                    console.warn(`PokeAPI species lookup failed for ID ${searchId}:`, err instanceof Error ? err.message : err);
                     continue;
                   }
                 }
@@ -402,15 +469,16 @@ export async function POST(request: NextRequest) {
       message: `Import abgeschlossen: ${results.encountersCreated} Encounters erstellt, ${results.routesCreated} Routen erstellt, ${results.pokemonSynced} Pokémon synchronisiert`,
       details: results,
     });
-  } catch (error) {
-    console.error('Error importing CSV:', error);
-    return NextResponse.json(
-      {
-        error: 'Fehler beim Importieren der CSV-Datei',
-        details: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      return NextResponse.json(
+        {
+          error: 'Fehler beim Importieren der CSV-Datei',
+          details: getErrorMessage(error),
+        },
+        { status: 500 }
+      );
+    }
+  });
 }
 

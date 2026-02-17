@@ -12,7 +12,7 @@ import PokemonCard from './PokemonCard';
 import PokemonStatsCard from './PokemonStatsCard';
 import EvolutionMenu from './EvolutionMenu';
 import PokemonSwapDialog from './PokemonSwapDialog';
-import { Button, Dialog, DialogActions, FormField, Select, Textarea } from './ui';
+import { Dialog, DialogActions, FormField, Select, Textarea } from './ui';
 import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
 import { calculateAverageStats, filterPokemonBySearch } from '@/lib/team-utils';
 import { parseTypes } from '@/lib/typeEffectiveness';
@@ -976,6 +976,7 @@ const RouteList = memo(function RouteList({
 
       {/* Pokemon Swap Dialog */}
       <PokemonSwapDialog
+        key={`route-swap-${swapDialogOpen ? swappingEncounter?.id ?? 'none' : 'closed'}`}
         isOpen={swapDialogOpen}
         onClose={() => {
           setSwapDialogOpen(false);

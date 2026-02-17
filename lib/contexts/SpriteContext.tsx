@@ -25,25 +25,19 @@ interface SpriteProviderProps {
 }
 
 export function SpriteProvider({ children }: SpriteProviderProps) {
-  // Initialer State ist 'static', wird nach Mount aus localStorage geladen
-  const [spriteMode, setSpriteMode] = useState<SpriteMode>('static');
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Beim Mount: localStorage lesen
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'animated' || stored === 'static') {
-      setSpriteMode(stored);
+  const [spriteMode, setSpriteMode] = useState<SpriteMode>(() => {
+    if (typeof window === 'undefined') {
+      return 'static';
     }
-    setIsHydrated(true);
-  }, []);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === 'animated' || stored === 'static' ? stored : 'static';
+  });
 
   // Bei Änderung: localStorage aktualisieren
   useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem(STORAGE_KEY, spriteMode);
-    }
-  }, [spriteMode, isHydrated]);
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(STORAGE_KEY, spriteMode);
+  }, [spriteMode]);
 
   const toggleSpriteMode = () => {
     setSpriteMode(prev => prev === 'static' ? 'animated' : 'static');

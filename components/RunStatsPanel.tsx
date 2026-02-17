@@ -156,7 +156,7 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
     const interval = setInterval(updateElapsedTime, 1000);
 
     return () => clearInterval(interval);
-  }, [stats?.activeRun?.startedAt, stats?.activeRun?.pausedAt, stats?.activeRun?.totalPausedMs]);
+  }, [stats?.activeRun]);
 
   if (loading) {
     return (

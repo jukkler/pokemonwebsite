@@ -5,7 +5,6 @@
 
 'use client';
 
-import TypeBadge from './ui/TypeBadge';
 import { parseTypes, calculateDefensiveEffectiveness } from '@/lib/typeEffectiveness';
 
 interface PokemonStatsCardProps {

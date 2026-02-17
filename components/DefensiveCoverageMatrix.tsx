@@ -95,6 +95,9 @@ export default function DefensiveCoverageMatrix({
   const [isExpanded, setIsExpanded] = useState(!collapsible);
   const [showWeak, setShowWeak] = useState(false);
   const [showResist, setShowResist] = useState(false);
+  const accentStyle = playerColor
+    ? ({ borderColor: `${playerColor}55` } as React.CSSProperties)
+    : undefined;
 
   // Berechne Matrix-Daten (memoized für Performance)
   const matrixData = useMemo(() => {
@@ -133,7 +136,7 @@ export default function DefensiveCoverageMatrix({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full" style={accentStyle}>
       {/* Collapsible Header */}
       {collapsible ? (
         <button
@@ -236,10 +239,13 @@ export default function DefensiveCoverageMatrix({
                       {member ? (
                         <div className="flex items-center gap-1">
                           {member.pokemon.spriteUrl && (
-                            <img
+                            <Image
                               src={member.pokemon.spriteUrl}
                               alt={member.pokemon.name}
+                              width={24}
+                              height={24}
                               className="w-5 h-5 lg:w-6 lg:h-6 pixelated flex-shrink-0"
+                              unoptimized
                             />
                           )}
                           <span className="truncate text-[10px] lg:text-xs">

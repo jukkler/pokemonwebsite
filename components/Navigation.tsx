@@ -42,7 +42,7 @@ export default function Navigation() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
 
   // Logout Handler
   const handleLogout = async () => {
@@ -65,7 +65,7 @@ export default function Navigation() {
           <div className="flex items-center space-x-8">
             <Link href="/pokeroute" className="flex items-center hover:opacity-80 transition-opacity duration-300">
               <Image
-                src="https://upload.wikimedia.org/wikipedia/commons/5/53/Pok%C3%A9_Ball_icon.svg"
+                src="/pokeball.svg"
                 alt="Poké Ball"
                 width={32}
                 height={32}

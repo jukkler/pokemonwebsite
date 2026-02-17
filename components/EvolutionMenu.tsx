@@ -28,6 +28,10 @@ interface EvolutionButtonProps {
   spriteMode: 'static' | 'animated';
 }
 
+interface CloseButtonProps {
+  onClose: () => void;
+}
+
 function EvolutionButton({ evolution, onClick, disabled, hoverColor, spriteMode }: EvolutionButtonProps) {
   const displaySpriteUrl = getSpriteUrl(evolution, spriteMode);
   
@@ -58,19 +62,8 @@ function EvolutionButton({ evolution, onClick, disabled, hoverColor, spriteMode 
   );
 }
 
-export default function EvolutionMenu({
-  evolutionData,
-  isLoading,
-  isEvolving,
-  onEvolve,
-  onClose,
-  menuRef,
-  className = '',
-}: EvolutionMenuProps) {
-  const { spriteMode } = useSpriteMode();
-
-  // Close Button Component
-  const CloseButton = () => (
+function CloseButton({ onClose }: CloseButtonProps) {
+  return (
     <button
       onClick={(e) => {
         e.stopPropagation();
@@ -84,6 +77,18 @@ export default function EvolutionMenu({
       </svg>
     </button>
   );
+}
+
+export default function EvolutionMenu({
+  evolutionData,
+  isLoading,
+  isEvolving,
+  onEvolve,
+  onClose,
+  menuRef,
+  className = '',
+}: EvolutionMenuProps) {
+  const { spriteMode } = useSpriteMode();
 
   if (isLoading) {
     return (
@@ -92,7 +97,7 @@ export default function EvolutionMenu({
         className={`bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg shadow-xl min-w-[200px] ${className}`}
       >
         <div className="relative">
-          <CloseButton />
+          <CloseButton onClose={onClose} />
           <div className="p-4 text-center text-[var(--text-secondary)] text-sm">
             Lade Evolutionen...
           </div>
@@ -115,7 +120,7 @@ export default function EvolutionMenu({
       className={`bg-[var(--card-bg)] border border-[var(--border-default)] rounded-lg shadow-xl min-w-[200px] overflow-hidden ${className}`}
     >
       <div className="relative">
-        <CloseButton />
+        <CloseButton onClose={onClose} />
       </div>
       
       {/* Entwickeln */}

@@ -10,7 +10,7 @@ import PokemonCard from './PokemonCard';
 import Input from './ui/Input';
 import Dropdown from './ui/Dropdown';
 import { allPokemonTypes, getGermanTypeName } from '@/lib/typeEffectiveness';
-import { getTypeColor, typeNamesGerman } from '@/lib/design-tokens';
+import { getTypeColor } from '@/lib/design-tokens';
 
 interface Pokemon {
   pokedexId: number;

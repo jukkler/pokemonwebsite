@@ -17,8 +17,9 @@ interface PlayerAggregatedStats {
 
 export async function GET() {
   try {
-    // Hole alle Runs mit Statistiken
+    // Hole alle nicht-archivierten Runs mit Statistiken
     const runs = await prisma.run.findMany({
+      where: { archived: false },
       include: {
         gameVersion: true,
         playerStats: true,

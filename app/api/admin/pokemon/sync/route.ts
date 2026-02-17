@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { withAdminAuth } from '@/lib/api-utils';
 import { syncAllPlatinumPokemon, syncAllAvailablePokemon } from '@/lib/pokeapi';
 import {
   startPokemonSync,
@@ -17,11 +17,8 @@ const getErrorMessage = (error: unknown) =>
 
 // POST: Alle Pokémon synchronisieren
 export async function POST(request: NextRequest) {
+  return withAdminAuth(async () => {
   try {
-    // Auth-Check
-    if (!(await isAdmin())) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-    }
 
     // Prüfe ob "all" Parameter gesetzt ist
     const syncAll = request.nextUrl.searchParams.get('all') === 'true';
@@ -51,10 +48,7 @@ export async function POST(request: NextRequest) {
       finishPokemonSync();
       console.error('Error in sync function:', syncError);
       return NextResponse.json(
-        { 
-          error: `Fehler beim Synchronisieren: ${getErrorMessage(syncError)}`,
-          details: syncError instanceof Error ? syncError.stack : undefined,
-        },
+        { error: `Fehler beim Synchronisieren: ${getErrorMessage(syncError)}` },
         { status: 500 }
       );
     }
@@ -69,15 +63,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error syncing pokemon:', error);
     return NextResponse.json(
-      { 
-        error: `Fehler beim Synchronisieren der Pokémon: ${getErrorMessage(error)}`,
-        details:
-          process.env.NODE_ENV === 'development' && error instanceof Error
-            ? error.stack
-            : undefined,
-      },
+      { error: `Fehler beim Synchronisieren der Pokémon: ${getErrorMessage(error)}` },
       { status: 500 }
     );
   }
+  });
 }
 

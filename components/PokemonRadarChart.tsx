@@ -17,12 +17,11 @@ import {
   Legend,
   Tooltip,
 } from 'recharts';
-import Image from 'next/image';
-import { parseTypes, calculateDefensiveEffectiveness } from '@/lib/typeEffectiveness';
-import TypeBadge from '@/components/ui/TypeBadge';
-import DefensiveCoverageMatrix from '@/components/DefensiveCoverageMatrix';
-import { useSpriteMode } from '@/lib/contexts/SpriteContext';
-import { getSpriteUrl } from '@/lib/sprite-utils';
+import dynamic from 'next/dynamic';
+const DefensiveCoverageMatrix = dynamic(() => import('@/components/DefensiveCoverageMatrix'), {
+  loading: () => <div className="animate-pulse bg-[var(--background-tertiary)] rounded-lg h-32" />,
+  ssr: false,
+});
 
 interface PokemonStats {
   pokedexId: number;
@@ -49,16 +48,29 @@ type RadarDataPoint = {
   stat: string;
 } & Record<string, number | string>;
 
+const STAT_LABELS = [
+  'HP',
+  'Angriff',
+  'Verteidigung',
+  'Sp. Ang.',
+  'Sp. Vert.',
+  'Initiative',
+] as const;
+const STAT_KEYS = [
+  'hp',
+  'attack',
+  'defense',
+  'spAttack',
+  'spDefense',
+  'speed',
+] as const;
+
 export default function PokemonRadarChart({
   pokemon,
   colors,
   onRemove,
 }: PokemonRadarChartProps) {
-  const { spriteMode } = useSpriteMode();
-
-  // Konstanten für Stats
-  const stats = ['HP', 'Angriff', 'Verteidigung', 'Sp. Ang.', 'Sp. Vert.', 'Initiative'];
-  const statKeys = ['hp', 'attack', 'defense', 'spAttack', 'spDefense', 'speed'];
+  void onRemove;
 
   // Performance: Berechne dynamisches Maximum mit useMemo
   const dynamicMax = useMemo(() => {
@@ -66,7 +78,7 @@ export default function PokemonRadarChart({
 
     let maxValue = 0;
     pokemon.forEach((p) => {
-      statKeys.forEach((key) => {
+      STAT_KEYS.forEach((key) => {
         const value = p[key as keyof PokemonStats] as number;
         if (value > maxValue) {
           maxValue = value;
@@ -79,7 +91,7 @@ export default function PokemonRadarChart({
 
   // Performance: Transformiere Daten für Recharts mit useMemo
   const data = useMemo(() => {
-    return stats.map((stat, index) => {
+    return STAT_LABELS.map((stat, index) => {
       const dataPoint: RadarDataPoint = { stat };
 
       // Wenn keine Pokemon, füge Dummy-Wert hinzu damit Grid gerendert wird
@@ -88,7 +100,7 @@ export default function PokemonRadarChart({
       } else {
         pokemon.forEach((p) => {
           const displayName = p.nameGerman || p.name;
-          const statValue = p[statKeys[index] as keyof PokemonStats];
+          const statValue = p[STAT_KEYS[index] as keyof PokemonStats];
           dataPoint[displayName] = typeof statValue === 'number' ? statValue : 0;
         });
       }

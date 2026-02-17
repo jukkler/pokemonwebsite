@@ -6,14 +6,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-interface MostCaughtPokemon {
-  pokedexId: number;
-  name: string;
-  nameGerman: string | null;
-  count: number;
-  spriteUrl: string | null;
-}
-
 interface LongestTeamMember {
   pokedexId: number;
   name: string;
@@ -28,10 +20,16 @@ interface LongestTeamMember {
 
 export async function GET() {
   try {
-    // 1. Häufigste Pokémon über alle Runs hinweg
+    // 1. Häufigste Pokémon über nicht-archivierte Runs
+    const nonArchivedRunIds = (await prisma.run.findMany({
+      where: { archived: false },
+      select: { id: true },
+    })).map(r => r.id);
+
     const runEncounters = await prisma.runEncounter.findMany({
       where: {
-        isNotCaught: false, // Nur gefangene Pokémon zählen
+        isNotCaught: false,
+        runId: { in: nonArchivedRunIds },
       },
       select: {
         pokemonPokedexId: true,
@@ -80,10 +78,14 @@ export async function GET() {
         where: {
           isNotCaught: false, // Nur gefangene Pokémon
         },
-        include: {
-          player: true,
-          route: true,
-          pokemon: true,
+        select: {
+          createdAt: true,
+          isKnockedOut: true,
+          koDate: true,
+          nickname: true,
+          player: { select: { name: true } },
+          route: { select: { name: true } },
+          pokemon: { select: { pokedexId: true, name: true, nameGerman: true, spriteUrl: true } },
         },
       });
 

@@ -15,6 +15,7 @@ import {
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 
+
 // GET: Alle Encounters abrufen
 export async function GET() {
   return withAdminAuthAndErrorHandling(async () => {

@@ -63,7 +63,7 @@ export async function GET() {
 
     return NextResponse.json(playersWithTeams, {
       headers: {
-        'Cache-Control': 'public, s-maxage=2, stale-while-revalidate=5',
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
       },
     });
   } catch (error) {

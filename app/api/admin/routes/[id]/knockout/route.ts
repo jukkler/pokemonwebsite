@@ -9,10 +9,10 @@ import {
   withAdminAuthAndErrorHandling,
   parseId,
   validateRequired,
-  badRequest,
   success,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { emitEvent } from '@/lib/event-store';
 
 export async function POST(
   request: NextRequest,
@@ -26,6 +26,12 @@ export async function POST(
     validateRequired(body, ['causedBy', 'reason']);
     const { causedBy, reason } = body;
 
+    // Pokemon-Namen vor dem Update laden (für Event)
+    const encounters = await prisma.encounter.findMany({
+      where: { routeId },
+      include: { pokemon: true, route: true, player: true },
+    });
+
     const result = await prisma.encounter.updateMany({
       where: { routeId },
       data: {
@@ -36,6 +42,18 @@ export async function POST(
         teamSlot: null,
       },
     });
+
+    // Event emittieren (Pokemon des Verursachers)
+    if (encounters.length > 0) {
+      const causedByName = String(causedBy).trim();
+      const match = encounters.find(e => e.player.name === causedByName) || encounters[0];
+      emitEvent('pokemon_ko', {
+        pokemonName: match.pokemon.name,
+        pokemonNameGerman: match.pokemon.nameGerman ?? undefined,
+        playerName: causedByName,
+        routeName: match.route.name,
+      });
+    }
 
     return success({
       message: `${result.count} Pokémon wurden K.O. gesetzt`,

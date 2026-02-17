@@ -17,12 +17,19 @@ export async function GET(
 ) {
   const { filename } = await params;
 
-  // Sicherheit: Kein Path Traversal erlauben
-  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+  // Sicherheit: path.basename entfernt Traversal-Versuche (auch URL-encoded)
+  const safeName = path.basename(filename);
+  if (!safeName || safeName !== filename) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
-  const filepath = path.join(process.cwd(), 'public', 'uploads', 'avatars', filename);
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
+  const filepath = path.resolve(uploadDir, safeName);
+
+  // Sicherheit: Aufgelöster Pfad muss innerhalb des Upload-Verzeichnisses liegen
+  if (!filepath.startsWith(uploadDir)) {
+    return new NextResponse('Not Found', { status: 404 });
+  }
 
   if (!existsSync(filepath)) {
     return new NextResponse('Not Found', { status: 404 });

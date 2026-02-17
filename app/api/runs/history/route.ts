@@ -8,22 +8,33 @@ import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const runs = await prisma.run.findMany({
-      include: {
-        gameVersion: true,
-        playerStats: true,
-        encounters: {
-          orderBy: [
-            { playerName: 'asc' },
-            { routeName: 'asc' },
-          ],
-        },
+    const includeOptions = {
+      gameVersion: true,
+      playerStats: true,
+      encounters: {
+        orderBy: [
+          { playerName: 'asc' as const },
+          { routeName: 'asc' as const },
+        ],
       },
-      orderBy: { runNumber: 'desc' },
-    });
+    };
+
+    const [runs, archivedRuns] = await Promise.all([
+      prisma.run.findMany({
+        where: { archived: false },
+        include: includeOptions,
+        orderBy: { runNumber: 'desc' },
+      }),
+      prisma.run.findMany({
+        where: { archived: true },
+        include: includeOptions,
+        orderBy: [{ gameVersionKey: 'asc' }, { runNumber: 'desc' }],
+      }),
+    ]);
 
     return NextResponse.json({
       runs,
+      archivedRuns,
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',

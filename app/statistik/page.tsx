@@ -40,6 +40,8 @@ interface Run {
   loserPlayerName: string | null;
   startedAt: string;
   endedAt: string | null;
+  totalPausedMs: number;
+  pausedAt: string | null;
   gameVersion: GameVersion | null;
   playerStats: PlayerStats[];
   encounters: RunEncounter[];
@@ -70,11 +72,35 @@ interface Analytics {
   longestTeamMembers: LongestTeamMember[];
 }
 
+function formatDuration(ms: number): string {
+  if (ms <= 0) return '0m 0s';
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+}
+
+function calculateRunDuration(run: Run): number {
+  const start = new Date(run.startedAt).getTime();
+  const paused = run.totalPausedMs || 0;
+  if (run.endedAt) {
+    return new Date(run.endedAt).getTime() - start - paused;
+  }
+  if (run.pausedAt) {
+    return new Date(run.pausedAt).getTime() - start - paused;
+  }
+  return Date.now() - start - paused;
+}
+
 export default function StatistikPage() {
   const [runs, setRuns] = useState<Run[]>([]);
+  const [archivedRuns, setArchivedRuns] = useState<Run[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedRun, setExpandedRun] = useState<number | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
+  const [totalTimeDisplay, setTotalTimeDisplay] = useState('');
   const { spriteMode } = useSpriteMode();
 
   useEffect(() => {
@@ -88,6 +114,7 @@ export default function StatistikPage() {
         if (runsRes.ok) {
           const data = await runsRes.json();
           setRuns(data.runs || []);
+          setArchivedRuns(data.archivedRuns || []);
         }
 
         if (analyticsRes.ok) {
@@ -103,6 +130,28 @@ export default function StatistikPage() {
 
     fetchData();
   }, []);
+
+  // Live-Ticker für Gesamtzeit (aktualisiert jede Sekunde falls aktiver Run läuft)
+  useEffect(() => {
+    if (runs.length === 0) {
+      setTotalTimeDisplay('');
+      return;
+    }
+
+    const updateTotalTime = () => {
+      const totalMs = runs.reduce((sum, run) => sum + calculateRunDuration(run), 0);
+      setTotalTimeDisplay(formatDuration(totalMs));
+    };
+
+    updateTotalTime();
+
+    // Prüfe ob ein aktiver, nicht-pausierter Run existiert → live ticken
+    const hasActiveRunning = runs.some(r => r.status === 'active' && !r.pausedAt);
+    if (!hasActiveRunning) return;
+
+    const interval = setInterval(updateTotalTime, 1000);
+    return () => clearInterval(interval);
+  }, [runs]);
 
   const getSpriteUrl = (pokedexId: number) => {
     if (spriteMode === 'animated') {
@@ -153,7 +202,7 @@ export default function StatistikPage() {
         </p>
       </div>
 
-      {completedRuns.length === 0 ? (
+      {completedRuns.length === 0 && archivedRuns.length === 0 && (
         <BentoCard>
           <div className="flex flex-col items-center justify-center py-12">
             <svg className="w-16 h-16 text-[var(--text-tertiary)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,28 +213,41 @@ export default function StatistikPage() {
             </p>
           </div>
         </BentoCard>
-      ) : (
-        <BentoGrid>
-          {/* KPI Cards */}
-          <BentoKPICard
-            label="Total Runs"
-            value={completedRuns.length}
-            icon="🎯"
-            className="animate-[scale-in_0.3s_ease-out]"
-          />
-          <BentoKPICard
-            label="Abgeschlossen"
-            value={completedSuccessRuns.length}
-            icon="✅"
-            className="animate-[scale-in_0.3s_ease-out] stagger-1"
-          />
-          <BentoKPICard
-            label="Gescheitert"
-            value={failedRuns.length}
-            icon="💀"
-            className="animate-[scale-in_0.3s_ease-out] stagger-2"
-          />
+      )}
 
+      {completedRuns.length > 0 && (
+        <>
+          {/* KPI Cards - eigenes 4-Spalten-Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-5">
+            <BentoKPICard
+              label="Total Runs"
+              value={completedRuns.length}
+              icon="🎯"
+              className="animate-[scale-in_0.3s_ease-out]"
+            />
+            <BentoKPICard
+              label="Abgeschlossen"
+              value={completedSuccessRuns.length}
+              icon="✅"
+              className="animate-[scale-in_0.3s_ease-out] stagger-1"
+            />
+            <BentoKPICard
+              label="Gescheitert"
+              value={failedRuns.length}
+              icon="💀"
+              className="animate-[scale-in_0.3s_ease-out] stagger-2"
+            />
+            {totalTimeDisplay && (
+              <BentoKPICard
+                label="Gesamtzeit"
+                value={totalTimeDisplay}
+                icon="⏱️"
+                className="animate-[scale-in_0.3s_ease-out] stagger-3"
+              />
+            )}
+          </div>
+
+        <BentoGrid>
           {/* Häufigste Pokémon (run-übergreifend) */}
           {analytics && analytics.mostCaught.length > 0 && (
             <BentoCard
@@ -339,6 +401,7 @@ export default function StatistikPage() {
                         <span title="Gefangen">🎯 {totalCaught}</span>
                         <span title="K.O.">💀 {totalKO}</span>
                         <span title="Nicht gefangen">❌ {totalNotCaught}</span>
+                        <span title="Dauer">⏱️ {formatDuration(calculateRunDuration(run))}</span>
                         <span>
                           {run.endedAt
                             ? new Date(run.endedAt).toLocaleDateString('de-DE')
@@ -436,7 +499,169 @@ export default function StatistikPage() {
             </div>
           </BentoCard>
         </BentoGrid>
+        </>
       )}
+
+      {/* Archiv */}
+      {archivedRuns.length > 0 && (
+            <div className="mt-8">
+              <button
+                onClick={() => setShowArchive(!showArchive)}
+                className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300 font-medium mb-4"
+              >
+                <span className="transition-transform duration-300" style={{ transform: showArchive ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                <span>Archiv ({archivedRuns.length} Run{archivedRuns.length !== 1 ? 's' : ''})</span>
+              </button>
+
+              {showArchive && (
+                <div className="space-y-6 animate-[slide-in-up_0.3s_ease-out]">
+                  {/* Gruppiere archivierte Runs nach Game-Version */}
+                  {Object.entries(
+                    archivedRuns.reduce<Record<string, Run[]>>((groups, run) => {
+                      const key = run.gameVersion?.name || 'Unbekannt';
+                      if (!groups[key]) groups[key] = [];
+                      groups[key].push(run);
+                      return groups;
+                    }, {})
+                  ).map(([versionName, versionRuns]) => (
+                    <BentoCard key={versionName}>
+                      <h3 className="text-lg font-bold mb-4 text-[var(--foreground)] flex items-center gap-2">
+                        <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-sm border border-indigo-500/30">
+                          {versionName}
+                        </span>
+                        <span className="text-sm font-normal text-[var(--text-secondary)]">
+                          {versionRuns.length} Run{versionRuns.length !== 1 ? 's' : ''}
+                        </span>
+                      </h3>
+                      <div className="space-y-3">
+                        {versionRuns.map((run) => {
+                          const isExpanded = expandedRun === run.id;
+                          const encountersByPlayer = groupEncountersByPlayer(run.encounters);
+                          const totalCaught = run.encounters.filter(e => !e.isNotCaught).length;
+                          const totalKO = run.encounters.filter(e => e.isKnockedOut).length;
+                          const totalNotCaught = run.encounters.filter(e => e.isNotCaught).length;
+
+                          return (
+                            <div
+                              key={run.id}
+                              className="bg-[var(--card-bg-elevated)] rounded-xl border border-[var(--border-default)] overflow-hidden transition-all duration-300 opacity-70 hover:opacity-100"
+                            >
+                              <button
+                                onClick={() => setExpandedRun(isExpanded ? null : run.id)}
+                                className="w-full p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:bg-[var(--background-tertiary)] transition-all duration-300 text-left"
+                              >
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className={`px-3 py-1 rounded-full text-sm font-bold border ${
+                                    run.status === 'failed'
+                                      ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                      : 'bg-green-500/20 text-green-400 border-green-500/30'
+                                  }`}>
+                                    Run #{run.runNumber}
+                                  </span>
+                                  {run.status === 'failed' && run.loserPlayerName && (
+                                    <span className="text-sm text-[var(--text-secondary)]">
+                                      Verloren von <strong className="text-[var(--foreground)]">{run.loserPlayerName}</strong>
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
+                                  <span title="Gefangen">🎯 {totalCaught}</span>
+                                  <span title="K.O.">💀 {totalKO}</span>
+                                  <span title="Nicht gefangen">❌ {totalNotCaught}</span>
+                                  <span title="Dauer">⏱️ {formatDuration(calculateRunDuration(run))}</span>
+                                  <span>
+                                    {run.endedAt
+                                      ? new Date(run.endedAt).toLocaleDateString('de-DE')
+                                      : '-'
+                                    }
+                                  </span>
+                                  <span className="text-lg transition-transform duration-300" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                                </div>
+                              </button>
+
+                              {isExpanded && (
+                                <div className="border-t border-[var(--border-default)] p-4 bg-[var(--background-secondary)] animate-[slide-in-up_0.3s_ease-out]">
+                                  {Object.keys(encountersByPlayer).length === 0 ? (
+                                    <p className="text-[var(--text-secondary)] text-center py-4">
+                                      Keine Pokemon-Daten für diesen Run gespeichert.
+                                    </p>
+                                  ) : (
+                                    <div className="space-y-6">
+                                      {Object.entries(encountersByPlayer).map(([playerName, encounters]) => {
+                                        const playerStats = run.playerStats.find(s => s.playerName === playerName);
+                                        const caught = encounters.filter(e => !e.isNotCaught);
+                                        const ko = encounters.filter(e => e.isKnockedOut);
+                                        const nc = encounters.filter(e => e.isNotCaught);
+
+                                        return (
+                                          <div key={playerName} className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-default)]">
+                                            <div className="flex items-center justify-between mb-3">
+                                              <h3 className={`text-lg font-bold ${
+                                                playerStats?.isLoser ? 'text-red-400' : 'text-[var(--foreground)]'
+                                              }`}>
+                                                {playerName}
+                                                {playerStats?.isLoser && (
+                                                  <span className="ml-2 text-sm font-normal text-red-500">(Verlierer)</span>
+                                                )}
+                                              </h3>
+                                              <div className="flex gap-3 text-sm">
+                                                <span className="text-green-400">🎯 {caught.length}</span>
+                                                <span className="text-red-400">💀 {ko.length}</span>
+                                                <span className="text-orange-400">❌ {nc.length}</span>
+                                              </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                                              {encounters.map((enc) => (
+                                                <div
+                                                  key={enc.id}
+                                                  className={`relative p-2 rounded-lg border text-center transition-all duration-300 hover:scale-105 ${
+                                                    enc.isNotCaught
+                                                      ? 'bg-orange-500/10 border-orange-500/30'
+                                                      : enc.isKnockedOut
+                                                      ? 'bg-red-500/10 border-red-500/30'
+                                                      : 'bg-green-500/10 border-green-500/30'
+                                                  }`}
+                                                >
+                                                  <div className="relative w-12 h-12 mx-auto">
+                                                    <Image
+                                                      src={getSpriteUrl(enc.pokemonPokedexId)}
+                                                      alt={enc.pokemonNameGerman || enc.pokemonName}
+                                                      fill
+                                                      className={`object-contain ${
+                                                        enc.isKnockedOut || enc.isNotCaught ? 'grayscale opacity-50' : ''
+                                                      }`}
+                                                      unoptimized
+                                                    />
+                                                  </div>
+                                                  <p className="text-xs font-medium truncate mt-1 text-[var(--foreground)]">
+                                                    {enc.pokemonNameGerman || enc.pokemonName}
+                                                  </p>
+                                                  <p className="text-xs text-[var(--text-secondary)] truncate">
+                                                    {enc.routeName}
+                                                  </p>
+                                                  {enc.isKnockedOut && <span className="absolute top-1 right-1 text-xs">💀</span>}
+                                                  {enc.isNotCaught && <span className="absolute top-1 right-1 text-xs">❌</span>}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </BentoCard>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
     </div>
   );
 }

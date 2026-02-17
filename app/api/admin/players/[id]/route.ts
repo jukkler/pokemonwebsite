@@ -83,7 +83,7 @@ export async function DELETE(
     }
 
     try {
-      // Spieler löschen (Cascade löscht auch Encounters und TeamMembers)
+      // Spieler löschen (Cascade löscht auch Encounters)
       await prisma.player.delete({
         where: { id: playerId },
       });

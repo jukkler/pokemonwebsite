@@ -3,7 +3,7 @@
  */
 
 import { allPokemonTypes, getDefenseMultiplier, parseTypes } from './typeEffectiveness';
-import type { TeamStats, TeamMatchupAnalysis, Pokemon, PokemonStats } from './types';
+import type { TeamStats, TeamMatchupAnalysis, PokemonStats } from './types';
 
 /**
  * Berechnet Durchschnittswerte für eine Gruppe von Pokémon

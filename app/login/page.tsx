@@ -8,10 +8,31 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+function getSafeRedirectPath(redirectParam: string | null): string {
+  if (!redirectParam) return '/admin';
+
+  // Nur interne, absolute Pfade erlauben
+  if (!redirectParam.startsWith('/')) return '/admin';
+  if (redirectParam.startsWith('//')) return '/admin';
+  if (redirectParam.includes('\\')) return '/admin';
+
+  // Protokoll-Injection über encodete Werte blocken
+  try {
+    const decoded = decodeURIComponent(redirectParam);
+    if (decoded.includes('://') || decoded.startsWith('//')) {
+      return '/admin';
+    }
+  } catch {
+    return '/admin';
+  }
+
+  return redirectParam;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/admin';
+  const redirect = getSafeRedirectPath(searchParams.get('redirect'));
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

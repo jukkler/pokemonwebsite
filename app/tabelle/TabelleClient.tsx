@@ -46,6 +46,27 @@ interface TabelleClientProps {
 const getSortIndicator = (direction: SortDirection) =>
   direction === 'asc' ? '▲' : '▼';
 
+const TYPE_TRANSLATIONS: Record<string, string> = {
+  normal: 'Normal',
+  fire: 'Feuer',
+  water: 'Wasser',
+  electric: 'Elektro',
+  grass: 'Pflanze',
+  ice: 'Eis',
+  fighting: 'Kampf',
+  poison: 'Gift',
+  ground: 'Boden',
+  flying: 'Flug',
+  psychic: 'Psycho',
+  bug: 'Käfer',
+  rock: 'Gestein',
+  ghost: 'Geist',
+  dragon: 'Drache',
+  dark: 'Unlicht',
+  steel: 'Stahl',
+  fairy: 'Fee',
+};
+
 export default function TabelleClient({ players, rows }: TabelleClientProps) {
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
     key: 'route',
@@ -116,27 +137,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
         ? cell.types
             .map((type) => {
               const lower = type.toLowerCase();
-              const translations: Record<string, string> = {
-                normal: 'Normal',
-                fire: 'Feuer',
-                water: 'Wasser',
-                electric: 'Elektro',
-                grass: 'Pflanze',
-                ice: 'Eis',
-                fighting: 'Kampf',
-                poison: 'Gift',
-                ground: 'Boden',
-                flying: 'Flug',
-                psychic: 'Psycho',
-                bug: 'Käfer',
-                rock: 'Gestein',
-                ghost: 'Geist',
-                dragon: 'Drache',
-                dark: 'Unlicht',
-                steel: 'Stahl',
-                fairy: 'Fee',
-              };
-              return translations[lower] || type.charAt(0).toUpperCase() + type.slice(1);
+              return TYPE_TRANSLATIONS[lower] || type.charAt(0).toUpperCase() + type.slice(1);
             })
             .join(' / ')
         : null;
@@ -149,10 +150,13 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
     return (
       <div className="flex items-start gap-3">
         {displaySpriteUrl && (
-          <img
+          <Image
             src={displaySpriteUrl}
             alt={displayName}
+            width={64}
+            height={64}
             className="w-16 h-16 object-contain flex-shrink-0"
+            unoptimized={spriteMode === 'animated'}
           />
         )}
         <div className="flex flex-col">

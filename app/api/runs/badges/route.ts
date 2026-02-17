@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server';
 import { withAdminAuthAndErrorHandling, success, badRequest, notFound } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 import { getBadgesForGame } from '@/lib/badge-data';
+import { emitEvent } from '@/lib/event-store';
 
 export async function POST(request: NextRequest) {
   return withAdminAuthAndErrorHandling(async () => {
@@ -41,6 +42,18 @@ export async function POST(request: NextRequest) {
       where: { id: activeRun.id },
       data: { badgesEarned: newCount },
     });
+
+    // Event emittieren bei Badge-Increment
+    if (action === 'increment' && badges) {
+      const badge = badges[newCount - 1]; // 0-indexed
+      if (badge) {
+        emitEvent('badge_unlocked', {
+          badgeNumber: newCount,
+          badgeName: badge.nameDe,
+          badgeImagePath: badge.imagePath,
+        });
+      }
+    }
 
     return success({ badgesEarned: newCount });
   }, 'updating badges');

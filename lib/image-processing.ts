@@ -20,7 +20,6 @@ export interface CropArea {
  * Konstanten für Avatar-Verarbeitung
  */
 const AVATAR_SIZE = 512; // 512x512px
-const OUTPUT_FORMAT = 'webp';
 const OUTPUT_QUALITY = 85; // WebP Qualität (0-100)
 
 /**

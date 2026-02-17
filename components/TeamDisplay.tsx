@@ -7,18 +7,19 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import PokemonCard from './PokemonCard';
 import EvolutionMenu from './EvolutionMenu';
 import PokemonSwapDialog from './PokemonSwapDialog';
-import TypeBadge from './ui/TypeBadge';
-import DefensiveCoverageMatrix from './DefensiveCoverageMatrix';
+import dynamic from 'next/dynamic';
+const DefensiveCoverageMatrix = dynamic(() => import('./DefensiveCoverageMatrix'), {
+  loading: () => <div className="animate-pulse bg-[var(--background-tertiary)] rounded-lg h-32" />,
+  ssr: false,
+});
 import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
-import { getAvatarUrl } from '@/lib/avatars';
 import { calculateAverageStats, countPlayerStats, createTeamSlots } from '@/lib/team-utils';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
-import type { TeamEncounter, RouteWithEncounters, TooltipItem, PokemonListItem } from '@/lib/types';
+import type { TeamEncounter, TooltipItem, PokemonListItem } from '@/lib/types';
 
 // =============================================================================
 // Sub-Komponenten
@@ -34,11 +35,6 @@ function Tooltip({ items, children }: TooltipProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
@@ -98,7 +94,8 @@ function Tooltip({ items, children }: TooltipProps) {
     </div>
   );
 
-  const showTooltip = (isOpen || isHovered) && mounted && position;
+  const canUsePortal = typeof document !== 'undefined';
+  const showTooltip = (isOpen || isHovered) && canUsePortal && position;
 
   return (
     <div
@@ -127,29 +124,6 @@ function Tooltip({ items, children }: TooltipProps) {
   );
 }
 
-interface MatchupSectionProps {
-  title: string;
-  types: string[];
-  emptyMessage: string;
-}
-
-function MatchupSection({ title, types, emptyMessage }: MatchupSectionProps) {
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-[var(--foreground)] mb-3">{title}</h3>
-      {types.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {types.map((type) => (
-            <TypeBadge key={`${title}-${type}`} type={type} size="sm" />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-gray-500">{emptyMessage}</p>
-      )}
-    </div>
-  );
-}
-
 // =============================================================================
 // Haupt-Komponente
 // =============================================================================
@@ -173,7 +147,6 @@ interface Route {
 interface TeamDisplayProps {
   playerName: string;
   playerColor: string;
-  playerAvatar?: string | null;
   teamMembers: TeamEncounter[];
   routes: Route[];
   isAdmin?: boolean;
@@ -185,7 +158,6 @@ interface TeamDisplayProps {
 export default function TeamDisplay({
   playerName,
   playerColor,
-  playerAvatar,
   teamMembers,
   routes,
   isAdmin = false,
@@ -383,6 +355,7 @@ export default function TeamDisplay({
 
       {/* Pokemon Swap Dialog */}
       <PokemonSwapDialog
+        key={`team-swap-${swapDialogOpen ? swappingMember?.id ?? 'none' : 'closed'}`}
         isOpen={swapDialogOpen}
         onClose={() => {
           setSwapDialogOpen(false);

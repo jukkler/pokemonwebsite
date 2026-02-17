@@ -38,17 +38,6 @@ export default function PokemonSwapDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setSearchValue('');
-      setSelectedPokemon(null);
-      setShowDropdown(false);
-      // Focus input after a short delay
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen]);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -114,6 +103,7 @@ export default function PokemonSwapDialog({
         <input
           ref={inputRef}
           type="text"
+          autoFocus
           value={searchValue}
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => searchValue && setShowDropdown(true)}

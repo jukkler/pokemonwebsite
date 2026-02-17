@@ -2,6 +2,7 @@
  * Authentifizierungs-Helper-Funktionen
  */
 
+import crypto from 'crypto';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { SessionData, sessionOptions, defaultSession } from './session';
@@ -37,10 +38,29 @@ export async function getSession(): Promise<SessionData> {
  * Prüft Admin-Credentials
  */
 export function validateAdminCredentials(username: string, password: string): boolean {
-  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
-  
-  return username === adminUsername && password === adminPassword;
+  const adminUsername = process.env.ADMIN_USERNAME?.trim();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  // Fail closed: niemals auf unsichere Defaults zurückfallen
+  if (!adminUsername || !adminPassword) {
+    console.error('ADMIN_USERNAME und ADMIN_PASSWORD müssen gesetzt sein');
+    return false;
+  }
+
+  // Timing-safe Vergleich gegen Timing-Attacks
+  const usernameBuffer = Buffer.from(username);
+  const adminUsernameBuffer = Buffer.from(adminUsername);
+  const passwordBuffer = Buffer.from(password);
+  const adminPasswordBuffer = Buffer.from(adminPassword);
+
+  const usernameMatch =
+    usernameBuffer.length === adminUsernameBuffer.length &&
+    crypto.timingSafeEqual(usernameBuffer, adminUsernameBuffer);
+  const passwordMatch =
+    passwordBuffer.length === adminPasswordBuffer.length &&
+    crypto.timingSafeEqual(passwordBuffer, adminPasswordBuffer);
+
+  return usernameMatch && passwordMatch;
 }
 
 /**

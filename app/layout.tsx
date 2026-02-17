@@ -4,6 +4,8 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import BottomNavigation from "@/components/BottomNavigation";
 import { SpriteProvider } from "@/lib/contexts/SpriteContext";
+import { EventProvider } from "@/lib/contexts/EventContext";
+import EventOverlay from "@/components/EventOverlay";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,11 +50,14 @@ export default function RootLayout({
         className={`${inter.variable} font-sans antialiased bg-[var(--background)] transition-colors duration-300`}
       >
         <SpriteProvider>
-          <Navigation />
-          <main className="min-h-screen pb-16 md:pb-0">
-          {children}
-          </main>
-          <BottomNavigation />
+          <EventProvider>
+            <Navigation />
+            <main className="min-h-screen pb-16 md:pb-0">
+            {children}
+            </main>
+            <BottomNavigation />
+            <EventOverlay />
+          </EventProvider>
         </SpriteProvider>
       </body>
     </html>

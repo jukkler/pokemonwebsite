@@ -6,6 +6,7 @@
 import { NextRequest } from 'next/server';
 import { withAdminAuthAndErrorHandling, success, badRequest, notFound, parseId } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { emitEvent } from '@/lib/event-store';
 
 interface EndRunBody {
   status: 'failed' | 'completed';
@@ -115,6 +116,13 @@ export async function POST(
         },
       });
     });
+
+    // Event emittieren bei fehlgeschlagenem Run
+    if (status === 'failed') {
+      emitEvent('run_failed', {
+        runNumber: run.runNumber,
+      });
+    }
 
     return success(updatedRun);
   }, 'ending run');

@@ -11,11 +11,26 @@ import path from 'path';
 import { withAdminAuth, success, badRequest, internalError } from '@/lib/api-utils';
 import { processAvatar, type CropArea } from '@/lib/image-processing';
 
-// Maximale Dateigröße: 10MB
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Maximale Dateigröße: 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 // Erlaubte Dateitypen
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+// Datei-Signatur (Magic Numbers) validieren
+function isValidImageSignature(buffer: Buffer): boolean {
+  if (buffer.length < 12) return false;
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return true;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return true;
+  // GIF: 47 49 46 38
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) return true;
+  // WebP: 52 49 46 46 ... 57 45 42 50
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return true;
+  return false;
+}
 
 export async function POST(request: NextRequest) {
   return withAdminAuth(async () => {
@@ -34,7 +49,7 @@ export async function POST(request: NextRequest) {
 
       // Dateigröße prüfen
       if (file.size > MAX_FILE_SIZE) {
-        return badRequest('Datei zu groß. Maximum: 10MB');
+        return badRequest('Datei zu groß. Maximum: 5MB');
       }
 
       // Upload-Verzeichnis erstellen falls nicht vorhanden
@@ -50,7 +65,7 @@ export async function POST(request: NextRequest) {
       if (cropData && typeof cropData === 'string') {
         try {
           cropArea = JSON.parse(cropData) as CropArea;
-        } catch (err) {
+        } catch {
           return badRequest('Ungültige Crop-Daten');
         }
       }
@@ -58,6 +73,11 @@ export async function POST(request: NextRequest) {
       // Datei einlesen
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
+
+      // Magic-Number-Validierung (verhindert umbenannte Nicht-Bilddateien)
+      if (!isValidImageSignature(buffer)) {
+        return badRequest('Ungültige Datei-Signatur. Nur echte Bilddateien sind erlaubt.');
+      }
 
       // Bildverarbeitung: Crop, Resize, WebP-Konvertierung
       const processedBuffer = await processAvatar(buffer, cropArea);

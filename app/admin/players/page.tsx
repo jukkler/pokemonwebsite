@@ -19,7 +19,6 @@ interface Player {
   createdAt: string;
   _count?: {
     encounters: number;
-    teamMembers: number;
   };
 }
 
@@ -74,10 +73,10 @@ export default function AdminPlayersPage() {
 
     setError('');
 
-    // Validierung: 10MB Max
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    // Validierung: 5MB Max
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     if (file.size > MAX_SIZE) {
-      setError('Datei zu groß. Maximum: 10MB');
+      setError('Datei zu groß. Maximum: 5MB');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -401,7 +400,7 @@ export default function AdminPlayersPage() {
                 {uploading ? 'Lädt...' : '📤 Eigenen Avatar hochladen'}
               </label>
               <span className="text-xs text-[var(--text-tertiary)]">
-                PNG, JPG, GIF oder WebP (max. 10MB)
+                PNG, JPG, GIF oder WebP (max. 5MB)
               </span>
             </div>
           </div>
@@ -442,7 +441,6 @@ export default function AdminPlayersPage() {
                   <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Spieler</th>
                   <th className="text-left py-2 px-4 text-[var(--text-secondary)]">Farbe</th>
                   <th className="text-center py-2 px-4 text-[var(--text-secondary)]">Encounters</th>
-                  <th className="text-center py-2 px-4 text-[var(--text-secondary)]">Team</th>
                   <th className="text-right py-2 px-4 text-[var(--text-secondary)]">Aktionen</th>
                 </tr>
               </thead>
@@ -484,9 +482,6 @@ export default function AdminPlayersPage() {
                     </td>
                     <td className="py-2 px-4 text-center text-[var(--foreground)]">
                       {player._count?.encounters || 0}
-                    </td>
-                    <td className="py-2 px-4 text-center text-[var(--foreground)]">
-                      {player._count?.teamMembers || 0}/6
                     </td>
                     <td className="py-2 px-4 text-right">
                       <button

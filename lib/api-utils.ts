@@ -3,7 +3,7 @@
  * Reduziert Code-Duplikation und vereinheitlicht Error-Handling
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { isAdmin } from './auth';
 

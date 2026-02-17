@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { fetchJson } from '@/lib/fetchJson';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
 import ThemeToggle from './ThemeToggle';
@@ -20,6 +20,33 @@ export default function Navigation() {
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { spriteMode, toggleSpriteMode } = useSpriteMode();
+
+  // Auto-Hide auf der Streams-Seite
+  const isStreamsPage = pathname === '/streams';
+  const [navHidden, setNavHidden] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startHideTimer = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setNavHidden(true), 5000);
+  }, []);
+
+  const showNav = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setNavHidden(false);
+  }, []);
+
+  useEffect(() => {
+    if (isStreamsPage) {
+      startHideTimer();
+    } else {
+      setNavHidden(false);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    }
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [isStreamsPage, startHideTimer]);
 
   // Auth-Status prüfen
   useEffect(() => {
@@ -59,7 +86,19 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-30 bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] border-b border-[var(--glass-border)] hidden md:block">
+    <>
+    {/* Unsichtbare Hover-Zone am oberen Rand (nur Streams-Seite) */}
+    {isStreamsPage && (
+      <div
+        className="fixed top-0 left-0 w-full h-3 z-30 hidden md:block"
+        onMouseEnter={showNav}
+      />
+    )}
+    <nav
+      className={`${isStreamsPage ? 'fixed w-full' : 'sticky'} top-0 z-30 bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] border-b border-[var(--glass-border)] hidden md:block transition-transform duration-500 ${isStreamsPage && navHidden ? '-translate-y-full' : 'translate-y-0'}`}
+      onMouseEnter={isStreamsPage ? showNav : undefined}
+      onMouseLeave={isStreamsPage ? startHideTimer : undefined}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
@@ -114,6 +153,16 @@ export default function Navigation() {
                 }`}
               >
                 Statistik
+              </Link>
+              <Link
+                href="/streams"
+                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
+                  isActive('/streams')
+                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
+                }`}
+              >
+                Streams
               </Link>
               {isAdmin && (
                 <Link
@@ -316,6 +365,7 @@ export default function Navigation() {
         </div>
       )}
     </nav>
+    </>
   );
 }
 

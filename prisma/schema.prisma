@@ -17,6 +17,7 @@ model Player {
   color       String         // Hex-Farbe für UI-Darstellung (z.B. "#FF0000")
   avatar      String?        // Avatar-Key (z.B. "trainer-red") oder URL
   encounters  Encounter[]
+  stream      Stream?
   createdAt   DateTime       @default(now())
 }
 
@@ -93,6 +94,16 @@ model GameSave {
   gameVersionKey String?  // Optional: Welche Version wurde gespielt
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// Stream-Einbettungen für Live-Streams
+model Stream {
+  id        Int      @id @default(autoincrement())
+  url       String   // YouTube URL
+  playerId  Int      @unique // Ein Spieler kann nur einen aktiven Stream haben
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 // =============================================================================

@@ -50,6 +50,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
       "img-src 'self' https://raw.githubusercontent.com data: blob:",
       "font-src 'self'",
       "connect-src 'self'",
+      "frame-src https://www.youtube.com https://youtube.com",
       "frame-ancestors 'none'",
     ].join('; ')
   );

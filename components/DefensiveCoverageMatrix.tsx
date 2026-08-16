@@ -31,15 +31,15 @@ function formatMultiplier(multiplier: number): string {
 
 // Gibt CSS-Klassen für Zelle basierend auf Multiplikator zurück
 function getCellStyle(multiplier: number): string {
-  const baseClasses = 'text-center text-[10px] lg:text-xs font-medium border transition-all duration-200';
+  const baseClasses = 'text-center text-[10px] lg:text-xs font-black border transition-opacity duration-200';
 
   if (multiplier === 0) {
     // Immun
-    return `${baseClasses} bg-slate-700/30 text-slate-300 border-slate-600/50`;
+    return `${baseClasses} bg-[var(--brand-blue)] text-white border-[var(--brand-blue)]`;
   }
   if (multiplier < 1) {
     // Resistent (0.25x, 0.5x)
-    return `${baseClasses} bg-green-500/20 text-green-400 border-green-500/30`;
+    return `${baseClasses} bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40`;
   }
   if (multiplier === 1) {
     // Neutral
@@ -47,11 +47,11 @@ function getCellStyle(multiplier: number): string {
   }
   if (multiplier === 2) {
     // Schwach
-    return `${baseClasses} bg-red-500/20 text-red-400 border-red-500/30`;
+    return `${baseClasses} bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40`;
   }
   if (multiplier === 4) {
     // Sehr schwach
-    return `${baseClasses} bg-red-600/30 text-red-300 border-red-600/50 border-2 font-bold`;
+    return `${baseClasses} bg-[var(--brand-red)] text-white border-[var(--brand-red)] border-2`;
   }
 
   // Fallback
@@ -141,10 +141,11 @@ export default function DefensiveCoverageMatrix({
       {collapsible ? (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between p-4 bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] rounded-lg border border-[var(--border-default)] transition-all duration-200 mb-4"
+          className="app-band mb-4 flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-[var(--background-secondary)]"
+          aria-expanded={isExpanded}
         >
           <div className="text-left">
-            <h3 className="text-lg font-bold text-[var(--foreground)]">Defensive Coverage</h3>
+            <h3 className="app-section-title text-lg">Defensive Abdeckung</h3>
             <p className="text-sm text-[var(--text-secondary)] mt-0.5">
               Typ-Effektivität gegen aktuelle Team-Zusammensetzung
             </p>
@@ -162,7 +163,7 @@ export default function DefensiveCoverageMatrix({
         </button>
       ) : (
         <div className="mb-4">
-          <h3 className="text-xl font-bold text-[var(--foreground)] mb-1">Defensive Coverage</h3>
+          <h3 className="app-section-title mb-1">Defensive Abdeckung</h3>
           <p className="text-sm text-[var(--text-secondary)]">
             Typ-Effektivität gegen ausgewählte Pokémon
           </p>
@@ -172,36 +173,36 @@ export default function DefensiveCoverageMatrix({
       {(isExpanded || !collapsible) && (
         <>
           {/* Filter Toggle-Buttons */}
-          <div className="flex gap-2 mb-4">
+          <div className="app-toolbar mb-4 flex gap-2">
             <button
               onClick={() => setShowWeak(!showWeak)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+              className={`app-action text-sm ${
                 showWeak
-                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
-                  : 'bg-[var(--background-secondary)] text-[var(--foreground)] border border-[var(--border-default)] hover:border-red-500'
+                  ? 'border-[var(--brand-red)] bg-[var(--brand-red)] text-white'
+                  : 'hover:border-[var(--brand-red)]'
               }`}
             >
-              Weak
+              Schwächen
             </button>
             <button
               onClick={() => setShowResist(!showResist)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+              className={`app-action text-sm ${
                 showResist
-                  ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                  : 'bg-[var(--background-secondary)] text-[var(--foreground)] border border-[var(--border-default)] hover:border-green-500'
+                  ? 'border-[var(--brand-green)] bg-[var(--brand-green)] text-white'
+                  : 'hover:border-[var(--brand-green)]'
               }`}
             >
-              Resist
+              Resistenzen
             </button>
           </div>
 
           {/* Matrix Table - Desktop: volle Breite, Mobile: Scroll */}
-          <div className="overflow-x-auto rounded-lg border border-[var(--border-default)] bg-[var(--background-secondary)]">
-            <table className="w-full border-collapse lg:min-w-0 min-w-[900px]">
+          <div className="overflow-x-auto border-y border-[var(--border-default)]">
+            <table className="app-data-table min-w-[900px] w-full border-collapse lg:min-w-0">
               <thead>
-                <tr className="bg-[var(--card-bg-elevated)] sticky top-0 z-10">
+                <tr className="sticky top-0 z-10 bg-[var(--brand-navy)] text-white">
                   {/* Pokemon-Spalten-Header */}
-                  <th className="px-2 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] border-b border-r border-[var(--border-default)] bg-[var(--card-bg-elevated)] sticky left-0 z-20 w-24 lg:w-32">
+                  <th className="sticky left-0 z-20 w-24 border-b border-r border-white/20 bg-[var(--brand-navy)] px-2 py-2 text-left text-xs font-black uppercase tracking-widest text-white lg:w-32">
                     POKÉMON
                   </th>
 
@@ -212,7 +213,7 @@ export default function DefensiveCoverageMatrix({
                       className="px-0.5 lg:px-1 py-1.5 text-center border-b border-[var(--border-default)]"
                     >
                       <div
-                        className="flex items-center justify-center w-7 h-7 lg:w-8 lg:h-8 rounded-md mx-auto"
+                        className="mx-auto flex h-7 w-7 items-center justify-center lg:h-8 lg:w-8"
                         style={{ backgroundColor: getTypeColor(type) }}
                         title={type.charAt(0).toUpperCase() + type.slice(1)}
                       >
@@ -232,7 +233,7 @@ export default function DefensiveCoverageMatrix({
                 {matrixData.map(({ member, matchups }, index) => (
                   <tr
                     key={member?.id || `empty-${index}`}
-                    className="hover:bg-[var(--background-tertiary)] transition-colors h-12"
+                    className="h-12 transition-colors hover:bg-[var(--background-secondary)]"
                   >
                     {/* Pokemon-Name (Sticky erste Spalte) */}
                     <td className="px-2 py-2 text-xs font-medium text-[var(--foreground)] border-b border-r border-[var(--border-default)] bg-[var(--card-bg)] sticky left-0 z-10 h-12">
@@ -282,21 +283,21 @@ export default function DefensiveCoverageMatrix({
           </div>
 
           {/* Legende */}
-          <div className="mt-3 flex flex-wrap gap-2 lg:gap-3 text-xs text-[var(--text-secondary)]">
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--text-secondary)]">
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-slate-700/30 border border-slate-600/50"></div>
+              <div className="h-4 w-4 border border-[var(--brand-blue)] bg-[var(--brand-blue)]"></div>
               <span>0x = Immun</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-green-500/20 border border-green-500/30"></div>
+              <div className="h-4 w-4 border border-emerald-500 bg-emerald-500/10"></div>
               <span>½x = Resistent</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-red-500/20 border border-red-500/30"></div>
+              <div className="h-4 w-4 border border-red-500 bg-red-500/10"></div>
               <span>2x = Schwach</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-red-600/30 border-2 border-red-600/50"></div>
+              <div className="h-4 w-4 border-2 border-[var(--brand-red)] bg-[var(--brand-red)]"></div>
               <span>4x = Sehr schwach</span>
             </div>
           </div>

@@ -4,7 +4,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { withAdminAuthAndErrorHandling, success, badRequest, notFound, parseId } from '@/lib/api-utils';
+import {
+  withAdminAuthAndErrorHandling,
+  success,
+  badRequest,
+  conflict,
+  notFound,
+  parseId,
+} from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 import { emitEvent } from '@/lib/event-store';
 
@@ -21,13 +28,14 @@ export async function POST(
     const { id } = await params;
     const runId = parseId(id, 'Run-ID');
     const body: EndRunBody = await request.json();
-    const { status, loserPlayerName } = body;
+    const { status } = body;
+    const loserPlayerName = body.loserPlayerName?.trim() || null;
 
     if (!status || !['failed', 'completed'].includes(status)) {
       return badRequest('Status muss "failed" oder "completed" sein');
     }
 
-    if (status === 'failed' && !loserPlayerName) {
+    if (status === 'failed' && loserPlayerName === null) {
       return badRequest('Bei einem gescheiterten Run muss der Verlierer angegeben werden');
     }
 
@@ -81,12 +89,35 @@ export async function POST(
       pokemonName: e.pokemon.name,
       pokemonNameGerman: e.pokemon.nameGerman,
       routeName: e.route.name,
+      nickname: e.nickname,
+      teamSlot: e.teamSlot,
       isKnockedOut: e.isKnockedOut,
+      koCausedBy: e.koCausedBy,
+      koReason: e.koReason,
+      koDate: e.koDate,
       isNotCaught: e.isNotCaught,
+      notCaughtBy: e.notCaughtBy,
+      notCaughtReason: e.notCaughtReason,
+      notCaughtDate: e.notCaughtDate,
+      caughtAt: e.createdAt,
     }));
 
-    // Update Run und erstelle Statistiken in einer Transaktion
+    // Den aktiven Run zuerst atomar beanspruchen. So können parallele Klicks
+    // weder doppelte Snapshots noch zwei widersprüchliche Ergebnisse erzeugen.
     const updatedRun = await prisma.$transaction(async (tx) => {
+      const claimedRun = await tx.run.updateMany({
+        where: { id: runId, status: 'active' },
+        data: {
+          status,
+          loserPlayerName: status === 'failed' ? loserPlayerName : null,
+          endedAt: new Date(),
+        },
+      });
+
+      if (claimedRun.count === 0) {
+        return null;
+      }
+
       // Erstelle Player-Statistiken
       if (playerStatsData.length > 0) {
         await tx.runPlayerStats.createMany({
@@ -101,14 +132,8 @@ export async function POST(
         });
       }
 
-      // Aktualisiere den Run
-      return tx.run.update({
+      return tx.run.findUnique({
         where: { id: runId },
-        data: {
-          status,
-          loserPlayerName: loserPlayerName || null,
-          endedAt: new Date(),
-        },
         include: {
           gameVersion: true,
           playerStats: true,
@@ -117,9 +142,17 @@ export async function POST(
       });
     });
 
+    if (!updatedRun) {
+      return conflict('Dieser Run wurde bereits durch eine andere Anfrage beendet');
+    }
+
     // Event emittieren bei fehlgeschlagenem Run
     if (status === 'failed') {
       emitEvent('run_failed', {
+        runNumber: run.runNumber,
+      });
+    } else {
+      emitEvent('run_completed', {
         runNumber: run.runNumber,
       });
     }

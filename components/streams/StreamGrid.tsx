@@ -102,17 +102,17 @@ export default function StreamGrid({ streams }: StreamGridProps) {
 
   if (streams.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[var(--text-secondary)]">
+      <section className="app-section flex min-h-[24rem] flex-1 items-center justify-center text-[var(--text-secondary)] md:min-h-[34rem]">
         <div className="text-center">
           <svg className="w-16 h-16 mx-auto mb-4 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
-          <p className="text-lg">Keine Streams aktiv</p>
+          <p className="text-lg font-black uppercase tracking-wide">Keine Streams aktiv</p>
           <p className="text-sm text-[var(--text-tertiary)] mt-1">
             Ein Admin kann Streams über das Zahnrad-Icon hinzufügen
           </p>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -126,7 +126,7 @@ export default function StreamGrid({ streams }: StreamGridProps) {
   return (
     <div
       ref={containerRef}
-      className="flex-1 grid gap-1 p-1 min-h-0"
+      className="grid min-h-[24rem] flex-1 gap-1 border border-[var(--border-default)] bg-[var(--brand-navy,#071a33)] p-1 md:min-h-[34rem]"
       style={{
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gridTemplateRows: `repeat(${rows}, 1fr)`,

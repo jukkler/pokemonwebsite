@@ -3,12 +3,31 @@
  * Zentrale Definitionen für Farben, Spacing, Typografie
  */
 
-// Primärfarben
+// Sports-editorial Primärfarben. Synchron mit app/globals.css.
 export const primaryColors = {
-  blue: '#3B82F6',
-  red: '#EF4444',
-  black: '#000000',
+  navy: '#061A32',
+  blue: '#1648D8',
+  red: '#ED171E',
+  green: '#1F7A3F',
+  gold: '#E3A114',
+  black: '#081426',
   white: '#FFFFFF',
+} as const;
+
+export const editorialTheme = {
+  light: {
+    background: '#FFFFFF',
+    surfaceSubtle: '#F3F5F7',
+    foreground: '#081426',
+    border: '#CFD5DC',
+  },
+  dark: {
+    background: '#07111F',
+    surfaceSubtle: '#141D29',
+    foreground: '#F4F7FB',
+    border: '#2B3A4C',
+  },
+  playerFallbacks: ['#ED171E', '#1648D8', '#1F7A3F'],
 } as const;
 
 // Pokémon Typ-Farben (Custom Colors)
@@ -101,10 +120,10 @@ export const fontSizes = {
 
 // Border-Radius
 export const borderRadius = {
-  sm: '4px',
-  md: '8px',
-  lg: '12px',
-  xl: '16px',
+  sm: '2px',
+  md: '4px',
+  lg: '6px',
+  xl: '8px',
   full: '9999px',
 } as const;
 
@@ -138,23 +157,23 @@ export function getTypeIcon(type: string): string {
 // Dark Theme Farben
 export const darkTheme = {
   background: {
-    primary: '#111113',      // Dark anthracite
-    secondary: '#1a1a1e',    // Card background
-    tertiary: '#242428',     // Elevated surfaces
+    primary: '#07111f',
+    secondary: '#0c1725',
+    tertiary: '#142131',
   },
   border: {
-    default: '#2a2a2e',
+    default: '#2b3a4c',
     hover: 'rgba(var(--player-color-rgb), 0.5)',
   },
   text: {
     primary: '#ffffff',
-    secondary: '#a0a0a8',
-    tertiary: '#6a6a72',
+    secondary: '#b0bdcb',
+    tertiary: '#8492a3',
   },
   glass: {
-    background: 'rgba(26, 26, 30, 0.7)',
-    blur: '12px',
-    border: 'rgba(255, 255, 255, 0.1)',
+    background: '#07111f',
+    blur: '0px',
+    border: '#2b3a4c',
   }
 } as const;
 
@@ -162,22 +181,22 @@ export const darkTheme = {
 export const lightTheme = {
   background: {
     primary: '#ffffff',
-    secondary: '#f9fafb',
-    tertiary: '#f3f4f6',
+    secondary: '#f8f9fb',
+    tertiary: '#f3f5f7',
   },
   border: {
-    default: '#e5e7eb',
+    default: '#cfd5dc',
     hover: 'rgba(var(--player-color-rgb), 0.5)',
   },
   text: {
-    primary: '#171717',
-    secondary: '#6b7280',
-    tertiary: '#9ca3af',
+    primary: '#081426',
+    secondary: '#526071',
+    tertiary: '#788493',
   },
   glass: {
-    background: 'rgba(255, 255, 255, 0.7)',
-    blur: '12px',
-    border: 'rgba(0, 0, 0, 0.1)',
+    background: '#ffffff',
+    blur: '0px',
+    border: '#d7dce2',
   }
 } as const;
 

@@ -89,21 +89,23 @@ Route 202;Ponita;Bamelin;Plinfa`;
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-[var(--foreground)] mb-6">CSV Import</h1>
-      <p className="text-[var(--text-secondary)] mb-8">
-        Importiere Routen und Pokémon-Begegnungen aus einer CSV-Datei.
-        Fehlende Pokémon werden automatisch von der PokeAPI synchronisiert.
-      </p>
+    <main className="admin-page">
+      <header>
+        <h1 className="text-4xl font-bold text-[var(--foreground)]">CSV Import</h1>
+        <p className="mt-2 text-[var(--text-secondary)]">
+          Importiere Routen und Pokémon-Begegnungen aus einer CSV-Datei.
+          Fehlende Pokémon werden automatisch von der PokeAPI synchronisiert.
+        </p>
+      </header>
 
       {/* CSV-Format Anleitung */}
-      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-blue-400 mb-4">📋 CSV-Format</h2>
+      <section className="app-section border-l-4 border-l-[var(--brand-blue)] p-5 sm:p-6">
+        <h2 className="text-xl font-bold text-[var(--brand-blue)] mb-4">CSV-Format</h2>
         
         <div className="space-y-6">
           {/* Format 1: Pivot */}
           <div className="bg-[var(--card-bg)] rounded-lg p-4 border border-blue-500/30">
-            <h3 className="font-bold text-blue-400 mb-2">✅ Format 1: Pivot (Empfohlen - wie deine CSV)</h3>
+            <h3 className="font-bold text-[var(--brand-blue)] mb-2">Format 1: Pivot (empfohlen)</h3>
             <p className="text-sm text-blue-400/80 mb-3">
               Jede Zeile ist eine Route, jede Spalte ist ein Spieler. Trennzeichen: <strong>Semikolon (;)</strong>
             </p>
@@ -117,7 +119,7 @@ Route 202;Ponita;Bamelin;Plinfa`}
               onClick={() => downloadTemplate('pivot')}
               className="mt-3 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-md transition text-sm"
             >
-              📥 Pivot-Vorlage herunterladen
+              Pivot-Vorlage herunterladen
             </button>
           </div>
 
@@ -147,13 +149,13 @@ Zweiblattdorf,Thorben,Bisasam,Planty`}
               onClick={() => downloadTemplate('standard')}
               className="mt-3 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-md transition text-sm"
             >
-              📥 Standard-Vorlage herunterladen
+              Standard-Vorlage herunterladen
             </button>
           </div>
 
           {/* Hinweise */}
           <div>
-            <h3 className="font-semibold text-blue-400 mb-2">💡 Wichtige Hinweise:</h3>
+            <h3 className="font-semibold text-[var(--brand-blue)] mb-2">Wichtige Hinweise</h3>
             <ul className="list-disc list-inside text-blue-400/80 space-y-1 text-sm">
               <li>Spieler müssen <strong>vorher im Admin-Panel erstellt</strong> werden</li>
               <li>Routen werden automatisch erstellt, falls sie noch nicht existieren</li>
@@ -168,10 +170,10 @@ Zweiblattdorf,Thorben,Bisasam,Planty`}
             </ul>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Upload-Formular */}
-      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+      <section className="app-section p-5 sm:p-6">
         <h2 className="text-2xl font-bold text-[var(--foreground)] mb-4">CSV-Datei hochladen</h2>
 
         <div className="space-y-4">
@@ -197,15 +199,15 @@ Zweiblattdorf,Thorben,Bisasam,Planty`}
             disabled={!file || importing}
             className="w-full px-6 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
           >
-            {importing ? '📤 Importiere...' : '📤 CSV importieren'}
+                {importing ? 'Importiere…' : 'CSV importieren'}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Ergebnis */}
       {result && (
         <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-green-400 mb-4">✅ Import erfolgreich</h3>
+          <h3 className="text-xl font-bold text-green-500 mb-4">Import erfolgreich</h3>
           <p className="text-green-400/80 mb-4">{result.message}</p>
 
           <div className="bg-[var(--card-bg)] rounded-lg p-4 space-y-2 border border-[var(--border-default)]">
@@ -226,7 +228,7 @@ Zweiblattdorf,Thorben,Bisasam,Planty`}
           {result.details.errors && result.details.errors.length > 0 && (
             <div className="mt-4">
               <h4 className="font-semibold text-orange-400 mb-2">
-                ⚠️ Warnungen ({result.details.errors.length}):
+                Warnungen ({result.details.errors.length}):
               </h4>
               <ul className="list-disc list-inside text-orange-400/80 text-sm space-y-1 max-h-40 overflow-y-auto">
                 {result.details.errors.map((err: string, idx: number) => (
@@ -262,11 +264,11 @@ Zweiblattdorf,Thorben,Bisasam,Planty`}
       {/* Fehler */}
       {error && (
         <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-red-400 mb-2">❌ Fehler beim Import</h3>
+          <h3 className="text-xl font-bold text-red-500 mb-2">Fehler beim Import</h3>
           <p className="text-red-400/80">{error}</p>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

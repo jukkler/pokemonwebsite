@@ -195,15 +195,24 @@ export default function StreamsClient() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+      <div className="app-page streams-page flex min-h-[calc(100dvh-4rem)] items-center justify-center">
         <p className="text-[var(--text-secondary)]">Lade Streams...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Topbar */}
+    <div className="app-page streams-page flex min-h-[calc(100dvh-4rem)] flex-col gap-3">
+      <header className="app-page-header">
+        <div className="flex min-w-0 items-start gap-3 md:items-center md:gap-5">
+          <span aria-hidden="true" className="shrink-0 border-r-2 border-red-600 pr-3 text-3xl font-black leading-none text-red-600 md:text-5xl">06</span>
+          <div>
+            <h1 className="text-3xl font-black uppercase tracking-[-0.04em] text-[var(--foreground)] md:text-5xl">Streams</h1>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Livebild, Teams und Runstatus in einer Ansicht.</p>
+          </div>
+        </div>
+      </header>
+
       <StreamsTopBar
         activeRun={activeRun}
         currentRunStats={currentRunStats}
@@ -213,10 +222,8 @@ export default function StreamsClient() {
         onToggleStream={toggleStreamVisibility}
       />
 
-      {/* Stream Grid */}
       <StreamGrid streams={visibleStreams} />
 
-      {/* Admin Panel */}
       {isAdmin && (
         <StreamAdminPanel
           streams={streams}

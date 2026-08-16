@@ -36,27 +36,27 @@ export default function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--brand-navy)]/78 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[var(--card-bg-elevated)] rounded-xl p-6 max-w-md w-full shadow-2xl border border-[var(--border-default)]">
-        <h2 className={`text-2xl font-semibold mb-4 ${titleColor}`}>
+      <div className="w-full max-w-md border border-[var(--border-default)] bg-[var(--card-bg-elevated)]">
+        <h2 className={`mb-0 bg-[var(--brand-navy)] px-6 py-4 font-[var(--font-display)] text-2xl font-black uppercase tracking-[-0.03em] text-white ${titleColor}`}>
           {titleIcon && <span className="mr-2">{titleIcon}</span>}
           {title}
         </h2>
 
         {description && (
-          <p className="text-[var(--text-secondary)] mb-4">{description}</p>
+          <p className="px-6 pt-5 text-[var(--text-secondary)]">{description}</p>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-6 py-5">
           {children}
         </div>
 
         {actions && (
-          <div className="flex gap-2 justify-end mt-6">
+          <div className="flex justify-end gap-2 border-t border-[var(--border-default)] px-6 py-4">
             {actions}
           </div>
         )}

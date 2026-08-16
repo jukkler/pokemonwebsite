@@ -69,11 +69,13 @@ async function getRoutes() {
           color: e.player.color,
         },
         pokemon: {
+          id: e.pokemon.id,
           pokedexId: e.pokemon.pokedexId,
           name: e.pokemon.name,
           nameGerman: e.pokemon.nameGerman,
           types: e.pokemon.types,
           spriteUrl: e.pokemon.spriteUrl,
+          spriteGifUrl: e.pokemon.spriteGifUrl,
           hp: e.pokemon.hp,
           attack: e.pokemon.attack,
           defense: e.pokemon.defense,

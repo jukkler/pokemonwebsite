@@ -8,7 +8,10 @@ export type EventType =
   | 'badge_unlocked'
   | 'pokemon_not_caught'
   | 'pokemon_ko'
-  | 'run_failed';
+  | 'team_link_added'
+  | 'team_link_boxed'
+  | 'run_failed'
+  | 'run_completed';
 
 export interface GameEvent {
   id: string;
@@ -17,11 +20,19 @@ export interface GameEvent {
   data: {
     pokemonName?: string;
     pokemonNameGerman?: string;
+    spriteUrl?: string;
     badgeNumber?: number;
     badgeName?: string;
     badgeImagePath?: string;
     playerName?: string;
     routeName?: string;
+    teamSlot?: number;
+    teamMembers?: Array<{
+      pokemonName: string;
+      pokemonNameGerman?: string;
+      spriteUrl?: string;
+      playerName: string;
+    }>;
     runNumber?: number;
   };
 }

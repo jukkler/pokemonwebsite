@@ -79,8 +79,17 @@ export async function POST(request: NextRequest) {
           pokemonName: e.pokemon.name,
           pokemonNameGerman: e.pokemon.nameGerman,
           routeName: e.route.name,
+          nickname: e.nickname,
+          teamSlot: e.teamSlot,
           isKnockedOut: e.isKnockedOut,
+          koCausedBy: e.koCausedBy,
+          koReason: e.koReason,
+          koDate: e.koDate,
           isNotCaught: e.isNotCaught,
+          notCaughtBy: e.notCaughtBy,
+          notCaughtReason: e.notCaughtReason,
+          notCaughtDate: e.notCaughtDate,
+          caughtAt: e.createdAt,
         }));
 
         if (runEncounterData.length > 0) {

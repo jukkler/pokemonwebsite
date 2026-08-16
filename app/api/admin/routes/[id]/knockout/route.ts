@@ -1,88 +1,53 @@
-/**
- * Admin API: K.O.-Verwaltung für Routen
- * POST /api/admin/routes/[id]/knockout - Setzt alle Encounters einer Route K.O.
- * DELETE /api/admin/routes/[id]/knockout - Reaktiviert alle Encounters einer Route
- */
+/** Legacy adapter. New clients use PATCH /api/admin/encounter-links/[routeId]. */
 
-import { NextRequest } from 'next/server';
-import {
-  withAdminAuthAndErrorHandling,
-  parseId,
-  validateRequired,
-  success,
-} from '@/lib/api-utils';
-import prisma from '@/lib/prisma';
-import { emitEvent } from '@/lib/event-store';
+import { NextRequest, NextResponse } from 'next/server';
+import { badRequest, withAdminAuthAndErrorHandling } from '@/lib/api-utils';
+import { parseEncounterLinkAdminAction } from '@/lib/encounter-link-admin';
+import { executeEncounterLinkAdminAction } from '@/lib/encounter-link-admin.server';
+
+function responseFor(result: Awaited<ReturnType<typeof executeEncounterLinkAdminAction>>) {
+  return result.ok
+    ? NextResponse.json(result.response)
+    : NextResponse.json(
+        { error: result.error, conflict: result.conflict },
+        { status: result.status },
+      );
+}
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   return withAdminAuthAndErrorHandling(async () => {
-    const { id } = await params;
-    const routeId = parseId(id, 'Routen-ID');
-    const body = await request.json();
+    const routeId = Number((await params).id);
+    if (!Number.isInteger(routeId) || routeId < 1) return badRequest('Ungültige Routen-ID');
 
-    validateRequired(body, ['causedBy', 'reason']);
-    const { causedBy, reason } = body;
-
-    // Pokemon-Namen vor dem Update laden (für Event)
-    const encounters = await prisma.encounter.findMany({
-      where: { routeId },
-      include: { pokemon: true, route: true, player: true },
-    });
-
-    const result = await prisma.encounter.updateMany({
-      where: { routeId },
-      data: {
-        isKnockedOut: true,
-        koCausedBy: String(causedBy).trim(),
-        koReason: String(reason).trim(),
-        koDate: new Date(),
-        teamSlot: null,
-      },
-    });
-
-    // Event emittieren (Pokemon des Verursachers)
-    if (encounters.length > 0) {
-      const causedByName = String(causedBy).trim();
-      const match = encounters.find(e => e.player.name === causedByName) || encounters[0];
-      emitEvent('pokemon_ko', {
-        pokemonName: match.pokemon.name,
-        pokemonNameGerman: match.pokemon.nameGerman ?? undefined,
-        playerName: causedByName,
-        routeName: match.route.name,
-      });
+    let body: unknown;
+    try {
+      const requestBody = await request.json() as Record<string, unknown>;
+      body = {
+        action: 'knockout',
+        causedBy: requestBody.causedBy,
+        reason: requestBody.reason,
+      };
+    } catch {
+      return badRequest('Der Request-Body muss gültiges JSON enthalten');
     }
-
-    return success({
-      message: `${result.count} Pokémon wurden K.O. gesetzt`,
-      count: result.count,
-    });
-  }, 'knocking out encounters');
+    const parsed = parseEncounterLinkAdminAction(body);
+    if (!parsed.ok) return badRequest(parsed.error);
+    return responseFor(await executeEncounterLinkAdminAction(routeId, parsed.action));
+  }, 'knocking out encounter link');
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   return withAdminAuthAndErrorHandling(async () => {
-    const { id } = await params;
-    const routeId = parseId(id, 'Routen-ID');
-
-    const result = await prisma.encounter.updateMany({
-      where: { routeId },
-      data: {
-        isKnockedOut: false,
-        koCausedBy: null,
-        koReason: null,
-        koDate: null,
-      },
-    });
-
-    return success({
-      message: `${result.count} Pokémon wurden reaktiviert`,
-      count: result.count,
-    });
-  }, 'reactivating encounters');
+    const routeId = Number((await params).id);
+    if (!Number.isInteger(routeId) || routeId < 1) return badRequest('Ungültige Routen-ID');
+    return responseFor(
+      await executeEncounterLinkAdminAction(routeId, { action: 'reactivate' }),
+    );
+  }, 'reactivating encounter link');
 }

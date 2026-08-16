@@ -170,8 +170,19 @@ export async function POST(request: NextRequest) {
                   pokemonName: enc.pokemonName,
                   pokemonNameGerman: enc.pokemonNameGerman || null,
                   routeName: enc.routeName,
+                  nickname: enc.nickname || null,
+                  teamSlot: enc.teamSlot ?? null,
                   isKnockedOut: enc.isKnockedOut || false,
+                  koCausedBy: enc.koCausedBy || null,
+                  koReason: enc.koReason || null,
+                  koDate: enc.koDate ? new Date(enc.koDate) : null,
                   isNotCaught: enc.isNotCaught || false,
+                  notCaughtBy: enc.notCaughtBy || null,
+                  notCaughtReason: enc.notCaughtReason || null,
+                  notCaughtDate: enc.notCaughtDate
+                    ? new Date(enc.notCaughtDate)
+                    : null,
+                  caughtAt: enc.caughtAt ? new Date(enc.caughtAt) : null,
                 },
               });
             }
@@ -193,4 +204,3 @@ export async function POST(request: NextRequest) {
     }
   });
 }
-

@@ -19,9 +19,9 @@ const POLL_INTERVAL_MS = 2000;
 
 export function EventProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<GameEvent[]>([]);
-  const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
   const seenIds = useRef(new Set<string>());
-  const lastCheck = useRef(Date.now());
+  const lastCheck = useRef<number | null>(null);
+  const currentEvent = queue[0] ?? null;
 
   // Polling
   useEffect(() => {
@@ -29,6 +29,10 @@ export function EventProvider({ children }: { children: ReactNode }) {
       if (document.hidden) return;
 
       try {
+        if (lastCheck.current === null) {
+          lastCheck.current = Date.now();
+        }
+
         const res = await fetch(`/api/events/latest?since=${lastCheck.current}`);
         if (!res.ok) return;
 
@@ -59,16 +63,8 @@ export function EventProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Queue abarbeiten: Nächstes Event anzeigen wenn kein aktuelles
-  useEffect(() => {
-    if (currentEvent || queue.length === 0) return;
-    const [next, ...rest] = queue;
-    setCurrentEvent(next);
-    setQueue(rest);
-  }, [currentEvent, queue]);
-
   const dismissEvent = useCallback(() => {
-    setCurrentEvent(null);
+    setQueue(prev => prev.slice(1));
   }, []);
 
   return (

@@ -52,8 +52,17 @@ interface GameSaveRunEncounter {
   pokemonName: string;
   pokemonNameGerman?: string | null;
   routeName: string;
+  nickname?: string | null;
+  teamSlot?: number | null;
   isKnockedOut?: boolean;
+  koCausedBy?: string | null;
+  koReason?: string | null;
+  koDate?: string | null;
   isNotCaught?: boolean;
+  notCaughtBy?: string | null;
+  notCaughtReason?: string | null;
+  notCaughtDate?: string | null;
+  caughtAt?: string | null;
 }
 
 interface GameSaveRun {
@@ -157,8 +166,17 @@ function validateRunEncounter(value: unknown, path: string): asserts value is Ga
   assert(isNonEmptyString(value.pokemonName), `${path}.pokemonName muss ein nicht-leerer String sein`);
   assert(isNullableString(value.pokemonNameGerman), `${path}.pokemonNameGerman muss string/null sein`);
   assert(isNonEmptyString(value.routeName), `${path}.routeName muss ein nicht-leerer String sein`);
+  assert(isNullableString(value.nickname), `${path}.nickname muss string/null sein`);
+  assert(value.teamSlot === undefined || value.teamSlot === null || (isInteger(value.teamSlot) && value.teamSlot >= 1 && value.teamSlot <= 6), `${path}.teamSlot muss null oder 1-6 sein`);
   assert(value.isKnockedOut === undefined || typeof value.isKnockedOut === 'boolean', `${path}.isKnockedOut muss boolean sein`);
+  assert(isNullableString(value.koCausedBy), `${path}.koCausedBy muss string/null sein`);
+  assert(isNullableString(value.koReason), `${path}.koReason muss string/null sein`);
+  assert(isValidDateOrNullable(value.koDate), `${path}.koDate muss ein gültiges Datum oder null sein`);
   assert(value.isNotCaught === undefined || typeof value.isNotCaught === 'boolean', `${path}.isNotCaught muss boolean sein`);
+  assert(isNullableString(value.notCaughtBy), `${path}.notCaughtBy muss string/null sein`);
+  assert(isNullableString(value.notCaughtReason), `${path}.notCaughtReason muss string/null sein`);
+  assert(isValidDateOrNullable(value.notCaughtDate), `${path}.notCaughtDate muss ein gültiges Datum oder null sein`);
+  assert(isValidDateOrNullable(value.caughtAt), `${path}.caughtAt muss ein gültiges Datum oder null sein`);
 }
 
 function validateRun(value: unknown, path: string): asserts value is GameSaveRun {

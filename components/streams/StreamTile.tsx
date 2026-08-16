@@ -40,10 +40,10 @@ export default function StreamTile({ stream }: StreamTileProps) {
   const videoId = extractYouTubeId(stream.url);
 
   return (
-    <div className="relative w-full h-full bg-black rounded-lg overflow-hidden">
+    <article className="relative h-full w-full overflow-hidden border border-white/20 bg-black">
       {/* Player-Label */}
       <div
-        className="absolute top-2 left-2 z-10 px-2 py-1 rounded text-xs font-bold text-white pointer-events-none"
+        className="pointer-events-none absolute left-0 top-0 z-10 border-r border-b border-white/30 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-white"
         style={{ backgroundColor: stream.player.color }}
       >
         {stream.player.name}
@@ -66,6 +66,6 @@ export default function StreamTile({ stream }: StreamTileProps) {
 
       {/* Team-Overlay */}
       <TeamOverlay encounters={stream.player.encounters} />
-    </div>
+    </article>
   );
 }

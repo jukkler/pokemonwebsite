@@ -157,16 +157,25 @@ model RunPlayerStats {
 
 // Gefangene Pokemon eines Runs (Snapshot beim Beenden)
 model RunEncounter {
-  id               Int     @id @default(autoincrement())
-  run              Run     @relation(fields: [runId], references: [id], onDelete: Cascade)
-  runId            Int
-  playerName       String  // Spielername
-  pokemonPokedexId Int     // Pokedex-ID des Pokemon
-  pokemonName      String  // Name für Anzeige ohne Join
-  pokemonNameGerman String? // Deutscher Name
-  routeName        String  // Route wo gefangen
-  isKnockedOut     Boolean @default(false)
-  isNotCaught      Boolean @default(false)
+  id                 Int       @id @default(autoincrement())
+  run                Run       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId              Int
+  playerName         String    // Spielername
+  pokemonPokedexId   Int       // Pokedex-ID des Pokemon
+  pokemonName        String    // Name für Anzeige ohne Join
+  pokemonNameGerman  String?   // Deutscher Name
+  routeName          String    // Route wo gefangen
+  nickname           String?
+  teamSlot           Int?
+  isKnockedOut       Boolean   @default(false)
+  koCausedBy         String?
+  koReason            String?
+  koDate              DateTime?
+  isNotCaught        Boolean   @default(false)
+  notCaughtBy        String?
+  notCaughtReason    String?
+  notCaughtDate      DateTime?
+  caughtAt           DateTime?
   
   @@index([runId])
   @@index([playerName])

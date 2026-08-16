@@ -1,8 +1,6 @@
 'use client';
 
-/**
- * BadgeProgressTracker - Vertikaler Skill-Tree für Gym-Orden-Fortschritt
- */
+/** Horizontaler Ordenfortschritt im Team-Sheet-Stil. */
 
 import Image from 'next/image';
 import { getBadgesForGame, getLevelCapsForGame } from '@/lib/badge-data';
@@ -24,125 +22,56 @@ export default function BadgeProgressTracker({
   if (!badges) return null;
 
   return (
-    <div className="mt-3 mb-2">
-      {/* Header */}
-      <div className="flex items-center gap-2 text-[10px] text-[var(--text-tertiary)] mb-3 font-medium uppercase tracking-wide">
-        <span>Orden</span>
-        <span className="ml-auto font-mono text-[var(--text-secondary)]">
-          {badgesEarned}/{badges.length}
+    <div className="app-band mt-3 bg-[var(--brand-navy)] px-4 py-3 text-white">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-sm font-black uppercase tracking-wide">Ordenfortschritt {badgesEarned}/{badges.length}</span>
+        <span className="text-xs font-black uppercase tracking-widest text-[var(--brand-gold)]">
+          {badgesEarned === badges.length ? 'Alle Orden erhalten' : 'Nächster Orden offen'}
         </span>
       </div>
 
-      {/* Vertikaler Skill-Tree */}
-      <div className="flex flex-col">
-        {badges.map((badge, index) => {
+      <div className="overflow-x-auto pb-1">
+        <div className="relative flex min-w-max items-start gap-3 px-1 pt-1">
+          <div aria-hidden="true" className="absolute left-6 right-6 top-6 h-0.5 bg-[var(--brand-gold)]/70" />
+          {badges.map((badge, index) => {
           const isEarned = index < badgesEarned;
           const isNext = index === badgesEarned;
           const isLastEarned = isEarned && index === badgesEarned - 1;
-          const isLast = index === badges.length - 1;
           const cap = levelCaps?.[index];
           const isClickable = onBadgeClick && (isNext || isLastEarned);
 
           return (
-            <div key={`${badge.key}-${index}`} className="flex items-stretch">
-              {/* Linke Spalte: Linie + Node */}
-              <div className="flex flex-col items-center w-9 shrink-0">
-                {/* Node (Kreis-Punkt auf der Linie) */}
-                <button
-                  onClick={() => {
-                    if (!onBadgeClick) return;
-                    if (isNext) onBadgeClick(badgesEarned + 1);
-                    else if (isLastEarned) onBadgeClick(badgesEarned - 1);
-                  }}
-                  className={`relative z-10 w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all duration-300 ${
-                    isEarned
-                      ? 'bg-amber-400 border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]'
-                      : isNext
-                        ? 'bg-transparent border-[var(--text-secondary)] hover:border-amber-400/60 hover:shadow-[0_0_6px_rgba(251,191,36,0.3)]'
-                        : 'bg-transparent border-[var(--border-default)]'
-                  } ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
-                  aria-label={isNext ? 'Orden erhalten' : isLastEarned ? 'Orden zurücknehmen' : undefined}
-                />
-                {/* Verbindungslinie nach unten */}
-                {!isLast && (
-                  <div
-                    className={`w-0.5 flex-1 min-h-[14px] transition-colors duration-300 ${
-                      isEarned && !isLastEarned
-                        ? 'bg-amber-400/50'
-                        : isEarned || isNext
-                          ? 'bg-gradient-to-b from-amber-400/40 to-[var(--border-default)]'
-                          : 'bg-[var(--border-default)]'
-                    }`}
-                  />
-                )}
-              </div>
-
-              {/* Rechte Spalte: Badge-Icon + Info */}
+            <div key={`${badge.key}-${index}`} className="relative z-10 w-20 shrink-0 text-center">
               <button
+                type="button"
                 onClick={() => {
                   if (!onBadgeClick) return;
                   if (isNext) onBadgeClick(badgesEarned + 1);
                   else if (isLastEarned) onBadgeClick(badgesEarned - 1);
                 }}
-                className={`flex items-center gap-3 flex-1 pb-3.5 -mt-0.5 transition-all duration-300 ${
-                  isClickable
-                    ? 'cursor-pointer hover:translate-x-0.5'
-                    : 'cursor-default'
-                }`}
+                className={`mx-auto flex w-full flex-col items-center ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
                 title={`${badge.nameDe} (${badge.leaderDe})${cap ? ` – Lv ${cap}` : ''}${
                   isEarned ? ' ✓' : isNext ? ' – Klicken zum Erhalten' : ''
                 }`}
               >
-                {/* Badge-Bild */}
                 <div
-                  className={`w-9 h-9 md:w-10 md:h-10 relative shrink-0 transition-all duration-300 ${
+                  className={`relative h-11 w-11 shrink-0 transition-all duration-200 ${
                     isEarned
-                      ? 'drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]'
+                      ? 'opacity-100'
                       : isNext
-                        ? 'grayscale brightness-75 opacity-60 hover:grayscale-[50%] hover:opacity-80'
-                        : 'grayscale brightness-50 opacity-25'
+                        ? 'grayscale opacity-70 hover:grayscale-0 hover:opacity-100'
+                        : 'grayscale opacity-35'
                   }`}
                 >
-                  <Image
-                    src={badge.imagePath}
-                    alt={badge.nameDe}
-                    width={40}
-                    height={40}
-                    className="object-contain w-full h-full"
-                  />
+                  <Image src={badge.imagePath} alt={badge.nameDe} width={44} height={44} className="h-full w-full object-contain" />
                 </div>
-
-                {/* Name + Level Cap */}
-                <div className="flex items-baseline justify-between flex-1 min-w-0 gap-2">
-                  <span
-                    className={`text-sm font-medium transition-colors duration-300 truncate ${
-                      isEarned
-                        ? 'text-[var(--foreground)]'
-                        : isNext
-                          ? 'text-[var(--text-secondary)]'
-                          : 'text-[var(--text-tertiary)] opacity-50'
-                    }`}
-                  >
-                    {badge.nameDe}
-                  </span>
-                  {cap != null && (
-                    <span
-                      className={`text-xs font-mono shrink-0 transition-colors duration-300 ${
-                        isEarned
-                          ? 'text-amber-400/80'
-                          : isNext
-                            ? 'text-[var(--text-tertiary)]'
-                            : 'text-[var(--text-tertiary)] opacity-40'
-                      }`}
-                    >
-                      Lv {cap}
-                    </span>
-                  )}
-                </div>
+                <span className={`mt-1 max-w-full truncate text-[10px] font-bold ${isEarned ? 'text-white' : 'text-white/55'}`}>{badge.nameDe}</span>
+                {cap != null ? <span className="text-[9px] font-bold tabular-nums text-[var(--brand-gold)]">LV {cap}</span> : null}
               </button>
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

@@ -11,14 +11,22 @@ import { emitEvent } from '@/lib/event-store';
 
 export async function POST(request: NextRequest) {
   return withAdminAuthAndErrorHandling(async () => {
-    const { action } = await request.json();
+    const { action, badgesEarned, runId } = await request.json();
 
-    if (action !== 'increment' && action !== 'decrement') {
-      return badRequest('Ungültige Aktion. Erlaubt: increment, decrement');
+    if (action !== 'increment' && action !== 'decrement' && action !== 'set') {
+      return badRequest('Ungültige Aktion. Erlaubt: increment, decrement, set');
+    }
+
+    if (runId !== undefined && (!Number.isInteger(runId) || runId <= 0)) {
+      return badRequest('Ungültige Run-ID');
     }
 
     const activeRun = await prisma.run.findFirst({
-      where: { status: 'active' },
+      where: {
+        status: 'active',
+        archived: false,
+        ...(runId !== undefined ? { id: runId } : {}),
+      },
       orderBy: { startedAt: 'desc' },
     });
 
@@ -31,11 +39,16 @@ export async function POST(request: NextRequest) {
       : null;
     const maxBadges = badges?.length ?? 8;
 
-    let newCount = activeRun.badgesEarned;
-    if (action === 'increment') {
-      newCount = Math.min(newCount + 1, maxBadges);
+    let newCount: number;
+    if (action === 'set') {
+      if (!Number.isInteger(badgesEarned) || badgesEarned < 0 || badgesEarned > maxBadges) {
+        return badRequest(`Ordenstand muss zwischen 0 und ${maxBadges} liegen`);
+      }
+      newCount = badgesEarned;
+    } else if (action === 'increment') {
+      newCount = Math.min(activeRun.badgesEarned + 1, maxBadges);
     } else {
-      newCount = Math.max(newCount - 1, 0);
+      newCount = Math.max(activeRun.badgesEarned - 1, 0);
     }
 
     await prisma.run.update({
@@ -44,7 +57,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Event emittieren bei Badge-Increment
-    if (action === 'increment' && badges) {
+    if (newCount > activeRun.badgesEarned && badges) {
       const badge = badges[newCount - 1]; // 0-indexed
       if (badge) {
         emitEvent('badge_unlocked', {

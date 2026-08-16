@@ -22,6 +22,13 @@ RUN npm ci
 # ================================
 FROM node:20-slim AS builder
 
+# Prisma generates its native client in this stage and therefore needs the
+# same OpenSSL runtime that is present in the dependency and runner stages.
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy dependencies from deps stage

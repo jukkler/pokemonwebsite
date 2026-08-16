@@ -16,16 +16,16 @@ export default function Input({
   className = '',
   ...props
 }: InputProps) {
-  const baseClasses = 'w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1';
+  const baseClasses = 'min-h-11 w-full border bg-[var(--background-secondary)] px-4 py-3 text-[var(--foreground)] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1';
   
   const stateClasses = error
     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-    : 'border-gray-300 focus:border-gray-700 focus:ring-gray-500';
+    : 'border-[var(--border-default)] focus:border-[var(--brand-blue)] focus:ring-[var(--brand-blue)]';
 
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="mb-2 block text-xs font-extrabold uppercase tracking-[0.06em] text-[var(--text-secondary)]">
           {label}
         </label>
       )}

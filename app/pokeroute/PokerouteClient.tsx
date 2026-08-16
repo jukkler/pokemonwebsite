@@ -7,22 +7,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import TeamDisplay from '@/components/TeamDisplay';
 import RouteList from '@/components/RouteList';
-import RunStatsPanel from '@/components/RunStatsPanel';
+import PlayerAvatar from '@/components/PlayerAvatar';
 import { fetchJson } from '@/lib/fetchJson';
-import { getAvatarUrl } from '@/lib/avatars';
-import Image from 'next/image';
-import { BentoGrid, BentoCard } from '@/components/layout/BentoGrid';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface PlayerEncounter {
   id: number;
   teamSlot: number | null;
   nickname: string | null;
   pokemon: {
+    id: number;
     pokedexId: number;
     name: string;
     nameGerman: string | null;
     types: string;
     spriteUrl: string | null;
+    spriteGifUrl: string | null;
     hp: number;
     attack: number;
     defense: number;
@@ -62,11 +62,13 @@ interface RouteEncounterMeta {
     color: string;
   };
   pokemon: {
+    id: number;
     pokedexId: number;
     name: string;
     nameGerman: string | null;
     types: string;
     spriteUrl: string | null;
+    spriteGifUrl: string | null;
     hp: number;
     attack: number;
     defense: number;
@@ -101,38 +103,40 @@ export default function PokerouteClient({
 }: PokerouteClientProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [routes, setRoutes] = useState<RouteListRoute[]>(initialRoutes);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAuth();
   const [newRouteName, setNewRouteName] = useState('');
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
 
-  // Auth-Status prüfen und Pokémon laden
+  // Pokémon-Daten werden nur für eingeloggte Admins benötigt.
   useEffect(() => {
-    fetchJson<{ isAdmin?: boolean }>('/api/auth/status')
-      .then((data) => {
-        setIsAdmin(data.isAdmin || false);
-        // Pokémon nur für Admins laden
-        if (data.isAdmin) {
-          fetchJson<{ pokemon: Pokemon[] }>('/api/pokemon')
-            .then((pokemonData) => {
-              setPokemon(pokemonData.pokemon || []);
-            })
-            .catch((err) => {
-              console.error('Error loading pokemon:', err);
-            });
+    if (!isAdmin) {
+      setPokemon([]);
+      return;
+    }
+
+    let cancelled = false;
+    fetchJson<{ pokemon: Pokemon[] }>('/api/pokemon')
+      .then((pokemonData) => {
+        if (!cancelled) {
+          setPokemon(pokemonData.pokemon || []);
         }
       })
-      .catch(() => {
-        setIsAdmin(false);
+      .catch((err) => {
+        console.error('Error loading pokemon:', err);
       });
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
 
   // Daten neu laden (wird auch von anderen Funktionen verwendet)
   const reloadData = useCallback(async () => {
     try {
       const [playersData, routesData] = await Promise.all([
-        fetchJson<Player[]>('/api/players'),
-        fetchJson<RouteListRoute[]>('/api/routes'),
+        fetchJson<Player[]>('/api/players', { cache: 'no-store' }),
+        fetchJson<RouteListRoute[]>('/api/routes', { cache: 'no-store' }),
       ]);
 
       setPlayers(playersData);
@@ -144,52 +148,23 @@ export default function PokerouteClient({
 
   // Automatisches Polling: Aktualisiere Daten regelmäßig
   useEffect(() => {
-    // Funktion zum Laden der Daten (definiert im useEffect für stabile Referenz)
-    const loadData = async () => {
-      try {
-        const [playersData, routesData] = await Promise.all([
-          fetchJson<Player[]>('/api/players'),
-          fetchJson<RouteListRoute[]>('/api/routes'),
-        ]);
-
-        setPlayers(playersData);
-        setRoutes(routesData);
-      } catch (error) {
-        console.error('Error reloading data:', error);
-      }
-    };
-
     // Initiales Laden
-    loadData();
+    void reloadData();
 
     // Polling-Interval: Jede Sekunde aktualisieren für Echtzeit-Experience
     const interval = setInterval(() => {
       // Nur aktualisieren, wenn die Seite sichtbar ist
       if (!document.hidden) {
-        loadData();
+        void reloadData();
       }
     }, 1000);
 
     // Cleanup beim Unmount
     return () => clearInterval(interval);
-  }, []); // Leeres Array - Funktion ist im useEffect definiert
+  }, [reloadData]);
 
-  // Encounter aus Team entfernen
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : 'Unbekannter Fehler';
-
-  const handleRemoveFromTeam = async (routeId: number) => {
-    try {
-      await fetchJson(`/api/admin/routes/${routeId}/set-team-slot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamSlot: null }),
-      });
-      await reloadData();
-    } catch (error: unknown) {
-      alert(`Fehler beim Entfernen: ${getErrorMessage(error)}`);
-    }
-  };
 
   // Neue Route erstellen
   const handleCreateRoute = async (e: React.FormEvent) => {
@@ -220,132 +195,107 @@ export default function PokerouteClient({
     }
   };
 
+  const encounterCount = routes.reduce(
+    (total, route) => total + route.encounters.length,
+    0,
+  );
+
   return (
-    <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-screen-2xl">
-      {/* Bento Grid Layout */}
-      <BentoGrid>
-        {/* Spieler Teams - links (2 Spalten), untereinander */}
-        {players.length === 0 ? (
-          <BentoCard
-            span={{ sm: 1, md: 2, lg: 2 }}
-            className="animate-[scale-in_0.3s_ease-out] lg:row-start-1"
-          >
-            <div className="flex flex-col items-center justify-center py-12">
-              <svg className="w-16 h-16 text-[var(--text-tertiary)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <p className="text-[var(--text-secondary)] text-lg">
-                Noch keine Spieler vorhanden. Admin kann Spieler im Admin-Panel hinzufügen.
-              </p>
-            </div>
-          </BentoCard>
-        ) : (
-          players.map((player, index) => {
-            // Explizite Row-Klassen für jedes Player-Item
-            const rowClass = index === 0 ? 'lg:row-start-1' : index === 1 ? 'lg:row-start-2' : 'lg:row-start-3';
-            return (
-              <BentoCard
-                key={player.id}
-                span={{ sm: 1, md: 2, lg: 2 }}
-                playerColor={player.color}
-                className={`stagger-${(index % 6) + 1} animate-[scale-in_0.3s_ease-out] lg:col-span-2 ${rowClass}`}
-              >
-              <div className="flex items-center gap-2.5 mb-3">
-                {(() => {
-                  const avatarUrl = getAvatarUrl(player.avatar);
-                  return avatarUrl ? (
-                    <div
-                      className="relative w-8 h-8 rounded-full overflow-hidden ring-2 transition-all duration-300 hover:ring-4"
-                      style={{
-                        ringColor: player.color,
-                        '--tw-ring-color': player.color,
-                        boxShadow: `0 0 12px ${player.color}40`
-                      } as React.CSSProperties}
-                    >
-                      <Image
-                        src={avatarUrl}
-                        alt={player.name}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(var(--player-color-rgb),0.5)]"
-                      style={{ backgroundColor: player.color }}
-                    />
-                  );
-                })()}
-                <h2 className="text-xl font-bold text-[var(--foreground)]">
-                  {player.name}
-                </h2>
-              </div>
-              <TeamDisplay
-                playerName={player.name}
-                playerColor={player.color}
-                teamMembers={player.encounters}
-                routes={routes}
-                isAdmin={isAdmin}
-                onRemoveFromTeam={handleRemoveFromTeam}
-                onEvolution={reloadData}
-                pokemon={pokemon}
-              />
-              </BentoCard>
-            );
-          })
-        )}
-
-        {/* Live Stats Sidebar - rechts (1 Spalte), über 3 Reihen */}
-        <BentoCard
-          span={{ sm: 1, md: 1, lg: 1 }}
-          variant="glass"
-          className="order-first lg:order-none lg:col-start-3 lg:col-span-1 lg:row-start-1 lg:row-[span_3_/_span_3] animate-[scale-in_0.3s_ease-out]"
-        >
-          <h2 className="text-xl font-bold mb-4 text-[var(--foreground)]">Live Stats</h2>
-          <RunStatsPanel isAdmin={isAdmin} />
-        </BentoCard>
-
-        {/* Routen Übersicht - unten (volle Breite) */}
-        <BentoCard
-          span={{ sm: 1, md: 3, lg: 3 }}
-          className="animate-[scale-in_0.3s_ease-out] stagger-3 lg:col-span-3 lg:row-start-4"
-        >
-          <h2 className="text-xl font-bold mb-4 text-[var(--foreground)]">Routen & Encounters</h2>
-          <RouteList
-            routes={routes}
-            players={players}
-            isAdmin={isAdmin}
-            onTeamUpdate={reloadData}
-            pokemon={pokemon}
-          />
-        </BentoCard>
-      </BentoGrid>
-
-      {/* Admin: Neue Route erstellen (außerhalb Bento Grid) */}
-      {isAdmin && (
-        <div className="mt-8 bg-[var(--card-bg)] rounded-xl shadow-md p-6 border border-[var(--border-default)] transition-all duration-300 hover:border-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-          <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Neue Route erstellen</h3>
-          <form onSubmit={handleCreateRoute} className="flex gap-2">
-            <input
-              type="text"
-              value={newRouteName}
-              onChange={(e) => setNewRouteName(e.target.value)}
-              placeholder="Routenname eingeben..."
-              className="flex-1 px-3 py-2 border border-[var(--border-default)] bg-[var(--background-secondary)] text-[var(--foreground)] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
-              disabled={isCreatingRoute}
-            />
-            <button
-              type="submit"
-              disabled={isCreatingRoute || !newRouteName.trim()}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-medium whitespace-nowrap"
-            >
-              {isCreatingRoute ? 'Erstelle...' : '+ Route erstellen'}
-            </button>
-          </form>
+    <main className="app-page">
+      <header className="app-page-header">
+        <div className="flex min-w-0 items-start gap-4 sm:gap-6">
+          <span aria-hidden="true" className="border-l-4 border-[var(--brand-red)] pl-3 text-4xl font-black leading-none text-[var(--brand-red)] sm:text-5xl">
+            02
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-4xl font-black uppercase leading-none tracking-tight text-[var(--foreground)] sm:text-6xl">Routen</h1>
+            <p className="mt-3 max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+              Encounter-Links verwalten, Fänge erfassen und verbundene Pokémon gemeinsam aktualisieren.
+            </p>
+          </div>
         </div>
-      )}
-    </div>
+        <dl className="grid shrink-0 grid-cols-2 divide-x divide-[var(--border-default)] border-y border-[var(--border-default)] text-right">
+          <div className="px-4 py-2">
+            <dt className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Routen</dt>
+            <dd className="text-2xl font-black tabular-nums text-[var(--brand-blue)]">{routes.length}</dd>
+          </div>
+          <div className="px-4 py-2">
+            <dt className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Encounters</dt>
+            <dd className="text-2xl font-black tabular-nums text-[var(--brand-red)]">{encounterCount}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <section className="app-section" aria-labelledby="team-overview-title">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b-2 border-[var(--foreground)] pb-2">
+          <div>
+            <h2 id="team-overview-title" className="app-section-title">Aktuelle Teams</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Alle Mitspieler und Teamplätze auf einen Blick.</p>
+          </div>
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)]">{players.length} Spieler</span>
+        </div>
+
+        {players.length === 0 ? (
+          <p className="py-10 text-center text-[var(--text-secondary)]">
+            Noch keine Spieler vorhanden. Admins können Spieler im Adminbereich hinzufügen.
+          </p>
+        ) : (
+          <div className="divide-y divide-[var(--border-default)]">
+            {players.map((player) => (
+              <article key={player.id} className="grid gap-4 py-5 lg:grid-cols-[12rem_minmax(0,1fr)]">
+                <div className="app-player-rule flex items-center gap-3 self-start py-2" style={{ '--player-color': player.color } as React.CSSProperties}>
+                  <PlayerAvatar avatar={player.avatar} name={player.name} color={player.color} size={36} className="h-9 w-9" />
+                  <div>
+                    <h3 className="text-xl font-black uppercase leading-none" style={{ color: player.color }}>{player.name}</h3>
+                    <span className="mt-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Teamaufstellung</span>
+                  </div>
+                </div>
+                <TeamDisplay
+                  playerId={player.id}
+                  playerName={player.name}
+                  playerColor={player.color}
+                  teamMembers={player.encounters}
+                  routes={routes}
+                  isAdmin={isAdmin}
+                  onUpdated={reloadData}
+                  pokemon={pokemon}
+                />
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="app-section" aria-labelledby="route-management-title">
+        <div className="mb-4 border-b-2 border-[var(--foreground)] pb-2">
+          <h2 id="route-management-title" className="app-section-title">Routen &amp; Encounters</h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Jede Zeile ist ein gemeinsamer Link. Änderungen am Status oder Teamplatz gelten für die ganze Gruppe.
+          </p>
+        </div>
+
+        <div className="app-band">
+          <RouteList routes={routes} players={players} isAdmin={isAdmin} onTeamUpdate={reloadData} pokemon={pokemon} />
+          {isAdmin ? (
+            <form onSubmit={handleCreateRoute} className="app-toolbar mt-4">
+              <label htmlFor="new-route-name" className="text-xs font-black uppercase tracking-widest text-[var(--text-secondary)]">Neue Route</label>
+              <input
+                id="new-route-name"
+                type="text"
+                value={newRouteName}
+                onChange={(event) => setNewRouteName(event.target.value)}
+                placeholder="Routenname eingeben"
+                className="min-h-11 min-w-0 flex-1 border border-[var(--border-default)] bg-[var(--card-bg)] px-3 text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)]"
+                disabled={isCreatingRoute}
+              />
+              <button type="submit" disabled={isCreatingRoute || !newRouteName.trim()} className="app-action-primary">
+                {isCreatingRoute ? 'Erstellt…' : 'Route erstellen'}
+              </button>
+            </form>
+          ) : null}
+        </div>
+      </section>
+    </main>
   );
 }
 

@@ -1,9 +1,29 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import EncounterActionMenu, {
+  type EncounterActionMenuTarget,
+} from '@/components/admin/EncounterActionMenu';
+import RouteLinkActionMenu from '@/components/admin/RouteLinkActionMenu';
+import PlayerAvatar from '@/components/PlayerAvatar';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
-import { BentoCard } from '@/components/layout/BentoGrid';
+import { fetchJson } from '@/lib/fetchJson';
+import type { PokemonListItem } from '@/lib/types';
+import {
+  rowMatchesTableFilters,
+  type EncounterStatusFilter,
+  type TeamFilter,
+} from './table-filters';
 
 type PlayerInfo = {
   id: number;
@@ -15,15 +35,10 @@ type PlayerInfo = {
 type EncounterStatus = 'ko' | 'notCaught' | null;
 
 type PlayerCell = {
-  playerId: number;
-  pokedexId: number | null;
-  pokemonName: string;
-  pokemonGermanName: string | null;
+  encounter: EncounterActionMenuTarget;
   types: string[];
-  basePoints: number | null;
+  basePoints: number;
   status: EncounterStatus;
-  spriteUrl: string | null;
-  spriteGifUrl: string | null;
 };
 
 export type RouteRow = {
@@ -42,9 +57,6 @@ interface TabelleClientProps {
   players: PlayerInfo[];
   rows: RouteRow[];
 }
-
-const getSortIndicator = (direction: SortDirection) =>
-  direction === 'asc' ? '▲' : '▼';
 
 const TYPE_TRANSLATIONS: Record<string, string> = {
   normal: 'Normal',
@@ -67,241 +79,513 @@ const TYPE_TRANSLATIONS: Record<string, string> = {
   fairy: 'Fee',
 };
 
+function getEncounterStatus(encounter: EncounterActionMenuTarget): EncounterStatus {
+  if (encounter.isKnockedOut) return 'ko';
+  if (encounter.isNotCaught) return 'notCaught';
+  return null;
+}
+
+function getRowStatus(cells: (PlayerCell | null)[]): EncounterStatus {
+  if (cells.some((cell) => cell?.encounter.isKnockedOut)) return 'ko';
+  if (cells.some((cell) => cell?.encounter.isNotCaught)) return 'notCaught';
+  return null;
+}
+
+function SortIndicator({ direction }: { direction: SortDirection }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 12 12"
+      className={`h-3 w-3 transition-transform ${direction === 'desc' ? 'rotate-180' : ''}`}
+      fill="currentColor"
+    >
+      <path d="M6 2 10 7H2l4-5Z" />
+    </svg>
+  );
+}
+
 export default function TabelleClient({ players, rows }: TabelleClientProps) {
+  const router = useRouter();
+  const { isAdmin } = useAuth();
+  const { spriteMode } = useSpriteMode();
+  const [isRefreshing, startRefresh] = useTransition();
+  const [tableRows, setTableRows] = useState(rows);
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
     key: 'route',
     direction: 'asc',
   });
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const { spriteMode } = useSpriteMode();
+  const [teamFilter, setTeamFilter] = useState<TeamFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<EncounterStatusFilter>('all');
+  const [pokemonOptions, setPokemonOptions] = useState<PokemonListItem[] | null>(null);
+  const [pokemonOptionsLoading, setPokemonOptionsLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const pokemonOptionsRequest = useRef<Promise<void> | null>(null);
+
+  useEffect(() => {
+    setTableRows(rows);
+  }, [rows]);
+
+  useEffect(() => {
+    if (isAdmin) return;
+    setPokemonOptions(null);
+    setPokemonOptionsLoading(false);
+    pokemonOptionsRequest.current = null;
+  }, [isAdmin]);
+
+  const refreshTable = useCallback(() => {
+    startRefresh(() => router.refresh());
+  }, [router]);
+
+  const loadPokemonOptions = useCallback(() => {
+    if (!isAdmin || pokemonOptions || pokemonOptionsRequest.current) return;
+
+    setPokemonOptionsLoading(true);
+    setActionMessage(null);
+    const request = fetchJson<{ data?: PokemonListItem[] }>(
+      '/api/admin/pokemon/options',
+      { cache: 'force-cache' },
+    )
+      .then((payload) => {
+        setPokemonOptions(payload.data ?? []);
+      })
+      .catch((error: unknown) => {
+        setActionMessage(
+          error instanceof Error
+            ? error.message
+            : 'Pokémon-Auswahl konnte nicht geladen werden.',
+        );
+      })
+      .finally(() => {
+        setPokemonOptionsLoading(false);
+        pokemonOptionsRequest.current = null;
+      });
+
+    pokemonOptionsRequest.current = request;
+  }, [isAdmin, pokemonOptions]);
 
   const handleSort = (key: SortKey) => {
-    setSort((prev) => {
-      if (prev.key === key) {
+    setSort((previous) => {
+      if (previous.key === key) {
         return {
           key,
-          direction: prev.direction === 'asc' ? 'desc' : 'asc',
+          direction: previous.direction === 'asc' ? 'desc' : 'asc',
         };
       }
       return { key, direction: 'asc' };
     });
   };
 
-  const sortedRows = useMemo(() => {
-    const sorted = [...rows];
+  const handleUpdated = useCallback((updated: EncounterActionMenuTarget) => {
+    setTableRows((currentRows) =>
+      currentRows.map((row) => {
+        let changed = false;
+        const nextCells = row.players.map((cell) => {
+          if (!cell || cell.encounter.id !== updated.id) return cell;
+          changed = true;
+          // Der kompakte Mutationsvertrag enthält bewusst keine Basiswerte
+          // oder Typen. Bei einem Pokémon-Tausch bleibt die alte Zelle daher
+          // geschlossen konsistent, bis router.refresh() alle Werte ersetzt.
+          if (cell.encounter.pokemon.id !== updated.pokemon.id) return cell;
+          return {
+            ...cell,
+            encounter: updated,
+            status: getEncounterStatus(updated),
+          };
+        });
+
+        return changed
+          ? { ...row, players: nextCells, status: getRowStatus(nextCells) }
+          : row;
+      }),
+    );
+    setActionMessage('Änderung gespeichert. Die Tabelle wird aktualisiert.');
+    refreshTable();
+  }, [refreshTable]);
+
+  const handleRouteUpdated = useCallback((updatedEncounters: EncounterActionMenuTarget[]) => {
+    const updatesById = new Map(
+      updatedEncounters.map((encounter) => [encounter.id, encounter]),
+    );
+
+    setTableRows((currentRows) =>
+      currentRows.map((row) => {
+        let changed = false;
+        const nextCells = row.players.map((cell) => {
+          if (!cell) return cell;
+          const updated = updatesById.get(cell.encounter.id);
+          if (!updated) return cell;
+          changed = true;
+          return {
+            ...cell,
+            encounter: updated,
+            status: getEncounterStatus(updated),
+          };
+        });
+
+        return changed
+          ? {
+              ...row,
+              players: nextCells,
+              status: getRowStatus(nextCells),
+            }
+          : row;
+      }),
+    );
+    setActionMessage(
+      `${updatedEncounters.length} Pokémon der Route aktualisiert. Die Tabelle wird neu abgeglichen.`,
+    );
+    refreshTable();
+  }, [refreshTable]);
+
+  const handleRouteDeleted = useCallback((routeId: number) => {
+    setTableRows((currentRows) =>
+      currentRows.map((row) =>
+        row.id === routeId
+          ? {
+              ...row,
+              players: row.players.map(() => null),
+              averageBasePoints: null,
+              status: null,
+            }
+          : row,
+      ),
+    );
+    setActionMessage('Alle Encounter-Zuordnungen der Route wurden gelöscht.');
+    refreshTable();
+  }, [refreshTable]);
+
+  const visibleRows = useMemo(() => {
+    const filtered = tableRows.filter((row) =>
+      rowMatchesTableFilters(row.players, teamFilter, statusFilter),
+    );
     const multiplier = sort.direction === 'asc' ? 1 : -1;
 
-    sorted.sort((a, b) => {
+    return [...filtered].sort((left, right) => {
       if (sort.key === 'route') {
-        return a.name.localeCompare(b.name) * multiplier;
+        return left.name.localeCompare(right.name, 'de-DE') * multiplier;
       }
-
       if (sort.key === 'average') {
-        const aValue = a.averageBasePoints ?? -Infinity;
-        const bValue = b.averageBasePoints ?? -Infinity;
-        return (aValue - bValue) * multiplier;
+        return (
+          ((left.averageBasePoints ?? -Infinity) -
+            (right.averageBasePoints ?? -Infinity)) *
+          multiplier
+        );
       }
 
-      const [, indexString] = sort.key.split('-');
-      const playerIndex = parseInt(indexString, 10);
-      const aCell = a.players[playerIndex];
-      const bCell = b.players[playerIndex];
+      const playerIndex = Number.parseInt(sort.key.split('-')[1], 10);
+      const leftCell = left.players[playerIndex];
+      const rightCell = right.players[playerIndex];
+      const leftValue = leftCell?.basePoints ?? -Infinity;
+      const rightValue = rightCell?.basePoints ?? -Infinity;
 
-      const aValue = aCell?.basePoints ?? -Infinity;
-      const bValue = bCell?.basePoints ?? -Infinity;
-
-      if (aValue === bValue) {
-        const aName = aCell?.pokemonGermanName || aCell?.pokemonName || '';
-        const bName = bCell?.pokemonGermanName || bCell?.pokemonName || '';
-        return aName.localeCompare(bName) * multiplier;
+      if (leftValue === rightValue) {
+        const leftName = leftCell
+          ? leftCell.encounter.pokemon.nameGerman || leftCell.encounter.pokemon.name
+          : '';
+        const rightName = rightCell
+          ? rightCell.encounter.pokemon.nameGerman || rightCell.encounter.pokemon.name
+          : '';
+        return leftName.localeCompare(rightName, 'de-DE') * multiplier;
       }
 
-      return (aValue - bValue) * multiplier;
+      return (leftValue - rightValue) * multiplier;
     });
+  }, [sort, statusFilter, tableRows, teamFilter]);
 
-    const filtered = onlyAvailable
-      ? sorted.filter((row) => row.status === null)
-      : sorted;
-
-    return filtered;
-  }, [rows, sort, onlyAvailable]);
+  const hasFilters = teamFilter !== 'all' || statusFilter !== 'all';
 
   const renderPlayerCell = (cell: PlayerCell | null) => {
-    if (!cell) {
-      return <span className="text-gray-400">-</span>;
-    }
+    if (!cell) return <span className="text-[var(--text-tertiary)]">–</span>;
 
-    const displayName = cell.pokemonGermanName || cell.pokemonName;
-    const typeText =
-      cell.types.length > 0
-        ? cell.types
-            .map((type) => {
-              const lower = type.toLowerCase();
-              return TYPE_TRANSLATIONS[lower] || type.charAt(0).toUpperCase() + type.slice(1);
-            })
-            .join(' / ')
-        : null;
-
-    // Sprite-URL basierend auf dem Modus wählen
-    const displaySpriteUrl = spriteMode === 'animated' && cell.spriteGifUrl
-      ? cell.spriteGifUrl
-      : cell.spriteUrl;
+    const { encounter } = cell;
+    const pokemonName = encounter.pokemon.nameGerman || encounter.pokemon.name;
+    const displayName = encounter.nickname || pokemonName;
+    const typeText = cell.types
+      .map((type) => {
+        const normalized = type.toLowerCase();
+        return TYPE_TRANSLATIONS[normalized] || type;
+      })
+      .join(' / ');
+    const displaySpriteUrl =
+      spriteMode === 'animated' && encounter.pokemon.spriteGifUrl
+        ? encounter.pokemon.spriteGifUrl
+        : encounter.pokemon.spriteUrl;
 
     return (
-      <div className="flex items-start gap-3">
-        {displaySpriteUrl && (
-          <Image
-            src={displaySpriteUrl}
-            alt={displayName}
-            width={64}
-            height={64}
-            className="w-16 h-16 object-contain flex-shrink-0"
-            unoptimized={spriteMode === 'animated'}
-          />
-        )}
-        <div className="flex flex-col">
-          <span className="font-semibold text-[var(--foreground)]">{displayName}</span>
-          {typeText && (
-            <span className="text-sm text-[var(--text-secondary)]">{typeText}</span>
-          )}
-          <span className="text-sm font-medium text-purple-400">
-            BP: {cell.basePoints ?? '-'}
-          </span>
-          {cell.status && (
-            <span
-              className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium border ${
-                cell.status === 'ko'
-                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                  : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-              }`}
-            >
-              {cell.status === 'ko' ? 'K.O.' : 'Nicht gefangen'}
+      <div className="flex min-w-56 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          {displaySpriteUrl ? (
+            <Image
+              src={displaySpriteUrl}
+              alt=""
+              width={52}
+              height={52}
+              className="h-14 w-14 shrink-0 object-contain"
+              unoptimized={spriteMode === 'animated'}
+            />
+          ) : (
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center border border-[var(--border-default)] bg-[var(--background-secondary)] text-xs font-bold text-[var(--text-secondary)]">
+              #{encounter.pokemon.pokedexId}
             </span>
           )}
+          <div className="min-w-0">
+            <span className="block truncate font-black uppercase leading-tight text-[var(--foreground)]">
+              {displayName}
+            </span>
+            {encounter.nickname ? (
+              <span className="block truncate text-xs text-[var(--text-secondary)]">
+                {pokemonName}
+              </span>
+            ) : null}
+            {typeText ? (
+              <span className="block text-sm text-[var(--text-secondary)]">{typeText}</span>
+            ) : null}
+            <span className="block text-sm font-black tabular-nums text-[var(--brand-blue)]">
+              {cell.basePoints} BP
+            </span>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {encounter.isKnockedOut ? (
+                <span className="app-status border-red-500 text-red-600">
+                  K.O.
+                </span>
+              ) : encounter.isNotCaught ? (
+                <span className="app-status border-amber-500 text-amber-600">
+                  Nicht gefangen
+                </span>
+              ) : (
+                <span className="app-status border-emerald-500 text-emerald-700 dark:text-emerald-300">
+                  Aktiv
+                </span>
+              )}
+              <span className="app-status text-[var(--text-secondary)]">
+                {encounter.teamSlot !== null
+                  ? `Im Team · Platz ${encounter.teamSlot}`
+                  : 'Nicht im Team'}
+              </span>
+            </div>
+          </div>
         </div>
+
+        {isAdmin ? (
+          <div
+            className="shrink-0"
+            onPointerEnter={loadPokemonOptions}
+            onPointerDownCapture={loadPokemonOptions}
+            onFocusCapture={loadPokemonOptions}
+          >
+            <EncounterActionMenu
+              encounter={encounter}
+              pokemonOptions={pokemonOptions ?? []}
+              onUpdated={handleUpdated}
+              onError={setActionMessage}
+              compact
+              disabled={isRefreshing}
+            />
+          </div>
+        ) : null}
       </div>
     );
   };
 
   const getRowHighlight = (status: EncounterStatus) => {
-    if (status === 'ko') {
-      return 'bg-red-500/10';
-    }
-    if (status === 'notCaught') {
-      return 'bg-amber-500/10';
-    }
+    if (status === 'ko') return 'bg-red-500/5';
+    if (status === 'notCaught') return 'bg-amber-500/5';
     return '';
   };
 
   return (
-    <BentoCard
-      span={{ sm: 1, md: 3, lg: 3 }}
-      className="animate-[scale-in_0.3s_ease-out]"
-    >
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-[var(--foreground)]">Encounter-Tabelle</h1>
-        <label htmlFor="only-available" className="flex items-center gap-3 cursor-pointer">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">
-            Nur verfügbare Pokémon
-          </span>
-          <input
-            id="only-available"
-            type="checkbox"
-            checked={onlyAvailable}
-            onChange={(e) => setOnlyAvailable(e.target.checked)}
-            className="h-4 w-4 rounded border-[var(--border-default)] text-purple-600 focus:ring-purple-500 bg-[var(--background-secondary)]"
-          />
-        </label>
+    <div>
+      <div className="mb-5 flex flex-col gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="encounter-table-title" className="app-section-title">Encounter-Tabelle</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {visibleRows.length} von {tableRows.length} Routen sichtbar
+              {isAdmin
+                ? ' · Routenaktionen stehen in der ersten Spalte, Pokémon-Tausch und Spitzname direkt in den Zellen bereit'
+                : ''}
+            </p>
+          </div>
+          {isRefreshing || pokemonOptionsLoading ? (
+            <p className="text-xs font-medium text-blue-600 dark:text-blue-400" aria-live="polite">
+              {isRefreshing ? 'Tabelle wird aktualisiert…' : 'Pokémon-Auswahl wird geladen…'}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="app-toolbar">
+          <div className="grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+            <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
+              Teamstatus
+              <select
+                value={teamFilter}
+                onChange={(event) => setTeamFilter(event.target.value as TeamFilter)}
+                className="h-11 border border-[var(--border-default)] bg-[var(--card-bg)] px-3 text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)]"
+              >
+                <option value="all">Alle Teamzustände</option>
+                <option value="in-team">Im Team</option>
+                <option value="not-in-team">Nicht im Team</option>
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
+              Encounter-Status
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as EncounterStatusFilter)
+                }
+                className="h-11 border border-[var(--border-default)] bg-[var(--card-bg)] px-3 text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)]"
+              >
+                <option value="all">Alle Status</option>
+                <option value="active">Aktiv</option>
+                <option value="knocked-out">K.O.</option>
+                <option value="not-caught">Nicht gefangen</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={!hasFilters}
+              onClick={() => {
+                setTeamFilter('all');
+                setStatusFilter('all');
+              }}
+              className="app-action h-11 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Filter zurücksetzen
+            </button>
+            <p className="text-xs text-[var(--text-secondary)] sm:col-span-3">
+              Eine Route bleibt sichtbar, wenn mindestens ein Encounter beide Filter erfüllt.
+            </p>
+          </div>
+        </div>
+
+        {actionMessage ? (
+          <p
+            role="status"
+            className="border-l-4 border-[var(--brand-blue)] bg-blue-500/5 px-3 py-2 text-sm text-[var(--brand-blue)]"
+          >
+            {actionMessage}
+          </p>
+        ) : null}
       </div>
-      <div className="overflow-x-auto rounded-lg border border-[var(--border-default)]">
-        <table className="w-full text-left">
-          <thead className="bg-[var(--card-bg-elevated)]">
+
+      <p className="mb-2 text-xs text-[var(--text-secondary)] sm:hidden">
+        Die Tabelle kann horizontal gescrollt werden.
+      </p>
+      <div className="-mx-4 overflow-x-auto border-y border-[var(--border-default)] sm:mx-0">
+        <table className="app-data-table min-w-[64rem] w-full text-left">
+          <caption className="sr-only">
+            Encounters nach Route und Spieler mit Team- und Encounter-Status
+          </caption>
+          <thead className="bg-[var(--brand-navy)] text-white">
             <tr className="border-b border-[var(--border-default)]">
-              <th className="px-4 py-3">
+              <th
+                scope="col"
+                aria-sort={sort.key === 'route' ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                className="sticky left-0 z-20 min-w-40 bg-[var(--brand-navy)] px-4 py-3"
+              >
                 <button
                   type="button"
                   onClick={() => handleSort('route')}
-                  className="flex items-center gap-2 font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300"
+                  className="flex min-h-11 items-center gap-2 text-xs font-black uppercase tracking-widest text-white transition-colors hover:text-[var(--brand-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   Route
-                  {sort.key === 'route' && (
-                    <span className="text-xs">{getSortIndicator(sort.direction)}</span>
-                  )}
+                  {sort.key === 'route' ? <SortIndicator direction={sort.direction} /> : null}
                 </button>
               </th>
-              {players.map((player, index) => (
-                <th key={player.id} className="px-4 py-3">
+              {players.map((player, index) => {
+                return (
+                <th
+                  key={player.id}
+                  scope="col"
+                  aria-sort={sort.key === `player-${index}` ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  className="min-w-64 px-4 py-3"
+                >
                   <button
                     type="button"
                     onClick={() => handleSort(`player-${index}`)}
-                    className="flex items-center gap-2 font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300"
+                  className="flex min-h-11 items-center gap-2 text-xs font-black uppercase tracking-widest text-white transition-colors hover:text-[var(--brand-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
-                    {player.avatar ? (
-                      <Image
-                        src={player.avatar}
-                        alt={player.name}
-                        width={24}
-                        height={24}
-                        className="rounded-full"
-                        unoptimized
-                      />
-                    ) : (
-                      <div
-                        className="w-6 h-6 rounded-full"
-                        style={{ backgroundColor: player.color }}
-                      />
-                    )}
+                    <PlayerAvatar
+                      avatar={player.avatar}
+                      name={player.name}
+                      color={player.color}
+                      size={24}
+                      className="h-6 w-6"
+                    />
                     <span>{player.name}</span>
-                    {sort.key === `player-${index}` && (
-                      <span className="text-xs">
-                        {getSortIndicator(sort.direction)}
-                      </span>
-                    )}
+                    {sort.key === `player-${index}` ? (
+                      <SortIndicator direction={sort.direction} />
+                    ) : null}
                   </button>
                 </th>
-              ))}
-              <th className="px-4 py-3 text-right">
+                );
+              })}
+              <th
+                scope="col"
+                aria-sort={sort.key === 'average' ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                className="min-w-48 px-4 py-3 text-right"
+              >
                 <button
                   type="button"
                   onClick={() => handleSort('average')}
-                  className="flex items-center gap-2 font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] transition-colors duration-300 ml-auto"
+                  className="ml-auto flex min-h-11 items-center gap-2 text-xs font-black uppercase tracking-widest text-white transition-colors hover:text-[var(--brand-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
-                  Durchschnitt Gesamt BP
-                  {sort.key === 'average' && (
-                    <span className="text-xs">{getSortIndicator(sort.direction)}</span>
-                  )}
+                  Durchschnitt Gesamt-BP
+                  {sort.key === 'average' ? <SortIndicator direction={sort.direction} /> : null}
                 </button>
               </th>
             </tr>
           </thead>
           <tbody>
-            {sortedRows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={players.length + 2}
-                  className="px-4 py-8 text-center text-[var(--text-secondary)]"
+                  className="px-4 py-10 text-center text-[var(--text-secondary)]"
                 >
-                  Keine Encounters gefunden.
+                  Keine Encounters entsprechen den gewählten Filtern.
                 </td>
               </tr>
             ) : (
-              sortedRows.map((row) => (
+              visibleRows.map((row) => (
                 <tr
                   key={row.id}
-                  className={`border-b border-[var(--border-default)] last:border-b-0 hover:bg-[var(--background-tertiary)] transition-colors duration-300 ${getRowHighlight(row.status)}`}
+                  className={`border-b border-[var(--border-default)] transition-colors last:border-b-0 hover:bg-[var(--background-secondary)] ${getRowHighlight(row.status)}`}
                 >
-                  <td className="px-4 py-3 font-medium text-[var(--foreground)]">
-                    {row.name}
-                  </td>
+                  <th
+                    scope="row"
+                    className="sticky left-0 z-10 border-r border-[var(--border-default)] bg-[var(--card-bg)] px-4 py-3 text-left font-black uppercase text-[var(--foreground)]"
+                  >
+                    <div className="flex min-w-36 items-center justify-between gap-2">
+                      <span>{row.name}</span>
+                      {isAdmin ? (
+                        <RouteLinkActionMenu
+                          link={{
+                            route: { id: row.id, name: row.name },
+                            encounters: row.players.flatMap((cell) =>
+                              cell ? [cell.encounter] : [],
+                            ),
+                            expectedPlayerCount: players.length,
+                          }}
+                          onUpdated={handleRouteUpdated}
+                          onDeleted={handleRouteDeleted}
+                          onError={setActionMessage}
+                          triggerLabel="Link"
+                          disabled={isRefreshing}
+                        />
+                      ) : null}
+                    </div>
+                  </th>
                   {row.players.map((cell, index) => (
-                    <td key={`${row.id}-player-${index}`} className="px-4 py-3">
+                    <td key={`${row.id}-player-${index}`} className="px-4 py-3 align-top">
                       {renderPlayerCell(cell)}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right font-semibold text-purple-400">
+                  <td className="px-4 py-3 text-right align-middle text-lg font-black tabular-nums text-[var(--brand-blue)]">
                     {row.averageBasePoints !== null
                       ? Math.round(row.averageBasePoints)
-                      : '-'}
+                      : '–'}
                   </td>
                 </tr>
               ))
@@ -309,7 +593,6 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
           </tbody>
         </table>
       </div>
-    </BentoCard>
+    </div>
   );
 }
-

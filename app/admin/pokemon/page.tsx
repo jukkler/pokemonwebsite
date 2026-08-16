@@ -219,14 +219,14 @@ export default function AdminPokemonPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-4xl font-bold text-[var(--foreground)] mb-8">
+    <main className="admin-page">
+      <h1 className="text-4xl font-bold text-[var(--foreground)]">
         Pokémon-Cache verwalten
       </h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+      <section className="app-band grid grid-cols-1 divide-y divide-[var(--border-default)] md:grid-cols-2 md:divide-x md:divide-y-0">
+        <div className="p-5 sm:p-6">
           <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-2">
             Gecachte Pokémon
           </h3>
@@ -236,7 +236,7 @@ export default function AdminPokemonPage() {
           </p>
         </div>
 
-        <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+        <div className="p-5 sm:p-6">
           <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-2">
             Fortschritt
           </h3>
@@ -245,9 +245,9 @@ export default function AdminPokemonPage() {
               {((count / MAX_AVAILABLE) * 100).toFixed(1)}%
             </p>
           </div>
-          <div className="w-full bg-[var(--background-secondary)] rounded-full h-2 mt-2">
+          <div className="mt-2 h-2 w-full bg-[var(--background-secondary)]">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all"
+              className="h-2 bg-[var(--brand-blue)] transition-all"
               style={{ width: `${Math.min((count / MAX_AVAILABLE) * 100, 100)}%` }}
             />
           </div>
@@ -257,10 +257,10 @@ export default function AdminPokemonPage() {
             {liveProgress.isRunning ? '(läuft …)' : '(inaktiv)'}
           </p>
         </div>
-      </div>
+      </section>
 
       {/* Sync-Aktionen */}
-      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 mb-8 border border-[var(--border-default)]">
+      <section className="app-section p-5 sm:p-6">
         <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Synchronisierung</h2>
 
         <div className="space-y-4">
@@ -361,10 +361,10 @@ export default function AdminPokemonPage() {
             </form>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Pokémon-Liste */}
-      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+      <section className="app-section overflow-hidden p-5 sm:p-6">
         <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Gecachte Pokémon</h2>
 
         {loading ? (
@@ -402,8 +402,8 @@ export default function AdminPokemonPage() {
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

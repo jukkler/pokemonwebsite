@@ -1,105 +1,53 @@
-/**
- * Admin API: Route "Nicht gefangen" Status
- * POST /api/admin/routes/[id]/notcaught - Route als "Nicht gefangen" markieren
- * DELETE /api/admin/routes/[id]/notcaught - Route reaktivieren
- */
+/** Legacy adapter. New clients use PATCH /api/admin/encounter-links/[routeId]. */
 
-import { NextRequest } from 'next/server';
-import {
-  withAdminAuthAndErrorHandling,
-  parseId,
-  validateRequired,
-  badRequest,
-  success,
-} from '@/lib/api-utils';
-import prisma from '@/lib/prisma';
-import { emitEvent } from '@/lib/event-store';
+import { NextRequest, NextResponse } from 'next/server';
+import { badRequest, withAdminAuthAndErrorHandling } from '@/lib/api-utils';
+import { parseEncounterLinkAdminAction } from '@/lib/encounter-link-admin';
+import { executeEncounterLinkAdminAction } from '@/lib/encounter-link-admin.server';
+
+function responseFor(result: Awaited<ReturnType<typeof executeEncounterLinkAdminAction>>) {
+  return result.ok
+    ? NextResponse.json(result.response)
+    : NextResponse.json(
+        { error: result.error, conflict: result.conflict },
+        { status: result.status },
+      );
+}
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   return withAdminAuthAndErrorHandling(async () => {
-    const { id } = await params;
-    let routeId: number;
+    const routeId = Number((await params).id);
+    if (!Number.isInteger(routeId) || routeId < 1) return badRequest('Ungültige Routen-ID');
 
+    let body: unknown;
     try {
-      routeId = parseId(id, 'Routen-ID');
-    } catch (error) {
-      return badRequest(error instanceof Error ? error.message : 'Ungültige Routen-ID');
+      const requestBody = await request.json() as Record<string, unknown>;
+      body = {
+        action: 'not-caught',
+        causedBy: requestBody.causedBy,
+        reason: requestBody.reason,
+      };
+    } catch {
+      return badRequest('Der Request-Body muss gültiges JSON enthalten');
     }
-
-    const body = await request.json();
-    const { causedBy, reason } = body;
-
-    try {
-      validateRequired(body, ['causedBy']);
-    } catch (error) {
-      return badRequest(
-        error instanceof Error ? error.message : 'Verursacher ist erforderlich'
-      );
-    }
-
-    // Pokemon-Namen vor dem Update laden (für Event)
-    const encounters = await prisma.encounter.findMany({
-      where: { routeId },
-      include: { pokemon: true, route: true, player: true },
-    });
-
-    // Setze alle Encounters dieser Route auf "Nicht gefangen"
-    await prisma.encounter.updateMany({
-      where: { routeId },
-      data: {
-        isNotCaught: true,
-        notCaughtBy: String(causedBy).trim(),
-        notCaughtReason: reason && String(reason).trim() ? String(reason).trim() : null,
-        notCaughtDate: new Date(),
-        teamSlot: null, // Entferne aus Team
-      },
-    });
-
-    // Event emittieren (Pokemon des Verursachers)
-    if (encounters.length > 0) {
-      const causedByName = String(causedBy).trim();
-      const match = encounters.find(e => e.player.name === causedByName) || encounters[0];
-      emitEvent('pokemon_not_caught', {
-        pokemonName: match.pokemon.name,
-        pokemonNameGerman: match.pokemon.nameGerman ?? undefined,
-        playerName: causedByName,
-        routeName: match.route.name,
-      });
-    }
-
-    return success({ message: `Route ${routeId} als "Nicht gefangen" markiert.` });
-  }, 'setting route not-caught status');
+    const parsed = parseEncounterLinkAdminAction(body);
+    if (!parsed.ok) return badRequest(parsed.error);
+    return responseFor(await executeEncounterLinkAdminAction(routeId, parsed.action));
+  }, 'marking encounter link not caught');
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   return withAdminAuthAndErrorHandling(async () => {
-    const { id } = await params;
-    let routeId: number;
-
-    try {
-      routeId = parseId(id, 'Routen-ID');
-    } catch (error) {
-      return badRequest(error instanceof Error ? error.message : 'Ungültige Routen-ID');
-    }
-
-    // Reaktiviere alle Encounters dieser Route
-    await prisma.encounter.updateMany({
-      where: { routeId },
-      data: {
-        isNotCaught: false,
-        notCaughtBy: null,
-        notCaughtReason: null,
-        notCaughtDate: null,
-      },
-    });
-
-    return success({ message: `Route ${routeId} reaktiviert.` });
-  }, 'reactivating route');
+    const routeId = Number((await params).id);
+    if (!Number.isInteger(routeId) || routeId < 1) return badRequest('Ungültige Routen-ID');
+    return responseFor(
+      await executeEncounterLinkAdminAction(routeId, { action: 'reactivate' }),
+    );
+  }, 'reactivating encounter link');
 }
-

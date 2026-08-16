@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import BadgeProgressTracker from './BadgeProgressTracker';
+import { calculateWinRate } from '@/lib/run-lifecycle';
 
 interface GameVersion {
   key: string;
@@ -45,7 +46,7 @@ interface RunStatsPanelProps {
 export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
   const [stats, setStats] = useState<RunStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('');
   const [pauseLoading, setPauseLoading] = useState(false);
   const [badgeLoading, setBadgeLoading] = useState(false);
@@ -171,7 +172,14 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
     return null;
   }
 
-  const { activeRun, totalRuns, failedRuns, aggregatedPlayerStats } = stats;
+  const {
+    activeRun,
+    totalRuns,
+    failedRuns,
+    completedRuns,
+    aggregatedPlayerStats,
+  } = stats;
+  const winRate = calculateWinRate(completedRuns, failedRuns);
 
   // Kein aktiver Run und keine Historie -> nichts anzeigen
   if (!activeRun && totalRuns === 0) {
@@ -181,16 +189,16 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
   return (
     <>
       {/* Header mit Run-Info */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 border-b-2 border-[var(--foreground)] pb-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3 flex-wrap">
             {activeRun?.gameVersion && (
-              <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-sm font-medium border border-indigo-500/30">
+              <span className="app-status border-[var(--brand-blue)] text-[var(--brand-blue)]">
                 {activeRun.gameVersion.name}
               </span>
             )}
             {activeRun && (
-              <span className="text-lg font-bold text-[var(--foreground)]">
+              <span className="text-lg font-black uppercase text-[var(--foreground)]">
                 Run #{activeRun.runNumber}
               </span>
             )}
@@ -205,7 +213,7 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
                   {elapsedTime}
                 </span>
                 {stats.activeRun?.pausedAt && (
-                  <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full font-medium">
+                  <span className="app-status border-amber-500 text-amber-600">
                     Pausiert
                   </span>
                 )}
@@ -216,10 +224,10 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
                 <button
                   onClick={togglePause}
                   disabled={pauseLoading}
-                  className={`p-1.5 rounded-lg transition-all duration-300 ${
+                  className={`app-action min-h-9 px-2 transition-colors ${
                     pauseLoading
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:bg-[var(--background-tertiary)] hover:scale-110'
+                      : 'hover:border-[var(--brand-blue)]'
                   }`}
                   title={stats.activeRun?.pausedAt ? 'Timer fortsetzen' : 'Timer pausieren'}
                 >
@@ -238,10 +246,17 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
           )}
         </div>
 
-        {failedRuns > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-red-500 font-medium">
-              {failedRuns} Run{failedRuns !== 1 ? 's' : ''} gescheitert
+        {winRate !== null && (
+          <div className="flex flex-wrap items-center gap-2 border-y border-[var(--border-default)] px-3 py-2 text-sm">
+            <span className="font-black text-emerald-600 dark:text-emerald-300">
+              {completedRuns} {completedRuns === 1 ? 'Sieg' : 'Siege'}
+            </span>
+            <span aria-hidden="true" className="text-[var(--text-tertiary)]">·</span>
+            <span className="font-black text-red-600 dark:text-red-300">
+              {failedRuns} {failedRuns === 1 ? 'Niederlage' : 'Niederlagen'}
+            </span>
+            <span className="app-status font-black text-[var(--foreground)]">
+              {winRate}% Siegquote
             </span>
           </div>
         )}
@@ -252,7 +267,8 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
         <>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-all duration-300 font-medium"
+            className="app-action flex items-center gap-2 text-sm"
+            aria-expanded={expanded}
           >
             <span className="transition-transform duration-300" style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
             <span>Übergreifende Statistiken {expanded ? 'ausblenden' : 'anzeigen'}</span>
@@ -261,17 +277,17 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
           {/* Statistik-Tabelle */}
           {expanded && (
             <div className="mt-4 overflow-x-auto animate-[slide-in-up_0.3s_ease-out]">
-              <table className="w-full text-xs md:text-sm">
+              <table className="app-data-table w-full text-xs md:text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--border-default)]">
-                    <th className="text-left py-2 px-2 md:px-3 font-semibold text-[var(--text-secondary)]">Spieler</th>
-                    <th className="text-center py-2 px-1 md:px-2 font-semibold text-[var(--text-secondary)]">
+                  <tr className="border-b border-[var(--border-default)] bg-[var(--brand-navy)] text-white">
+                    <th className="px-2 py-2 text-left font-black uppercase tracking-widest md:px-3">Spieler</th>
+                    <th className="px-1 py-2 text-center font-black uppercase tracking-widest md:px-2">
                       <span title="Pokémon K.O. über alle Runs">K.O.</span>
                     </th>
-                    <th className="text-center py-2 px-1 md:px-2 font-semibold text-[var(--text-secondary)]">
+                    <th className="px-1 py-2 text-center font-black uppercase tracking-widest md:px-2">
                       <span title="Nicht gefangen über alle Runs">N.g.</span>
                     </th>
-                    <th className="text-center py-2 px-2 md:px-3 font-semibold text-[var(--text-secondary)]">
+                    <th className="px-2 py-2 text-center font-black uppercase tracking-widest md:px-3">
                       <span title="Runs gefailed">Gefailed</span>
                     </th>
                   </tr>
@@ -283,21 +299,21 @@ export default function RunStatsPanel({ isAdmin = false }: RunStatsPanelProps) {
 
                       {/* K.O. */}
                       <td className="py-2 px-1 md:px-2 text-center">
-                        <span className={`px-1.5 md:px-2 py-0.5 rounded transition-all duration-300 text-xs font-semibold ${player.totalKnockedOut > 0 ? 'bg-red-500/30 text-red-300 border border-red-500/40' : 'text-[var(--text-tertiary)]'}`}>
+                        <span className={`app-status text-xs ${player.totalKnockedOut > 0 ? 'border-red-500 text-red-600 dark:text-red-300' : 'text-[var(--text-tertiary)]'}`}>
                           {player.totalKnockedOut}
                         </span>
                       </td>
 
                       {/* Nicht gefangen */}
                       <td className="py-2 px-1 md:px-2 text-center">
-                        <span className={`px-1.5 md:px-2 py-0.5 rounded transition-all duration-300 text-xs font-semibold ${player.totalNotCaught > 0 ? 'bg-orange-500/30 text-orange-300 border border-orange-500/40' : 'text-[var(--text-tertiary)]'}`}>
+                        <span className={`app-status text-xs ${player.totalNotCaught > 0 ? 'border-amber-500 text-amber-600 dark:text-amber-300' : 'text-[var(--text-tertiary)]'}`}>
                           {player.totalNotCaught}
                         </span>
                       </td>
 
                       {/* Gefailed */}
                       <td className="py-2 px-2 md:px-3 text-center">
-                        <span className={`px-2 py-0.5 rounded transition-all duration-300 ${player.runsLost > 0 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 font-bold' : 'text-[var(--text-tertiary)]'}`}>
+                        <span className={`app-status ${player.runsLost > 0 ? 'border-[var(--brand-blue)] font-bold text-[var(--brand-blue)]' : 'text-[var(--text-tertiary)]'}`}>
                           {player.runsLost}
                         </span>
                       </td>

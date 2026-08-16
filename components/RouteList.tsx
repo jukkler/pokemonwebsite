@@ -7,29 +7,70 @@
 'use client';
 
 import { useState, useRef, useEffect, memo } from 'react';
-import Image from 'next/image';
+import Link from 'next/link';
 import PokemonCard from './PokemonCard';
-import PokemonStatsCard from './PokemonStatsCard';
 import EvolutionMenu from './EvolutionMenu';
-import PokemonSwapDialog from './PokemonSwapDialog';
-import { Dialog, DialogActions, FormField, Select, Textarea } from './ui';
+import EncounterActionMenu from './admin/EncounterActionMenu';
+import RouteLinkActionMenu from './admin/RouteLinkActionMenu';
+import PlayerAvatar from './PlayerAvatar';
 import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
 import { calculateAverageStats, filterPokemonBySearch } from '@/lib/team-utils';
-import { parseTypes } from '@/lib/typeEffectiveness';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
-import { getAvatarUrl } from '@/lib/avatars';
+import { buildPokeradarHref } from '@/lib/pokeradar-team-data';
 import type { EncounterWithMeta, PlayerBase, PokemonListItem } from '@/lib/types';
+import type { EncounterAdminTarget } from '@/lib/encounter-admin';
+
+function buildRouteComparisonHref(route: Route) {
+  const stableEncounters = [...route.encounters]
+    .sort((left, right) => left.player.id - right.player.id || left.id - right.id);
+
+  return buildPokeradarHref(stableEncounters.map((encounter) => ({
+    pokedexId: encounter.pokemon.pokedexId,
+    status: encounter.isNotCaught
+      ? 'not-caught'
+      : encounter.isKnockedOut
+        ? 'ko'
+        : encounter.teamSlot !== null
+          ? 'team'
+          : 'caught',
+  })), {
+    source: 'route',
+    sourceLabel: route.name,
+  });
+}
 
 // =============================================================================
 // Types
 // =============================================================================
 
+interface RouteEncounter extends EncounterWithMeta {
+  pokemon: EncounterWithMeta['pokemon'] & {
+    id: number;
+    spriteGifUrl: string | null;
+  };
+}
+
 interface Route {
   id: number;
   name: string;
   order: number;
-  encounters: EncounterWithMeta[];
+  encounters: RouteEncounter[];
+}
+
+function toEncounterAdminTarget(encounter: RouteEncounter, route: Route): EncounterAdminTarget {
+  return {
+    ...encounter,
+    route: { id: route.id, name: route.name },
+    pokemon: {
+      id: encounter.pokemon.id,
+      pokedexId: encounter.pokemon.pokedexId,
+      name: encounter.pokemon.name,
+      nameGerman: encounter.pokemon.nameGerman,
+      spriteUrl: encounter.pokemon.spriteUrl,
+      spriteGifUrl: encounter.pokemon.spriteGifUrl,
+    },
+  };
 }
 
 interface RouteListProps {
@@ -97,7 +138,7 @@ function EditableRouteName({
           onKeyDown={handleKeyDown}
           onBlur={onEditSave}
           disabled={isProcessing}
-          className="text-2xl font-semibold px-2 py-1 bg-[var(--background-secondary)] text-[var(--foreground)] border border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="min-h-10 max-w-64 border-b-2 border-[var(--brand-blue)] bg-transparent px-1 text-lg font-black uppercase text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
         />
       </div>
     );
@@ -105,7 +146,7 @@ function EditableRouteName({
 
   return (
     <div className="flex items-center gap-2">
-      <h3 className={`text-2xl font-semibold ${isInactive ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--foreground)]'}`}>
+      <h3 className={`text-lg font-black uppercase leading-tight ${isInactive ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--foreground)]'}`}>
         {route.name}
       </h3>
       {isAdmin && (
@@ -130,7 +171,6 @@ interface RouteHeaderProps {
   isNotCaught: boolean;
   koInfo: EncounterWithMeta | null;
   notCaughtInfo: EncounterWithMeta | null;
-  currentSlot: number | null;
   routeAverage: { total: number } | null;
   isAdmin: boolean;
   isEditing: boolean;
@@ -154,7 +194,6 @@ function RouteHeader({
   isNotCaught,
   koInfo,
   notCaughtInfo,
-  currentSlot,
   routeAverage,
   isAdmin,
   isEditing,
@@ -171,7 +210,10 @@ function RouteHeader({
   isProcessing,
 }: RouteHeaderProps) {
   return (
-    <div className="flex items-center gap-3 flex-wrap group">
+    <div className="group flex flex-wrap items-center gap-3">
+      <span className="w-8 shrink-0 text-right text-sm font-black tabular-nums text-[var(--brand-red)]">
+        {String(route.order).padStart(2, '0')}
+      </span>
       {/* Move Up/Down Buttons */}
       {isAdmin && !isEditing && (
         <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition">
@@ -226,26 +268,20 @@ function RouteHeader({
       )}
       
       {isKnockedOut && koInfo && (
-        <span className="text-xs bg-red-500/20 text-red-400 px-2.5 py-1 rounded-full font-medium border border-red-500/30">
-          💀 {koInfo.koCausedBy}
+        <span className="app-status border-red-500 text-red-600">
+          K.O. · {koInfo.koCausedBy}
         </span>
       )}
 
       {isNotCaught && notCaughtInfo && (
-        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2.5 py-1 rounded-full font-medium border border-yellow-500/30">
-          ❌ {notCaughtInfo.notCaughtBy}
-        </span>
-      )}
-
-      {currentSlot && !isInactive && (
-        <span className="text-xs bg-green-500/20 text-green-400 px-2.5 py-1 rounded-full font-medium border border-green-500/30">
-          Im Team (Slot {currentSlot})
+        <span className="app-status border-amber-500 text-amber-600">
+          Nicht gefangen · {notCaughtInfo.notCaughtBy}
         </span>
       )}
 
       {routeAverage && !isInactive && (
-        <span className="text-xs bg-blue-500/20 text-blue-400 px-2.5 py-1 rounded-full font-medium border border-blue-500/30">
-          Gesamt-BP: {routeAverage.total}
+        <span className="app-status border-[var(--brand-blue)] text-[var(--brand-blue)]">
+          Ø BP {routeAverage.total}
         </span>
       )}
     </div>
@@ -257,16 +293,23 @@ interface StatusInfoBoxProps {
   info: EncounterWithMeta;
 }
 
+const statusDateFormatter = new Intl.DateTimeFormat('de-DE', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Europe/Berlin',
+});
+
 function StatusInfoBox({ type, info }: StatusInfoBoxProps) {
   const isKo = type === 'ko';
+  const reason = isKo ? info.koReason : info.notCaughtReason;
   const colors = isKo
-    ? { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400', icon: '💀' }
-    : { bg: 'bg-yellow-500/20', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '❌' };
+    ? { bg: 'bg-red-500/5', border: 'border-red-500', text: 'text-red-700 dark:text-red-300', icon: 'K.O.' }
+    : { bg: 'bg-amber-500/5', border: 'border-amber-500', text: 'text-amber-700 dark:text-amber-300', icon: 'OFFEN' };
 
   return (
-    <div className={`mb-4 ${colors.bg} border ${colors.border} rounded-lg p-3 text-sm`}>
+    <div className={`mb-4 ${colors.bg} border-l-4 ${colors.border} px-3 py-2 text-sm`}>
       <div className="flex items-start gap-2">
-        <span className="font-bold text-lg">{colors.icon}</span>
+        <span className="text-xs font-black tracking-widest">{colors.icon}</span>
         <div className="flex-1">
           <p className={`${colors.text} font-bold`}>
             {isKo ? 'Diese Route ist K.O.' : 'Auf dieser Route wurde nicht gefangen'}
@@ -274,12 +317,14 @@ function StatusInfoBox({ type, info }: StatusInfoBoxProps) {
           <p className={`${colors.text} mt-1`}>
             <strong>Verursacher:</strong> {isKo ? info.koCausedBy : info.notCaughtBy}
           </p>
-          <p className={`${colors.text}`}>
-            <strong>Grund:</strong> {isKo ? info.koReason : info.notCaughtReason}
-          </p>
+          {reason ? (
+            <p className={`${colors.text}`}>
+              <strong>Grund:</strong> {reason}
+            </p>
+          ) : null}
           {(isKo ? info.koDate : info.notCaughtDate) && (
             <p className={`${colors.text} opacity-70 text-xs mt-1`}>
-              {new Date((isKo ? info.koDate : info.notCaughtDate)!).toLocaleString('de-DE')}
+              {statusDateFormatter.format(new Date((isKo ? info.koDate : info.notCaughtDate)!))}
             </p>
           )}
         </div>
@@ -311,11 +356,11 @@ function PokemonSearchInput({
         value={searchValue}
         onChange={(e) => onSearchChange(e.target.value)}
         disabled={isAdding}
-        className="w-full px-3 py-2 bg-[var(--background-secondary)] text-[var(--foreground)] border border-[var(--border-default)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="min-h-11 w-full border border-[var(--border-default)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
       />
 
       {searchValue && filteredPokemon.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto border border-[var(--border-default)] bg-[var(--card-bg-elevated)] shadow-lg">
           {filteredPokemon.map((p) => (
             <button
               key={p.id}
@@ -331,7 +376,7 @@ function PokemonSearchInput({
       )}
 
       {searchValue && filteredPokemon.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-[var(--card-bg-elevated)] border border-[var(--border-default)] rounded-lg shadow-lg p-3">
+        <div className="absolute z-50 mt-1 w-full border border-[var(--border-default)] bg-[var(--card-bg-elevated)] p-3 shadow-lg">
           <p className="text-sm text-[var(--text-secondary)]">Kein Pokemon gefunden</p>
         </div>
       )}
@@ -351,7 +396,6 @@ const RouteList = memo(function RouteList({
   pokemon = [],
 }: RouteListProps) {
   // State
-  const [addingToTeam, setAddingToTeam] = useState<Record<number, boolean>>({});
   const [processing, setProcessing] = useState(false);
   const [addPokemonSearch, setAddPokemonSearch] = useState<Record<string, string>>({});
   const [addingPokemon, setAddingPokemon] = useState<Record<string, boolean>>({});
@@ -360,108 +404,12 @@ const RouteList = memo(function RouteList({
   const [editingRouteId, setEditingRouteId] = useState<number | null>(null);
   const [editingRouteName, setEditingRouteName] = useState('');
 
-  // Pokemon Swap State
-  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
-  const [swappingEncounter, setSwappingEncounter] = useState<EncounterWithMeta | null>(null);
-  const [swapping, setSwapping] = useState(false);
-  
-  // Dialog State
-  const [koDialogOpen, setKoDialogOpen] = useState(false);
-  const [notCaughtDialogOpen, setNotCaughtDialogOpen] = useState(false);
-  const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
-  const [koCausedBy, setKoCausedBy] = useState('');
-  const [koReason, setKoReason] = useState('');
-  const [notCaughtBy, setNotCaughtBy] = useState('');
-  const [notCaughtReason, setNotCaughtReason] = useState('');
-
   // Evolution-Hook
   const evolution = useEvolutionMenu(onTeamUpdate);
-
-  // Ermittle belegte Slots
-  const usedSlots: Record<number, { routeId: number; routeName: string }> = {};
-  routes.forEach((route) => {
-    if (route.encounters.length > 0 && route.encounters[0].teamSlot) {
-      usedSlots[route.encounters[0].teamSlot] = { routeId: route.id, routeName: route.name };
-    }
-  });
 
   // ==========================================================================
   // Handler
   // ==========================================================================
-
-  const handleAddToTeam = async (routeId: number, slot: number) => {
-    setAddingToTeam({ ...addingToTeam, [routeId]: true });
-    try {
-      await fetchJson(`/api/admin/routes/${routeId}/set-team-slot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamSlot: slot === 0 ? null : slot }),
-      });
-      onTeamUpdate?.();
-    } catch (error) {
-      alert(`Fehler beim Aktualisieren des Teams: ${getErrorMessage(error)}`);
-    } finally {
-      setAddingToTeam({ ...addingToTeam, [routeId]: false });
-    }
-  };
-
-  const handleKnockout = async () => {
-    if (!selectedRouteId || !koCausedBy.trim() || !koReason.trim()) {
-      alert('Bitte Verursacher und Grund angeben');
-      return;
-    }
-    setProcessing(true);
-    try {
-      await fetchJson(`/api/admin/routes/${selectedRouteId}/knockout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ causedBy: koCausedBy, reason: koReason }),
-      });
-      setKoDialogOpen(false);
-      await onTeamUpdate?.(); // Warte auf Daten-Reload
-    } catch (error) {
-      alert(`Fehler beim K.O.-Eintrag: ${getErrorMessage(error)}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleReactivate = async (routeId: number, type: 'ko' | 'notCaught') => {
-    if (!confirm('Moechtest du diese Route wirklich reaktivieren?')) return;
-    setProcessing(true);
-    try {
-      const endpoint = type === 'ko' ? 'knockout' : 'notcaught';
-      await fetchJson(`/api/admin/routes/${routeId}/${endpoint}`, { method: 'DELETE' });
-      await onTeamUpdate?.(); // Warte auf Daten-Reload
-    } catch (error) {
-      alert(`Fehler beim Reaktivieren: ${getErrorMessage(error)}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleNotCaught = async () => {
-    if (!selectedRouteId || !notCaughtBy.trim()) {
-      alert('Bitte Verursacher angeben');
-      return;
-    }
-    setProcessing(true);
-    try {
-      await fetchJson(`/api/admin/routes/${selectedRouteId}/notcaught`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ causedBy: notCaughtBy.trim(), reason: notCaughtReason.trim() || null }),
-      });
-      setNotCaughtDialogOpen(false);
-      setNotCaughtBy('');
-      setNotCaughtReason('');
-      await onTeamUpdate?.(); // Warte auf Daten-Reload
-    } catch (error) {
-      alert(`Fehler beim Nicht-gefangen-Eintrag: ${getErrorMessage(error)}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const handleAddPokemon = async (routeId: number, playerId: number, pokemonId: number) => {
     const key = `${routeId}-${playerId}`;
@@ -536,42 +484,6 @@ const RouteList = memo(function RouteList({
     }
   };
 
-  // Pokemon Swap Handler
-  const handleSwapPokemon = async (newPokemonId: number) => {
-    if (!swappingEncounter) return;
-    setSwapping(true);
-    try {
-      await fetchJson(`/api/admin/encounters/${swappingEncounter.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pokemonId: newPokemonId }),
-      });
-      setSwapDialogOpen(false);
-      setSwappingEncounter(null);
-      await onTeamUpdate?.(); // Warte auf Daten-Reload
-    } catch (error) {
-      alert(`Fehler beim Tauschen: ${getErrorMessage(error)}`);
-    } finally {
-      setSwapping(false);
-    }
-  };
-
-  // Pokemon Delete Handler
-  const handleDeleteEncounter = async (encounterId: number, pokemonName: string) => {
-    if (!confirm(`Pokemon "${pokemonName}" wirklich entfernen?`)) {
-      return;
-    }
-    setProcessing(true);
-    try {
-      await fetchJson(`/api/admin/encounters/${encounterId}`, { method: 'DELETE' });
-      await onTeamUpdate?.(); // Warte auf Daten-Reload
-    } catch (error) {
-      alert(`Fehler beim Entfernen: ${getErrorMessage(error)}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
   // Route Move Handler (Verschieben nach oben/unten)
   const handleMoveRoute = async (routeId: number, direction: 'up' | 'down') => {
     const currentIndex = routes.findIndex(r => r.id === routeId);
@@ -612,7 +524,7 @@ const RouteList = memo(function RouteList({
 
   if (routes.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <p className="text-[var(--text-secondary)] text-lg">
           Noch keine Routen vorhanden. Admin kann Routen im Admin-Panel hinzufuegen.
         </p>
@@ -620,34 +532,30 @@ const RouteList = memo(function RouteList({
     );
   }
 
-  const playerOptions = players.map((p) => ({ value: p.name, label: p.name }));
-
   return (
     <>
-      <div className="space-y-6">
+      <div className="divide-y divide-[var(--border-default)] border-t border-[var(--border-default)]">
         {routes.map((route) => {
-          const currentSlot = route.encounters[0]?.teamSlot ?? null;
           const routeAverage = calculateAverageStats(route.encounters);
-          const isKnockedOut = route.encounters[0]?.isKnockedOut ?? false;
-          const isNotCaught = route.encounters[0]?.isNotCaught ?? false;
+          const isKnockedOut = route.encounters.length > 0
+            && route.encounters.every((encounter) => encounter.isKnockedOut);
+          const isNotCaught = route.encounters.length > 0
+            && route.encounters.every((encounter) => encounter.isNotCaught);
           const isInactive = isKnockedOut || isNotCaught;
           const koInfo = isKnockedOut ? route.encounters[0] : null;
           const notCaughtInfo = isNotCaught ? route.encounters[0] : null;
           const isEditingThisRoute = editingRouteId === route.id;
+          const routeComparisonHref = buildRouteComparisonHref(route);
 
-          // Fuer konsistente Hoehe
-          const maxTypesInRoute = route.encounters.length > 0
-            ? Math.max(...route.encounters.map((e) => parseTypes(e.pokemon.types).length))
-            : 1;
-          const minHeight = maxTypesInRoute === 2 ? 'min-h-[240px]' : 'min-h-[220px]';
+          const minHeight = 'min-h-[172px]';
 
           return (
             <div
               key={route.id}
-              className={`bg-[var(--card-bg)] rounded-xl shadow-md p-6 border border-[var(--border-default)] transition-all duration-300 ${isInactive ? 'opacity-60 bg-[var(--background-secondary)]' : ''}`}
+              className={`py-5 transition-colors ${isInactive ? 'bg-[var(--background-secondary)]/60 opacity-75' : ''}`}
             >
               {/* Header */}
-              <div className="flex items-center justify-between mb-4 border-b border-[var(--border-default)] pb-3">
+              <div className="mb-4 flex flex-col items-stretch gap-3 px-3 sm:flex-row sm:items-center sm:justify-between">
                 <RouteHeader
                   route={route}
                   isInactive={isInactive}
@@ -655,7 +563,6 @@ const RouteList = memo(function RouteList({
                   isNotCaught={isNotCaught}
                   koInfo={koInfo}
                   notCaughtInfo={notCaughtInfo}
-                  currentSlot={currentSlot}
                   routeAverage={routeAverage}
                   isAdmin={isAdmin}
                   isEditing={isEditingThisRoute}
@@ -672,90 +579,31 @@ const RouteList = memo(function RouteList({
                   isProcessing={processing}
                 />
 
-                {/* Admin-Aktionen */}
-                {isAdmin && route.encounters.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {isKnockedOut ? (
-                      <button
-                        onClick={() => handleReactivate(route.id, 'ko')}
-                        disabled={processing}
-                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition text-sm disabled:opacity-50"
-                      >
-                        Reaktivieren
-                      </button>
-                    ) : isNotCaught ? (
-                      <button
-                        onClick={() => handleReactivate(route.id, 'notCaught')}
-                        disabled={processing}
-                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition text-sm disabled:opacity-50"
-                      >
-                        Reaktivieren
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => {
-                            setSelectedRouteId(route.id);
-                            setKoCausedBy('');
-                            setKoReason('');
-                            setKoDialogOpen(true);
-                          }}
-                          disabled={processing}
-                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition text-sm disabled:opacity-50"
-                        >
-                          K.O.
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedRouteId(route.id);
-                            setNotCaughtBy('');
-                            setNotCaughtReason('');
-                            setNotCaughtDialogOpen(true);
-                          }}
-                          disabled={processing}
-                          className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md transition text-sm disabled:opacity-50"
-                        >
-                          Nicht gefangen
-                        </button>
-                      </>
-                    )}
+                {route.encounters.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Link
+                      href={routeComparisonHref ?? '/pokeradar'}
+                      aria-label={`${route.name} im Vergleich öffnen`}
+                      className="app-action"
+                    >
+                      Im Vergleich öffnen
+                    </Link>
 
-                    {/* Team-Slots */}
-                    {!isInactive && (
-                      <>
-                        {currentSlot ? (
-                          <button
-                            onClick={() => handleAddToTeam(route.id, 0)}
-                            disabled={addingToTeam[route.id]}
-                            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition text-sm disabled:opacity-50"
-                          >
-                            {addingToTeam[route.id] ? '...' : 'Aus Team entfernen'}
-                          </button>
-                        ) : (
-                          <>
-                            <span className="text-sm text-gray-600">Ins Team:</span>
-                            {[1, 2, 3, 4, 5, 6].map((slot) => {
-                              const isUsedByOther = usedSlots[slot] && usedSlots[slot].routeId !== route.id;
-                              return (
-                                <button
-                                  key={slot}
-                                  onClick={() => handleAddToTeam(route.id, slot)}
-                                  disabled={addingToTeam[route.id] || isUsedByOther}
-                                  className={`px-3 py-1 rounded-md transition text-sm ${
-                                    isUsedByOther
-                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                      : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                  }`}
-                                  title={isUsedByOther ? `Slot ${slot} belegt von "${usedSlots[slot].routeName}"` : `Zu Slot ${slot}`}
-                                >
-                                  {slot}
-                                </button>
-                              );
-                            })}
-                          </>
-                        )}
-                      </>
-                    )}
+                    {isAdmin ? (
+                      <RouteLinkActionMenu
+                        link={{
+                          route: { id: route.id, name: route.name },
+                          encounters: route.encounters.map((encounter) =>
+                            toEncounterAdminTarget(encounter, route),
+                          ),
+                          expectedPlayerCount: players.length,
+                        }}
+                        triggerLabel="Link verwalten"
+                        disabled={processing}
+                        onUpdated={() => { void onTeamUpdate?.(); }}
+                        onDeleted={() => { void onTeamUpdate?.(); }}
+                      />
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -765,7 +613,10 @@ const RouteList = memo(function RouteList({
               {isNotCaught && notCaughtInfo && <StatusInfoBox type="notCaught" info={notCaughtInfo} />}
 
               {/* Encounters */}
-              <div className="flex flex-wrap items-start gap-6">
+              <div
+                className="grid min-w-[48rem] border-l border-t border-[var(--border-default)]"
+                style={{ gridTemplateColumns: `repeat(${Math.max(players.length, 1)}, minmax(14rem, 1fr))` }}
+              >
                 {players.map((player) => {
                   const playerEncounters = route.encounters.filter((e) => e.player.id === player.id);
                   const hasEncounter = playerEncounters.length > 0;
@@ -775,83 +626,51 @@ const RouteList = memo(function RouteList({
                   const isAdding = addingPokemon[key] || false;
 
                   return (
-                    <div key={player.id} className="flex-shrink-0">
-                      <div className="flex items-center gap-2 mb-3">
+                    <div key={player.id} className="border-b border-r border-[var(--border-default)] p-3">
+                      <div className="mb-3 flex items-center gap-2 border-b-2 pb-2" style={{ borderColor: player.color }}>
                         {/* Avatar oder Farbe */}
-                        {(() => {
-                          const avatarUrl = getAvatarUrl(player.avatar);
-                          if (avatarUrl) {
-                            return (
-                              <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                                <Image
-                                  src={avatarUrl}
-                                  alt={player.name}
-                                  width={24}
-                                  height={24}
-                                  className="object-cover w-full h-full"
-                                  unoptimized
-                                />
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: player.color }} />
-                          );
-                        })()}
-                        <h4 className="font-semibold text-lg text-[var(--foreground)]">{player.name}</h4>
+                        <PlayerAvatar
+                          avatar={player.avatar}
+                          name={player.name}
+                          color={player.color}
+                          size={24}
+                          className="h-6 w-6"
+                        />
+                        <h4 className="text-sm font-black uppercase text-[var(--foreground)]">{player.name}</h4>
                       </div>
 
                       {hasEncounter ? (
-                        <div className="flex flex-wrap items-stretch gap-3 md:gap-2">
+                        <div className="flex flex-wrap items-stretch gap-2">
                           {playerEncounters.map((encounter) => (
-                            <div key={encounter.id} className="flex flex-col w-[140px] flex-shrink-0">
-                              <div className={`relative group ${minHeight}`}>
-                                {/* Admin Action Buttons */}
-                                {isAdmin && !isInactive && (
-                                  <div className="absolute top-1 right-1 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                                    {/* Swap Button */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSwappingEncounter(encounter);
-                                        setSwapDialogOpen(true);
-                                      }}
-                                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs w-6 h-6 rounded-md flex items-center justify-center shadow-sm"
-                                      title="Pokemon tauschen"
-                                    >
-                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                      </svg>
-                                    </button>
-                                    {/* Delete Button */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteEncounter(
-                                          encounter.id,
-                                          encounter.pokemon.nameGerman || encounter.pokemon.name
-                                        );
-                                      }}
+                            <div key={encounter.id} className="w-[132px] shrink-0">
+                              <div className={`relative group ${minHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}>
+                                {isAdmin ? (
+                                  <div className="absolute right-1 top-1 z-20">
+                                    <EncounterActionMenu
+                                      encounter={toEncounterAdminTarget(encounter, route)}
+                                      pokemonOptions={pokemon}
+                                      compact
                                       disabled={processing}
-                                      className="bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-md flex items-center justify-center shadow-sm disabled:opacity-50"
-                                      title="Pokemon entfernen"
-                                    >
-                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    </button>
+                                      onUpdated={() => { void onTeamUpdate?.(); }}
+                                    />
                                   </div>
-                                )}
+                                ) : null}
+
+                                {encounter.isKnockedOut || encounter.isNotCaught ? (
+                                  <span className={`absolute left-1 top-1 z-10 rounded-full px-2 py-1 text-[10px] font-bold text-white ${encounter.isKnockedOut ? 'bg-red-600' : 'bg-amber-600'}`}>
+                                    {encounter.isKnockedOut ? 'K.O.' : 'Nicht gefangen'}
+                                  </span>
+                                ) : null}
                                 
                                 <div
-                                  className={`h-full ${minHeight} ${isAdmin && !isInactive ? 'cursor-pointer' : ''}`}
+                                  className={`h-full ${minHeight} ${isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught ? 'cursor-pointer' : ''}`}
                                   onClick={() => {
-                                    if (isAdmin && !isInactive) {
+                                    if (isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught) {
                                       evolution.openMenu(encounter.id, encounter.pokemon.pokedexId);
                                     }
                                   }}
                                 >
-                                  <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="small" />
+                                  <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="tiny" />
                                 </div>
 
                                 {/* Evolution-Menue - direkt unter der Pokemon-Box als Overlay */}
@@ -867,8 +686,6 @@ const RouteList = memo(function RouteList({
                                   />
                                 )}
                               </div>
-                              
-                              <PokemonStatsCard pokemon={encounter.pokemon} />
                             </div>
                           ))}
                         </div>
@@ -892,101 +709,6 @@ const RouteList = memo(function RouteList({
         })}
       </div>
 
-      {/* K.O.-Dialog */}
-      <Dialog
-        isOpen={koDialogOpen}
-        onClose={() => setKoDialogOpen(false)}
-        title="Route K.O. setzen"
-        titleIcon="!"
-        titleColor="text-red-700"
-        description="Alle Pokemon dieser Route werden K.O. gesetzt und aus dem Team entfernt."
-        actions={
-          <DialogActions
-            onCancel={() => setKoDialogOpen(false)}
-            onConfirm={handleKnockout}
-            confirmText="K.O. setzen"
-            confirmVariant="danger"
-            isLoading={processing}
-            disabled={!koCausedBy.trim() || !koReason.trim()}
-          />
-        }
-      >
-        <FormField label="Verursacher (Spieler)" required>
-          <Select
-            value={koCausedBy}
-            onChange={(e) => setKoCausedBy(e.target.value)}
-            options={playerOptions}
-            placeholder="-- Spieler auswaehlen --"
-            focusColor="focus:ring-red-500"
-            disabled={processing}
-          />
-        </FormField>
-        <FormField label="Grund des Ausscheidens" required>
-          <Textarea
-            value={koReason}
-            onChange={(e) => setKoReason(e.target.value)}
-            placeholder="z.B. Verloren gegen Arena-Leiter Veit"
-            rows={3}
-            focusColor="focus:ring-red-500"
-            disabled={processing}
-          />
-        </FormField>
-      </Dialog>
-
-      {/* Nicht-gefangen-Dialog */}
-      <Dialog
-        isOpen={notCaughtDialogOpen}
-        onClose={() => setNotCaughtDialogOpen(false)}
-        title="Route als Nicht gefangen markieren"
-        titleIcon="!"
-        titleColor="text-yellow-700"
-        description="Diese Route wird als Nicht gefangen markiert und aus dem Team entfernt."
-        actions={
-          <DialogActions
-            onCancel={() => setNotCaughtDialogOpen(false)}
-            onConfirm={handleNotCaught}
-            confirmText="Als Nicht gefangen markieren"
-            confirmVariant="warning"
-            isLoading={processing}
-            disabled={!notCaughtBy.trim()}
-          />
-        }
-      >
-        <FormField label="Verursacher (Spieler)" required>
-          <Select
-            value={notCaughtBy}
-            onChange={(e) => setNotCaughtBy(e.target.value)}
-            options={playerOptions}
-            placeholder="-- Spieler auswaehlen --"
-            focusColor="focus:ring-yellow-500"
-            disabled={processing}
-          />
-        </FormField>
-        <FormField label="Grund (optional)">
-          <Textarea
-            value={notCaughtReason}
-            onChange={(e) => setNotCaughtReason(e.target.value)}
-            placeholder="z.B. Vergessen zu fangen, zu schwach, nur Tentacha"
-            rows={3}
-            focusColor="focus:ring-yellow-500"
-            disabled={processing}
-          />
-        </FormField>
-      </Dialog>
-
-      {/* Pokemon Swap Dialog */}
-      <PokemonSwapDialog
-        key={`route-swap-${swapDialogOpen ? swappingEncounter?.id ?? 'none' : 'closed'}`}
-        isOpen={swapDialogOpen}
-        onClose={() => {
-          setSwapDialogOpen(false);
-          setSwappingEncounter(null);
-        }}
-        onConfirm={handleSwapPokemon}
-        currentPokemon={swappingEncounter?.pokemon}
-        pokemon={pokemon}
-        isLoading={swapping}
-      />
     </>
   );
 });

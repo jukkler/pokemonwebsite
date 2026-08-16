@@ -24,8 +24,17 @@ export async function GET() {
             id: true,
             teamSlot: true,
             nickname: true,
+            isKnockedOut: true,
+            koCausedBy: true,
+            koReason: true,
+            koDate: true,
+            isNotCaught: true,
+            notCaughtBy: true,
+            notCaughtReason: true,
+            notCaughtDate: true,
             pokemon: {
               select: {
+                id: true,
                 pokedexId: true,
                 name: true,
                 nameGerman: true,

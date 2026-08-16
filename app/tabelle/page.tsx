@@ -1,9 +1,10 @@
 /**
- * Tabelle Page
- * Vergleich aller gefangenen Pokémon nach Route und Spielern
+ * Vergleich aller Encounters nach Route und Spielern.
+ * Die Admin-Zieldaten bleiben bewusst pro Encounter kompakt; die große
+ * Pokémon-Auswahlliste wird erst nach einer Admin-Interaktion geladen.
  */
 
-import TabelleClient, { RouteRow } from './TabelleClient';
+import TabelleClient, { type RouteRow } from './TabelleClient';
 import prisma from '@/lib/prisma';
 import { parseTypes } from '@/lib/typeEffectiveness';
 
@@ -35,11 +36,48 @@ async function getTableData(): Promise<{
         orderBy: { createdAt: 'asc' },
       }),
       prisma.route.findMany({
-        include: {
+        select: {
+          id: true,
+          name: true,
+          order: true,
           encounters: {
-            include: {
-              player: true,
-              pokemon: true,
+            select: {
+              id: true,
+              nickname: true,
+              teamSlot: true,
+              isKnockedOut: true,
+              koCausedBy: true,
+              koReason: true,
+              koDate: true,
+              isNotCaught: true,
+              notCaughtBy: true,
+              notCaughtReason: true,
+              notCaughtDate: true,
+              playerId: true,
+              player: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                },
+              },
+              pokemon: {
+                select: {
+                  id: true,
+                  pokedexId: true,
+                  name: true,
+                  nameGerman: true,
+                  types: true,
+                  hp: true,
+                  attack: true,
+                  defense: true,
+                  spAttack: true,
+                  spDefense: true,
+                  speed: true,
+                  spriteUrl: true,
+                  spriteGifUrl: true,
+                },
+              },
             },
             orderBy: { createdAt: 'asc' },
           },
@@ -53,12 +91,10 @@ async function getTableData(): Promise<{
 
       const playerCells = players.map((player) => {
         const encounter = route.encounters.find(
-          (enc) => enc.playerId === player.id
+          (candidate) => candidate.playerId === player.id,
         );
 
-        if (!encounter) {
-          return null;
-        }
+        if (!encounter) return null;
 
         const { pokemon } = encounter;
         const status: EncounterStatus = encounter.isKnockedOut
@@ -67,32 +103,48 @@ async function getTableData(): Promise<{
             ? 'notCaught'
             : null;
 
-        if (status) {
-          if (status === 'ko') {
-            rowStatus = 'ko';
-          } else if (rowStatus !== 'ko') {
-            rowStatus = 'notCaught';
-          }
+        if (status === 'ko') {
+          rowStatus = 'ko';
+        } else if (status === 'notCaught' && rowStatus !== 'ko') {
+          rowStatus = 'notCaught';
         }
 
-        const basePoints =
-          pokemon.hp +
-          pokemon.attack +
-          pokemon.defense +
-          pokemon.spAttack +
-          pokemon.spDefense +
-          pokemon.speed;
-
         return {
-          playerId: player.id,
-          pokedexId: pokemon.pokedexId ?? null,
-          pokemonName: pokemon.name,
-          pokemonGermanName: pokemon.nameGerman,
+          encounter: {
+            id: encounter.id,
+            nickname: encounter.nickname,
+            teamSlot: encounter.teamSlot,
+            isKnockedOut: encounter.isKnockedOut,
+            koCausedBy: encounter.koCausedBy,
+            koReason: encounter.koReason,
+            koDate: encounter.koDate?.toISOString() ?? null,
+            isNotCaught: encounter.isNotCaught,
+            notCaughtBy: encounter.notCaughtBy,
+            notCaughtReason: encounter.notCaughtReason,
+            notCaughtDate: encounter.notCaughtDate?.toISOString() ?? null,
+            player: encounter.player,
+            route: {
+              id: route.id,
+              name: route.name,
+            },
+            pokemon: {
+              id: pokemon.id,
+              pokedexId: pokemon.pokedexId,
+              name: pokemon.name,
+              nameGerman: pokemon.nameGerman,
+              spriteUrl: pokemon.spriteUrl,
+              spriteGifUrl: pokemon.spriteGifUrl,
+            },
+          },
           types: parseTypes(pokemon.types),
-          basePoints,
+          basePoints:
+            pokemon.hp +
+            pokemon.attack +
+            pokemon.defense +
+            pokemon.spAttack +
+            pokemon.spDefense +
+            pokemon.speed,
           status,
-          spriteUrl: pokemon.spriteUrl,
-          spriteGifUrl: pokemon.spriteGifUrl,
         };
       });
 
@@ -127,23 +179,34 @@ export default async function TabellePage() {
   const data = await getTableData();
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-10 max-w-7xl">
-      <div className="mb-6 md:mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 mb-2">
-          Übersicht
-        </p>
-        <p className="text-[var(--text-secondary)] max-w-3xl">
-          Vergleich aller gefangenen Pokémon je Route. Die Spalten zeigen das
-          aktuell gefangene Pokémon pro Spieler inklusive Typen und
-          Basispunkte (Summe aller Statuswerte). Der Durchschnitt berechnet
-          sich aus den Basispunkten aller auf der Route gefangenen Pokémon.
-          Über die Spaltenüberschriften lässt sich die Tabelle sortieren.
-        </p>
-      </div>
+    <main className="app-page">
+      <header className="app-page-header">
+        <div className="flex min-w-0 items-start gap-4 sm:gap-6">
+          <span aria-hidden="true" className="border-l-4 border-[var(--brand-red)] pl-3 text-4xl font-black leading-none text-[var(--brand-red)] sm:text-5xl">
+            04
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-4xl font-black uppercase leading-none tracking-tight text-[var(--foreground)] sm:text-6xl">Tabelle</h1>
+            <p className="mt-3 max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base">
+              Alle gefangenen Pokémon im direkten Routenvergleich – mit Teamstatus, Typen und Gesamt-BP.
+            </p>
+          </div>
+        </div>
+        <dl className="grid shrink-0 grid-cols-2 divide-x divide-[var(--border-default)] border-y border-[var(--border-default)] text-right">
+          <div className="px-4 py-2">
+            <dt className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Routen</dt>
+            <dd className="text-2xl font-black tabular-nums text-[var(--brand-blue)]">{data.rows.length}</dd>
+          </div>
+          <div className="px-4 py-2">
+            <dt className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Spieler</dt>
+            <dd className="text-2xl font-black tabular-nums text-[var(--brand-red)]">{data.players.length}</dd>
+          </div>
+        </dl>
+      </header>
 
-      <TabelleClient players={data.players} rows={data.rows} />
-    </div>
+      <section className="app-section" aria-labelledby="encounter-table-title">
+        <TabelleClient players={data.players} rows={data.rows} />
+      </section>
+    </main>
   );
 }
-
-

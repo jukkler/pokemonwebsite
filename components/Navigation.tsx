@@ -1,27 +1,34 @@
 'use client';
 
-/**
- * Navigations-Komponente
- * Zeigt die Hauptnavigation mit Admin-Link (nur wenn eingeloggt)
- */
-
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { fetchJson } from '@/lib/fetchJson';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import { fetchJson } from '@/lib/fetchJson';
 import ThemeToggle from './ThemeToggle';
+
+const coreNavItems = [
+  { href: '/', label: 'Dashboard' },
+  { href: '/pokeroute', label: 'Routen' },
+  { href: '/pokeradar', label: 'Vergleich' },
+  { href: '/tabelle', label: 'Tabelle' },
+  { href: '/statistik', label: 'Statistik' },
+  { href: '/streams', label: 'Streams' },
+] as const;
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { isAdmin, setSession } = useAuth();
+  const {
+    spriteMode,
+    toggleSpriteMode,
+    baseStatOverlaysEnabled,
+    toggleBaseStatOverlays,
+  } = useSpriteMode();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { spriteMode, toggleSpriteMode } = useSpriteMode();
-
-  // Auto-Hide auf der Streams-Seite
   const isStreamsPage = pathname === '/streams';
   const [navHidden, setNavHidden] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,335 +44,221 @@ export default function Navigation() {
   }, []);
 
   useEffect(() => {
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
     if (isStreamsPage) {
       startHideTimer();
     } else {
-      setNavHidden(false);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      resetTimer = setTimeout(() => setNavHidden(false), 0);
     }
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      if (resetTimer) clearTimeout(resetTimer);
     };
   }, [isStreamsPage, startHideTimer]);
 
-  // Auth-Status prüfen
   useEffect(() => {
-    let cancelled = false;
-    
-    fetchJson<{ isAdmin?: boolean }>('/api/auth/status')
-      .then(data => {
-        if (!cancelled) {
-          setIsAdmin(data.isAdmin || false);
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        if (!cancelled) {
-          console.error('Error checking auth status:', err);
-          setLoading(false);
-        }
-      });
-    
-    return () => {
-      cancelled = true;
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
     };
-  }, []);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [mobileOpen]);
 
-  // Logout Handler
   const handleLogout = async () => {
     try {
       await fetchJson('/api/auth/logout', { method: 'POST' });
-      setIsAdmin(false);
-      router.push('/pokeroute');
+      setSession({ isAdmin: false, username: null });
+      setMobileOpen(false);
+      router.push('/');
       router.refresh();
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname?.startsWith(href);
+  };
+
+  const navItems = isAdmin
+    ? [...coreNavItems, { href: '/admin', label: 'Admin' } as const]
+    : coreNavItems;
 
   return (
     <>
-    {/* Unsichtbare Hover-Zone am oberen Rand (nur Streams-Seite) */}
-    {isStreamsPage && (
-      <div
-        className="fixed top-0 left-0 w-full h-3 z-30 hidden md:block"
-        onMouseEnter={showNav}
-      />
-    )}
-    <nav
-      className={`${isStreamsPage ? 'fixed w-full' : 'sticky'} top-0 z-30 bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] border-b border-[var(--glass-border)] hidden md:block transition-transform duration-500 ${isStreamsPage && navHidden ? '-translate-y-full' : 'translate-y-0'}`}
-      onMouseEnter={isStreamsPage ? showNav : undefined}
-      onMouseLeave={isStreamsPage ? startHideTimer : undefined}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-8">
-            <Link href="/pokeroute" className="flex items-center hover:opacity-80 transition-opacity duration-300">
-              <Image
-                src="/pokeball.svg"
-                alt="Poké Ball"
-                width={32}
-                height={32}
-                priority
-              />
-              <span className="ml-2 text-xl font-semibold text-[var(--foreground)]">PokéTool</span>
-            </Link>
+      {isStreamsPage ? (
+        <div
+          className="fixed left-0 top-0 z-30 hidden h-3 w-full md:block"
+          onMouseEnter={showNav}
+        />
+      ) : null}
 
-            <div className="flex items-center space-x-2 bg-[var(--card-bg)] rounded-full p-1 border border-[var(--border-default)]">
-              <Link
-                href="/pokeroute"
-                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                  isActive('/pokeroute')
-                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
-                }`}
-              >
-                Routen
-              </Link>
-              <Link
-                href="/pokeradar"
-                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                  isActive('/pokeradar')
-                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
-                }`}
-              >
-                Vergleich
-              </Link>
-              <Link
-                href="/tabelle"
-                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                  isActive('/tabelle')
-                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
-                }`}
-              >
-                Tabelle
-              </Link>
-              <Link
-                href="/statistik"
-                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                  isActive('/statistik')
-                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
-                }`}
-              >
-                Statistik
-              </Link>
-              <Link
-                href="/streams"
-                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                  isActive('/streams')
-                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
-                }`}
-              >
-                Streams
-              </Link>
-              {isAdmin && (
+      <nav
+        aria-label="Hauptnavigation"
+        className={`${isStreamsPage ? 'fixed w-full' : 'sticky'} top-0 z-40 hidden border-b border-[var(--border-default)] bg-[var(--background)] transition-transform duration-300 md:block ${isStreamsPage && navHidden ? '-translate-y-full' : 'translate-y-0'}`}
+        onMouseEnter={isStreamsPage ? showNav : undefined}
+        onMouseLeave={isStreamsPage ? startHideTimer : undefined}
+      >
+        <div className="mx-auto flex h-[60px] max-w-[1440px] items-stretch px-5 lg:px-8">
+          <Link
+            href="/"
+            className="mr-5 flex shrink-0 items-center gap-2.5 text-[var(--foreground)] transition-opacity hover:opacity-75 lg:mr-9"
+          >
+            <Image src="/pokeball.svg" alt="" width={30} height={30} priority />
+            <span className="text-[1.2rem] font-black tracking-[-0.04em]">PokéTool</span>
+          </Link>
+
+          <div className="flex min-w-0 flex-1 items-stretch" role="list">
+            {navItems.map((item) => {
+              const active = isActive(item.href);
+              return (
                 <Link
-                  href="/admin"
-                  className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                    pathname?.startsWith('/admin')
-                      ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background-tertiary)]'
-                  }`}
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative flex items-center px-2.5 font-[Arial_Narrow,Roboto_Condensed,var(--font-inter),sans-serif] text-[0.72rem] font-black uppercase tracking-[0.015em] transition-colors lg:px-4 lg:text-[0.78rem] ${active ? 'text-[var(--brand-red)]' : 'text-[var(--foreground)] hover:text-[var(--brand-red)]'}`}
                 >
-                  Admin
+                  {item.label}
+                  {active ? <span className="absolute inset-x-2.5 bottom-0 h-[3px] bg-[var(--brand-red)] lg:inset-x-4" aria-hidden="true" /> : null}
                 </Link>
-              )}
+              );
+            })}
+          </div>
+
+          <div className="ml-3 flex shrink-0 items-center gap-2 border-l border-[var(--border-default)] pl-3">
+            <div className="[&_button]:min-h-9 [&_button]:rounded-sm [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-2 [&_button]:shadow-none">
+              <ThemeToggle />
             </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
-            {/* Sprite-Modus Toggle */}
-            <button
-              onClick={toggleSpriteMode}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition text-sm font-medium ${
-                spriteMode === 'animated'
-                  ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              title={spriteMode === 'animated' ? 'Animierte Sprites aktiv' : 'Statische Sprites aktiv'}
-            >
-              {spriteMode === 'animated' ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="hidden lg:inline">GIF</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="hidden lg:inline">Statisch</span>
-                </>
-              )}
-            </button>
-
-            {!loading && (
-              <>
-                {isAdmin ? (
-                  <button
-                    onClick={handleLogout}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition text-sm font-medium"
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
-                  >
-                    Login
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-            <span className="text-xl font-semibold text-gray-900">Navigation</span>
             <button
               type="button"
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Menü schließen"
-              onClick={() => setMobileOpen(false)}
+              onClick={toggleSpriteMode}
+              className="hidden min-h-9 items-center gap-1.5 border border-[var(--border-default)] px-2 text-[0.7rem] font-extrabold uppercase tracking-wide text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-blue)] hover:text-[var(--brand-blue)] xl:flex"
+              title={spriteMode === 'animated' ? 'Animierte Sprites aktiv' : 'Statische Sprites aktiv'}
+              aria-label={spriteMode === 'animated' ? 'Zu statischen Sprites wechseln' : 'Zu animierten Sprites wechseln'}
+              aria-pressed={spriteMode === 'animated'}
             >
-              <svg
-                className="h-6 w-6 text-gray-700"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
-            <Link
-              href="/pokeroute"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-lg font-medium ${
-                isActive('/pokeroute') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Routen
-            </Link>
-            <Link
-              href="/pokeradar"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-lg font-medium ${
-                isActive('/pokeradar') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Vergleich
-            </Link>
-            <Link
-              href="/tabelle"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-lg font-medium ${
-                isActive('/tabelle') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Tabelle
-            </Link>
-            <Link
-              href="/statistik"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3 rounded-lg font-medium ${
-                isActive('/statistik') ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Statistik
-            </Link>
-            {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={() => setMobileOpen(false)}
-                className={`block px-4 py-3 rounded-lg font-medium ${
-                  pathname?.startsWith('/admin')
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Admin
-              </Link>
-            )}
-            {/* Sprite-Modus Toggle (Mobile) */}
-            <div className="pt-4 border-t border-gray-200">
-              <button
-                onClick={toggleSpriteMode}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium ${
-                  spriteMode === 'animated'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 {spriteMode === 'animated' ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Animierte Sprites (GIF)
-                  </>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5v14l11-7z" />
                 ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Statische Sprites
-                  </>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.6-4.6a2 2 0 012.8 0L16 16m-2-2 1.6-1.6a2 2 0 012.8 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 )}
+              </svg>
+              {spriteMode === 'animated' ? 'GIF' : 'Statisch'}
+            </button>
+            <button
+              type="button"
+              onClick={toggleBaseStatOverlays}
+              className={`flex min-h-9 w-24 shrink-0 items-center justify-center gap-1.5 border px-2 text-[0.7rem] font-extrabold uppercase tracking-wide transition-colors hover:border-[var(--brand-blue)] hover:text-[var(--brand-blue)] ${
+                baseStatOverlaysEnabled
+                  ? 'border-[var(--brand-blue)] bg-blue-500/10 text-[var(--brand-blue)]'
+                  : 'border-[var(--border-default)] text-[var(--text-secondary)]'
+              }`}
+              title={baseStatOverlaysEnabled ? 'Basiswert-Overlays aktiv' : 'Basiswert-Overlays deaktiviert'}
+              aria-label={baseStatOverlaysEnabled ? 'Basiswert-Overlays ausschalten' : 'Basiswert-Overlays einschalten'}
+              aria-pressed={baseStatOverlaysEnabled}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 19V9m5 10V5m5 14v-7m5 7V3" />
+              </svg>
+              <span className="hidden xl:inline">Stats</span>
+              <span className="flex items-center gap-1 text-[0.62rem]">
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 rounded-full ${baseStatOverlaysEnabled ? 'bg-emerald-500' : 'bg-[var(--text-tertiary)]'}`}
+                />
+                {baseStatOverlaysEnabled ? 'An' : 'Aus'}
+              </span>
+            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="min-h-9 px-2.5 text-xs font-bold text-[var(--foreground)] transition-colors hover:text-[var(--brand-red)]"
+              >
+                Logout
               </button>
-            </div>
-
-            {!loading && (
-              <div className="pt-4 border-t border-gray-200">
-                {isAdmin ? (
-                  <button
-                    onClick={() => {
-                      setMobileOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-center font-medium"
-                  >
-                    Login
-                  </Link>
-                )}
-              </div>
+            ) : (
+              <Link href="/login" className="app-action min-h-9 px-3">Login</Link>
             )}
           </div>
         </div>
-      )}
-    </nav>
+      </nav>
+
+      <header className="sticky top-0 z-40 flex h-[58px] items-center justify-between border-b border-[var(--border-default)] bg-[var(--background)] px-4 md:hidden">
+        <Link href="/" className="flex items-center gap-2 text-[var(--foreground)]">
+          <Image src="/pokeball.svg" alt="" width={28} height={28} priority />
+          <span className="text-lg font-black tracking-[-0.04em]">PokéTool</span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((open) => !open)}
+          className="flex h-11 w-11 items-center justify-center text-[var(--foreground)]"
+          aria-label={mobileOpen ? 'Navigation schließen' : 'Navigation öffnen'}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation-panel"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d={mobileOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 7h16M4 12h16M4 17h16'} />
+          </svg>
+        </button>
+      </header>
+
+      {mobileOpen ? (
+        <div id="mobile-navigation-panel" className="fixed inset-0 top-[58px] z-[65] overflow-y-auto bg-[var(--background)] px-4 pb-24 pt-4 md:hidden">
+          <nav aria-label="Erweiterte Hauptnavigation" className="border-t-4 border-[var(--brand-navy)]">
+            {navItems.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex min-h-12 items-center justify-between border-b border-[var(--border-default)] px-2 font-[Arial_Narrow,Roboto_Condensed,var(--font-inter),sans-serif] text-lg font-black uppercase ${active ? 'text-[var(--brand-red)]' : 'text-[var(--foreground)]'}`}
+                >
+                  {item.label}
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m9 18 6-6-6-6" />
+                  </svg>
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="app-toolbar mt-6 flex-wrap justify-start">
+            <button type="button" className="app-action" onClick={toggleSpriteMode}>
+              Sprites: {spriteMode === 'animated' ? 'Animiert' : 'Statisch'}
+            </button>
+            <button
+              type="button"
+              className={`app-action ${baseStatOverlaysEnabled ? 'border-[var(--brand-blue)] bg-blue-500/10 text-[var(--brand-blue)]' : ''}`}
+              onClick={toggleBaseStatOverlays}
+              aria-pressed={baseStatOverlaysEnabled}
+            >
+              Basiswerte: {baseStatOverlaysEnabled ? 'An' : 'Aus'}
+            </button>
+            <div className="[&_button]:min-h-10 [&_button]:rounded-sm [&_button]:shadow-none">
+              <ThemeToggle />
+            </div>
+          </div>
+          <div className="mt-5">
+            {isAdmin ? (
+              <button type="button" onClick={handleLogout} className="app-action w-full">Abmelden</button>
+            ) : (
+              <Link href="/login" className="app-action app-action-primary w-full">Anmelden</Link>
+            )}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
-

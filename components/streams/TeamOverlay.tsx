@@ -33,18 +33,18 @@ export default function TeamOverlay({ encounters }: TeamOverlayProps) {
   });
 
   return (
-    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-2 bg-black/60 backdrop-blur-sm rounded-full px-4 py-1.5 pointer-events-none">
+    <div className="pointer-events-none absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 gap-1 border-x border-t border-white/25 bg-black/80 px-2 py-1 sm:gap-2 sm:px-4">
       {slots.map((slot, i) => (
-        <div key={i} className="w-14 h-14 flex items-center justify-center">
+        <div key={i} className="flex h-10 w-10 items-center justify-center sm:h-14 sm:w-14">
           {slot ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={getSpriteUrl(slot.pokemon, spriteMode) || ''}
               alt={slot.pokemon.nameGerman || slot.pokemon.name}
-              className="w-12 h-12 object-contain pixelated"
+              className="h-9 w-9 object-contain pixelated sm:h-12 sm:w-12"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-600/50" />
+            <div className="h-7 w-7 border border-dashed border-white/35 bg-white/5" />
           )}
         </div>
       ))}

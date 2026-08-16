@@ -6,6 +6,13 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { SpriteProvider } from "@/lib/contexts/SpriteContext";
 import { EventProvider } from "@/lib/contexts/EventContext";
 import EventOverlay from "@/components/EventOverlay";
+import { getSession } from "@/lib/auth";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+
+// The root shell reads the session cookie. Marking it explicitly dynamic keeps
+// Next.js from attempting static prerendering and swallowing cookie/DB signals
+// during the production build.
+export const dynamic = "force-dynamic";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,11 +25,13 @@ export const metadata: Metadata = {
   description: "Dokumentation eines Parallel-Playthroughs",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
@@ -47,18 +56,29 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} font-sans antialiased bg-[var(--background)] transition-colors duration-300`}
+        className={`${inter.variable} font-sans antialiased`}
       >
-        <SpriteProvider>
-          <EventProvider>
-            <Navigation />
-            <main className="min-h-screen pb-16 md:pb-0">
-            {children}
-            </main>
-            <BottomNavigation />
-            <EventOverlay />
-          </EventProvider>
-        </SpriteProvider>
+        <AuthProvider initialSession={{
+          isAdmin: session.isAdmin,
+          username: session.username ?? null,
+        }}>
+          <SpriteProvider>
+            <EventProvider>
+              <a
+                href="#main-content"
+                className="fixed left-3 top-3 z-[100] -translate-y-20 bg-[var(--brand-navy)] px-4 py-2 text-sm font-bold text-white focus:translate-y-0"
+              >
+                Zum Inhalt
+              </a>
+              <Navigation />
+              <main id="main-content" className="min-h-screen pb-16 md:pb-0">
+                {children}
+              </main>
+              <BottomNavigation />
+              <EventOverlay />
+            </EventProvider>
+          </SpriteProvider>
+        </AuthProvider>
       </body>
     </html>
   );

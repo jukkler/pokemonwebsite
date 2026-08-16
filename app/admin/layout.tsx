@@ -9,6 +9,7 @@ export const revalidate = 0;
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { isAdmin } from '@/lib/auth';
+import './admin.css';
 
 export default async function AdminLayout({
   children,
@@ -30,47 +31,48 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300">
+    <div className="admin-surface min-h-screen bg-[var(--background)]">
       {/* Admin Navigation */}
-      <div className="bg-[var(--background-tertiary)] text-[var(--foreground)] border-b border-[var(--border-default)]">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center space-x-6 py-3 overflow-x-auto">
+      <div className="admin-subnav" aria-label="Admin-Bereiche">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-12 items-center gap-1 overflow-x-auto py-1">
+            <span className="admin-subnav-label">Verwaltung</span>
             <Link
               href="/admin"
-              className="whitespace-nowrap hover:text-gray-300 transition"
+              className="admin-subnav-link"
             >
-              Dashboard
+              Übersicht
             </Link>
             <Link
               href="/admin/players"
-              className="whitespace-nowrap hover:text-gray-300 transition"
+              className="admin-subnav-link"
             >
               Spieler
             </Link>
             <Link
               href="/admin/pokemon"
-              className="whitespace-nowrap hover:text-gray-300 transition"
+              className="admin-subnav-link"
             >
-              Pokemon-Cache
+              Pokémon-Cache
             </Link>
             <Link
               href="/admin/gamesaves"
-              className="whitespace-nowrap hover:text-gray-300 transition"
+              className="admin-subnav-link"
             >
-              💾 Spielstände
+              Spielstände
             </Link>
             <Link
               href="/admin/import"
-              className="whitespace-nowrap hover:text-gray-300 transition"
+              className="admin-subnav-link"
             >
-              📤 CSV Import
+              CSV-Import
             </Link>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 py-8">{children}</div>
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
     </div>
   );
 }

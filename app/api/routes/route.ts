@@ -37,6 +37,7 @@ export async function GET() {
             },
             pokemon: {
               select: {
+                id: true,
                 pokedexId: true,
                 name: true,
                 nameGerman: true,

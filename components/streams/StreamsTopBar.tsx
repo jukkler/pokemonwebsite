@@ -54,39 +54,33 @@ function formatElapsed(ms: number): string {
 }
 
 export default function StreamsTopBar({ activeRun, currentRunStats, playerColors, streams, hiddenStreamIds, onToggleStream }: StreamsTopBarProps) {
-  const [elapsedTime, setElapsedTime] = useState('');
+  const [now, setNow] = useState<number | null>(null);
+  const timerRunId = activeRun?.id ?? null;
+  const timerPausedAt = activeRun?.pausedAt ?? null;
 
   // Timer-Logik (analog zu RunStatsPanel)
   useEffect(() => {
-    if (!activeRun) {
-      setElapsedTime('');
-      return;
-    }
+    if (timerRunId === null || timerPausedAt) return;
 
-    const updateTimer = () => {
-      const startTime = new Date(activeRun.startedAt).getTime();
-      const totalPausedMs = activeRun.totalPausedMs || 0;
+    const updateTimer = () => setNow(Date.now());
+    const initialUpdate = setTimeout(updateTimer, 0);
+    const interval = setInterval(updateTimer, 1000);
 
-      let elapsedMs: number;
-      if (activeRun.pausedAt) {
-        const pauseTime = new Date(activeRun.pausedAt).getTime();
-        elapsedMs = pauseTime - startTime - totalPausedMs;
-      } else {
-        elapsedMs = Date.now() - startTime - totalPausedMs;
-      }
-
-      setElapsedTime(formatElapsed(Math.max(0, elapsedMs)));
+    return () => {
+      clearTimeout(initialUpdate);
+      clearInterval(interval);
     };
-
-    updateTimer();
-
-    if (!activeRun.pausedAt) {
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [activeRun]);
+  }, [timerRunId, timerPausedAt]);
 
   if (!activeRun) return null;
+
+  const startTime = new Date(activeRun.startedAt).getTime();
+  const referenceTime = activeRun.pausedAt
+    ? new Date(activeRun.pausedAt).getTime()
+    : now ?? startTime + (activeRun.totalPausedMs || 0);
+  const elapsedTime = formatElapsed(
+    Math.max(0, referenceTime - startTime - (activeRun.totalPausedMs || 0)),
+  );
 
   // Badge-Daten
   const badges = activeRun.gameVersion ? getBadgesForGame(activeRun.gameVersion.key) : null;
@@ -95,39 +89,33 @@ export default function StreamsTopBar({ activeRun, currentRunStats, playerColors
   const nextLevelCap = levelCaps?.[activeRun.badgesEarned];
 
   return (
-    <div className="w-full bg-[var(--card-bg)]/90 backdrop-blur-sm border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-6 text-sm overflow-x-auto shrink-0">
+    <section aria-label="Aktueller Run" className="app-band app-band--navy no-scrollbar flex w-full shrink-0 items-stretch overflow-x-auto text-sm">
       {/* Timer */}
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[var(--text-tertiary)]">⏱</span>
-        <span className="font-mono font-bold text-[var(--foreground)]">
-          {elapsedTime || '0m 0s'}
+      <div className="flex shrink-0 items-center gap-2 border-r border-white/20 px-4 py-3">
+        <span className="text-[10px] font-black uppercase tracking-wide text-white/60">Laufzeit</span>
+        <span className="font-mono font-black tabular-nums text-white">
+          {elapsedTime}
         </span>
         {activeRun.pausedAt && (
-          <span className="text-xs text-yellow-500 font-medium">PAUSIERT</span>
+          <span className="text-xs font-black text-yellow-300">■ PAUSIERT</span>
         )}
       </div>
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-[var(--border-default)] shrink-0" />
-
       {/* Run Info */}
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[var(--text-secondary)]">
+      <div className="flex shrink-0 items-center gap-2 border-r border-white/20 px-4 py-3">
+        <span className="font-black text-white">
           Run #{activeRun.runNumber}
         </span>
         {activeRun.gameVersion && (
-          <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30">
+          <span className="border-l-2 border-red-500 pl-2 text-xs font-bold text-white/70">
             {activeRun.gameVersion.name}
           </span>
         )}
       </div>
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-[var(--border-default)] shrink-0" />
-
       {/* Nächster Orden */}
       {nextBadge ? (
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2 border-r border-white/20 px-4 py-3">
           <Image
             src={nextBadge.imagePath}
             alt={nextBadge.nameDe}
@@ -135,24 +123,21 @@ export default function StreamsTopBar({ activeRun, currentRunStats, playerColors
             height={20}
             className="object-contain"
           />
-          <span className="text-[var(--foreground)] font-medium">{nextBadge.nameDe}</span>
+          <span className="font-bold text-white">{nextBadge.nameDe}</span>
           {nextLevelCap && (
-            <span className="text-xs text-[var(--text-tertiary)]">
+            <span className="text-xs text-white/60">
               Lv.{nextLevelCap}
             </span>
           )}
         </div>
       ) : badges && activeRun.badgesEarned >= badges.length ? (
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-green-400 font-medium">Alle Orden!</span>
+        <div className="flex shrink-0 items-center gap-2 border-r border-white/20 px-4 py-3">
+          <span className="font-black text-green-300">✓ Alle Orden</span>
         </div>
       ) : null}
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-[var(--border-default)] shrink-0" />
-
       {/* Stats pro Spieler (klickbar zum Ein-/Ausblenden) */}
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex shrink-0 items-stretch">
         {currentRunStats.map(stat => {
           const stream = streams?.find(s => s.player.name === stat.playerName);
           const isHidden = stream ? hiddenStreamIds?.has(stream.id) : false;
@@ -168,9 +153,9 @@ export default function StreamsTopBar({ activeRun, currentRunStats, playerColors
               type="button"
               onClick={() => canToggle && !isLastVisible && onToggleStream!(stream!.id)}
               disabled={!canToggle || (isLastVisible && !isHidden)}
-              className={`flex items-center gap-1.5 transition-all duration-200 rounded px-1.5 py-0.5 ${
+              className={`flex min-h-11 items-center gap-1.5 border-r border-white/20 px-4 py-2 transition-opacity ${
                 canToggle && !(isLastVisible && !isHidden)
-                  ? 'cursor-pointer hover:bg-[var(--background-secondary)]'
+                  ? 'cursor-pointer hover:bg-white/10'
                   : canToggle
                     ? 'cursor-not-allowed'
                     : ''
@@ -211,18 +196,18 @@ export default function StreamsTopBar({ activeRun, currentRunStats, playerColors
                 {stat.playerName}
               </span>
               {stat.totalKnockedOut > 0 && (
-                <span className="text-red-400 text-xs">{stat.totalKnockedOut}💀</span>
+                <span className="text-xs font-black text-red-300">{stat.totalKnockedOut} K.O.</span>
               )}
               {stat.totalNotCaught > 0 && (
-                <span className="text-yellow-400 text-xs">{stat.totalNotCaught}❌</span>
+                <span className="text-xs font-black text-yellow-300">{stat.totalNotCaught} verpasst</span>
               )}
               {stat.totalKnockedOut === 0 && stat.totalNotCaught === 0 && (
-                <span className="text-green-400 text-xs">✓</span>
+                <span className="text-xs font-black text-green-300">✓ ohne Verlust</span>
               )}
             </button>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

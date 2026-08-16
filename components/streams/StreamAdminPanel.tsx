@@ -83,14 +83,16 @@ export default function StreamAdminPanel({ streams, players, onAdd, onRemove }: 
     <>
       {/* Toggle-Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-[var(--card-bg)] border border-[var(--border-default)] shadow-lg flex items-center justify-center hover:bg-[var(--background-tertiary)] transition-colors md:bottom-4"
+        className="app-action app-action-primary fixed bottom-20 right-4 z-50 min-h-11 gap-2 md:bottom-4"
         title="Stream-Verwaltung"
       >
-        <svg className="w-5 h-5 text-[var(--text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
+        <span>Streams verwalten</span>
       </button>
 
       {/* Panel */}
@@ -103,12 +105,14 @@ export default function StreamAdminPanel({ streams, players, onAdd, onRemove }: 
           />
 
           {/* Drawer */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--card-bg)] border-t border-[var(--border-default)] rounded-t-2xl shadow-2xl p-4 max-h-[50vh] overflow-y-auto animate-[slide-in-up_0.2s_ease-out]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[var(--foreground)]">Stream-Verwaltung</h3>
+          <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] overflow-y-auto border-t-4 border-red-600 bg-[var(--card-bg)] p-4 shadow-2xl animate-[slide-in-up_0.2s_ease-out]">
+            <div className="app-section-title flex items-center justify-between">
+              <h3 className="text-lg font-black uppercase tracking-[-0.02em] text-[var(--foreground)]">Stream-Verwaltung</h3>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-[var(--text-secondary)] hover:text-[var(--foreground)]"
+                className="flex min-h-11 min-w-11 items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                aria-label="Stream-Verwaltung schließen"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -123,12 +127,12 @@ export default function StreamAdminPanel({ streams, players, onAdd, onRemove }: 
                 value={url}
                 onChange={e => { setUrl(e.target.value); setError(''); }}
                 placeholder="YouTube-URL einfügen..."
-                className="flex-1 px-3 py-2 rounded-lg bg-[var(--background-secondary)] border border-[var(--border-default)] text-[var(--foreground)] text-sm placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-blue-500"
+                className="min-h-11 flex-1 border border-[var(--border-default)] bg-[var(--background-secondary)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20"
               />
               <select
                 value={selectedPlayerId}
                 onChange={e => { setSelectedPlayerId(e.target.value ? Number(e.target.value) : ''); setError(''); }}
-                className="px-3 py-2 rounded-lg bg-[var(--background-secondary)] border border-[var(--border-default)] text-[var(--foreground)] text-sm focus:outline-none focus:border-blue-500"
+                className="min-h-11 border border-[var(--border-default)] bg-[var(--background-secondary)] px-3 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20"
               >
                 <option value="">Spieler...</option>
                 {availablePlayers.map(p => (
@@ -138,7 +142,7 @@ export default function StreamAdminPanel({ streams, players, onAdd, onRemove }: 
               <button
                 onClick={handleAdd}
                 disabled={loading}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shrink-0"
+                className="app-action app-action-primary min-h-11 shrink-0 disabled:opacity-50"
               >
                 {loading ? '...' : 'Hinzufügen'}
               </button>
@@ -150,16 +154,17 @@ export default function StreamAdminPanel({ streams, players, onAdd, onRemove }: 
 
             {/* Aktive Streams */}
             {streams.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-[var(--text-tertiary)] font-medium uppercase tracking-wider">Aktive Streams</p>
+              <div>
+                <p className="mb-2 text-xs font-black uppercase tracking-wider text-[var(--text-tertiary)]">Aktive Streams</p>
+                <div className="divide-y divide-[var(--border-default)] border-y border-[var(--border-default)]">
                 {streams.map(stream => (
                   <div
                     key={stream.id}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--background-secondary)] border border-[var(--border-default)]"
+                    className="flex items-center justify-between bg-[var(--background-secondary)] px-3 py-2"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className="w-3 h-3 rounded-full shrink-0"
+                        className="h-3 w-3 shrink-0"
                         style={{ backgroundColor: stream.player.color }}
                       />
                       <span className="text-sm font-medium text-[var(--foreground)]">{stream.player.name}</span>
@@ -168,12 +173,13 @@ export default function StreamAdminPanel({ streams, players, onAdd, onRemove }: 
                     <button
                       onClick={() => handleRemove(stream.id)}
                       disabled={loading}
-                      className="text-red-400 hover:text-red-300 text-sm font-medium shrink-0 ml-2 disabled:opacity-50"
+                      className="ml-2 min-h-11 shrink-0 px-2 text-sm font-bold text-red-600 hover:bg-red-500/10 disabled:opacity-50 dark:text-red-300"
                     >
                       Entfernen
                     </button>
                   </div>
                 ))}
+                </div>
               </div>
             )}
           </div>

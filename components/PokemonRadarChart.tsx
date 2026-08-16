@@ -1,46 +1,28 @@
 'use client';
 
-/**
- * Pokémon Radar Chart Komponente
- * Zeigt einen Radar Chart mit den Stats mehrerer Pokémon
- * Performance: Mit useMemo für teure Berechnungen
- */
-
 import { useMemo } from 'react';
 import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
   Radar,
   RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   ResponsiveContainer,
-  Legend,
   Tooltip,
 } from 'recharts';
-import dynamic from 'next/dynamic';
-const DefensiveCoverageMatrix = dynamic(() => import('@/components/DefensiveCoverageMatrix'), {
-  loading: () => <div className="animate-pulse bg-[var(--background-tertiary)] rounded-lg h-32" />,
-  ssr: false,
-});
-
-interface PokemonStats {
-  pokedexId: number;
-  name: string;
-  nameGerman: string | null;
-  types: string;
-  hp: number;
-  attack: number;
-  defense: number;
-  spAttack: number;
-  spDefense: number;
-  speed: number;
-  spriteUrl: string | null;
-  spriteGifUrl: string | null;
-}
+import type { Pokemon } from '@/lib/types';
+import {
+  DEFAULT_COMPARISON_COLORS,
+  SeriesMarker,
+  getPokemonDisplayName,
+  getSeriesColor,
+} from '@/components/pokeradar/comparison-ui';
+import PokemonMiniSprite from '@/components/pokeradar/PokemonMiniSprite';
 
 interface PokemonRadarChartProps {
-  pokemon: PokemonStats[];
-  colors: string[];
+  pokemon: Pokemon[];
+  colors?: readonly string[];
+  /** @deprecated Entfernen erfolgt jetzt in der Auswahlleiste. */
   onRemove?: (pokedexId: number) => void;
 }
 
@@ -48,73 +30,118 @@ type RadarDataPoint = {
   stat: string;
 } & Record<string, number | string>;
 
-const STAT_LABELS = [
-  'HP',
-  'Angriff',
-  'Verteidigung',
-  'Sp. Ang.',
-  'Sp. Vert.',
-  'Initiative',
+const STAT_DEFINITIONS = [
+  { key: 'hp', label: 'KP' },
+  { key: 'attack', label: 'Angriff' },
+  { key: 'defense', label: 'Verteidigung' },
+  { key: 'spAttack', label: 'Sp. Angriff' },
+  { key: 'spDefense', label: 'Sp. Verteidigung' },
+  { key: 'speed', label: 'Initiative' },
 ] as const;
-const STAT_KEYS = [
-  'hp',
-  'attack',
-  'defense',
-  'spAttack',
-  'spDefense',
-  'speed',
-] as const;
+
+const SERIES_DASHES = [undefined, '9 4', '3 3', '12 4 3 4', '2 4', '14 5'] as const;
+
+function RadarTooltipContent({
+  active,
+  payload,
+  label,
+  pokemon,
+}: {
+  active?: boolean;
+  payload?: ReadonlyArray<{
+    color?: string;
+    dataKey?: string | number;
+    value?: unknown;
+  }>;
+  label?: string | number;
+  pokemon: Pokemon[];
+}) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="min-w-44 border border-[var(--border-default)] bg-[var(--card-bg)] p-3 text-[var(--foreground)] shadow-[var(--shadow-md)]">
+      <p className="mb-2 text-sm font-bold">{label}</p>
+      <div className="space-y-1.5">
+        {payload.map((item) => {
+          const pokedexId = Number(String(item.dataKey).replace('pokemon-', ''));
+          const entry = pokemon.find((candidate) => candidate.pokedexId === pokedexId);
+          if (!entry) return null;
+
+          return (
+            <div key={entry.pokedexId} className="flex items-center gap-2 text-xs">
+              <PokemonMiniSprite pokemon={entry} size="xs" />
+              <span className="min-w-0 flex-1 truncate font-semibold">
+                {getPokemonDisplayName(entry)}
+              </span>
+              <span className="font-bold tabular-nums" style={{ color: item.color }}>
+                {String(item.value ?? '–')}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function PokemonRadarChart({
   pokemon,
-  colors,
+  colors = DEFAULT_COMPARISON_COLORS,
   onRemove,
 }: PokemonRadarChartProps) {
   void onRemove;
 
-  // Performance: Berechne dynamisches Maximum mit useMemo
-  const dynamicMax = useMemo(() => {
-    if (pokemon.length === 0) return 100; // Default für leeren Zustand
-
-    let maxValue = 0;
-    pokemon.forEach((p) => {
-      STAT_KEYS.forEach((key) => {
-        const value = p[key as keyof PokemonStats] as number;
-        if (value > maxValue) {
-          maxValue = value;
-        }
-      });
-    });
-    // Maximum ist höchster Wert + 10%, aufgerundet auf nächste 10er-Stelle
-    return Math.ceil((maxValue * 1.1) / 10) * 10;
-  }, [pokemon]);
-
-  // Performance: Transformiere Daten für Recharts mit useMemo
   const data = useMemo(() => {
-    return STAT_LABELS.map((stat, index) => {
-      const dataPoint: RadarDataPoint = { stat };
+    return STAT_DEFINITIONS.map(({ key, label }) => {
+      const point: RadarDataPoint = { stat: label };
 
-      // Wenn keine Pokemon, füge Dummy-Wert hinzu damit Grid gerendert wird
-      if (pokemon.length === 0) {
-        dataPoint['_placeholder'] = 0;
-      } else {
-        pokemon.forEach((p) => {
-          const displayName = p.nameGerman || p.name;
-          const statValue = p[STAT_KEYS[index] as keyof PokemonStats];
-          dataPoint[displayName] = typeof statValue === 'number' ? statValue : 0;
-        });
-      }
+      pokemon.forEach((entry) => {
+        point[`pokemon-${entry.pokedexId}`] = entry[key];
+      });
 
-      return dataPoint;
+      return point;
     });
   }, [pokemon]);
+
+  if (pokemon.length === 0) {
+    return (
+      <div className="border border-dashed border-[var(--border-default)] bg-[var(--background-secondary)] px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
+        Wähle mindestens ein Pokémon aus, um das Basiswert-Profil zu öffnen.
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full">
-      {/* Radar Chart */}
-      <div className="w-full h-96">
+    <div className="w-full" aria-label="Radar-Profil der ausgewählten Pokémon">
+      <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2" aria-label="Legende">
+        {pokemon.map((entry, index) => (
+          <div
+            key={entry.pokedexId}
+            className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]"
+          >
+            <SeriesMarker index={index} colors={colors} size="sm" />
+            <PokemonMiniSprite pokemon={entry} size="xs" />
+            <span
+              aria-hidden="true"
+              className="w-7 border-t-2"
+              style={{
+                borderColor: getSeriesColor(index, colors),
+                borderTopStyle: index === 0 ? 'solid' : 'dashed',
+              }}
+            />
+            <span>{getPokemonDisplayName(entry)}</span>
+          </div>
+        ))}
+      </div>
+
+      <p className="mb-2 text-xs leading-5 text-[var(--text-secondary)]">
+        Alle Achsen verwenden denselben festen Wertebereich von 0 bis 255. Die Linien unterscheiden
+        sich zusätzlich durch Nummern und Muster.
+      </p>
+
+      <div className="h-80 w-full md:h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={data}>
+          <RadarChart data={data} accessibilityLayer>
             <PolarGrid stroke="var(--border-default)" />
             <PolarAngleAxis
               dataKey="stat"
@@ -122,91 +149,57 @@ export default function PokemonRadarChart({
             />
             <PolarRadiusAxis
               angle={90}
-              domain={[0, dynamicMax]}
-              tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+              domain={[0, 255]}
+              tickCount={6}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             />
-            {pokemon.length === 0 ? (
-              // Unsichtbarer Radar für Grid-Rendering wenn keine Pokemon
+            {pokemon.map((entry, index) => (
               <Radar
-                name=""
-                dataKey="_placeholder"
-                stroke="transparent"
-                fill="transparent"
-                fillOpacity={0}
+                key={entry.pokedexId}
+                name={`${index + 1}. ${getPokemonDisplayName(entry)}`}
+                dataKey={`pokemon-${entry.pokedexId}`}
+                stroke={getSeriesColor(index, colors)}
+                strokeWidth={2.5}
+                strokeDasharray={SERIES_DASHES[index % SERIES_DASHES.length]}
+                fill={getSeriesColor(index, colors)}
+                fillOpacity={0.1}
+                dot={{ r: 2.5, fill: getSeriesColor(index, colors) }}
               />
-            ) : (
-              pokemon.map((p, index) => {
-                const displayName = p.nameGerman || p.name;
-                return (
-                  <Radar
-                    key={p.pokedexId}
-                    name={displayName}
-                    dataKey={displayName}
-                    stroke={colors[index % colors.length]}
-                    fill={colors[index % colors.length]}
-                    fillOpacity={0.3}
-                  />
-                );
-              })
-            )}
-            <Legend
-              layout="vertical"
-              align="right"
-              verticalAlign="middle"
-              wrapperStyle={{ color: 'var(--foreground)' }}
-            />
+            ))}
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--card-bg)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '8px',
-                color: 'var(--foreground)',
-              }}
-              labelStyle={{ color: 'var(--foreground)' }}
+              content={(props) => <RadarTooltipContent {...props} pokemon={pokemon} />}
             />
           </RadarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Defensive Coverage Matrix */}
-      <div className="mt-8">
-        <DefensiveCoverageMatrix
-          collapsible={false}
-          maxSlots={6}
-          teamMembers={pokemon.map((p, index) => ({
-            id: p.pokedexId,
-            nickname: null,
-            teamSlot: index + 1,
-            pokemon: {
-              pokedexId: p.pokedexId,
-              name: p.name,
-              nameGerman: p.nameGerman,
-              types: p.types,
-              spriteUrl: p.spriteUrl,
-              hp: p.hp,
-              attack: p.attack,
-              defense: p.defense,
-              spAttack: p.spAttack,
-              spDefense: p.spDefense,
-              speed: p.speed,
-            },
-            route: {
-              id: 0,
-              name: '',
-            },
-            isKnockedOut: false,
-            koCausedBy: null,
-            koReason: null,
-            koDate: null,
-            isNotCaught: false,
-            notCaughtBy: null,
-            notCaughtReason: null,
-            notCaughtDate: null,
-          }))}
-          playerColor={colors[0]}
-        />
+      <div className="mt-4 overflow-x-auto">
+        <table className="app-data-table w-full min-w-[640px] text-sm">
+          <caption className="pb-2 text-left text-xs text-[var(--text-secondary)]">
+            Exakte Basiswerte zur Profilansicht
+          </caption>
+          <thead>
+            <tr>
+              <th>Basiswert</th>
+              {pokemon.map((entry, index) => (
+                <th key={entry.pokedexId}>
+                  {index + 1}. {getPokemonDisplayName(entry)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {STAT_DEFINITIONS.map(({ key, label }) => (
+              <tr key={key}>
+                <th>{label}</th>
+                {pokemon.map((entry) => (
+                  <td key={entry.pokedexId} className="font-bold tabular-nums">{entry[key]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
-

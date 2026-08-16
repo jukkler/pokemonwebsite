@@ -54,10 +54,10 @@ export default function Dropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-white text-left flex items-center justify-between hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="flex min-h-11 w-full items-center justify-between border border-[var(--border-default)] bg-[var(--background-secondary)] px-4 py-3 text-left text-[var(--foreground)] transition-colors hover:border-[var(--brand-navy)] focus:border-[var(--brand-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
         style={selectedOption?.color ? { borderColor: selectedOption.color, backgroundColor: selectedOption.color + '20' } : {}}
       >
-        <span className={selectedOption?.color ? 'font-semibold' : 'text-gray-500'}>
+        <span className={selectedOption?.color ? 'font-semibold' : 'text-[var(--text-secondary)]'}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <svg
@@ -71,14 +71,14 @@ export default function Dropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+        <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto border border-[var(--border-default)] bg-[var(--card-bg-elevated)]">
           {options.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => handleSelect(option.value)}
-              className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                value === option.value ? 'bg-blue-50 font-semibold' : ''
+              className={`w-full px-4 py-3 text-left text-[var(--foreground)] transition-colors hover:bg-[var(--background-secondary)] ${
+                value === option.value ? 'bg-[var(--background-tertiary)] font-semibold' : ''
               }`}
               style={option.color ? { color: option.color } : {}}
             >

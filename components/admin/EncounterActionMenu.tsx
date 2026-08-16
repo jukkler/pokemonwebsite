@@ -1,0 +1,469 @@
+'use client';
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useId,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
+import type { PokemonListItem } from '@/lib/types';
+import {
+  deleteEncounterAdmin,
+  mutateEncounterAdmin,
+  type EncounterAdminAction,
+  type EncounterAdminTarget,
+} from '@/lib/encounter-admin';
+import EncounterAdminDialog from './EncounterAdminDialog';
+
+export type EncounterActionMenuTarget = EncounterAdminTarget;
+
+interface EncounterActionMenuProps {
+  encounter: EncounterAdminTarget;
+  pokemonOptions?: PokemonListItem[];
+  onUpdated?: (encounter: EncounterAdminTarget) => void;
+  onDeleted?: (encounterId: number) => void;
+  onError?: (message: string) => void;
+  triggerLabel?: string;
+  compact?: boolean;
+  disabled?: boolean;
+  /**
+   * Individual is the safe default: only identity edits that affect exactly
+   * one encounter are exposed. Repair adds the deliberately separated
+   * one-row delete escape hatch; team and status mutations belong to the
+   * route-link menu.
+   */
+  scope?: 'individual' | 'repair';
+  className?: string;
+}
+
+type IndividualEncounterAction = Extract<
+  EncounterAdminAction,
+  { action: 'swap-pokemon' | 'update-nickname' }
+>;
+type DialogAction = IndividualEncounterAction['action'] | 'delete' | null;
+
+const inputClasses =
+  'w-full border border-[var(--border-default)] bg-[var(--background-secondary)] px-3 py-2.5 text-[var(--foreground)] placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] disabled:opacity-50';
+const secondaryButtonClasses =
+  'min-h-11 border border-[var(--border-default)] bg-[var(--background-secondary)] px-4 py-2 font-bold text-[var(--foreground)] hover:border-[var(--brand-navy)] hover:bg-[var(--background-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] disabled:opacity-50';
+const primaryButtonClasses =
+  'min-h-11 border border-[var(--brand-red)] bg-[var(--brand-red)] px-4 py-2 font-extrabold text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
+function pokemonDisplayName(encounter: EncounterAdminTarget) {
+  return encounter.pokemon.nameGerman ?? encounter.pokemon.name;
+}
+
+/**
+ * Shared entry point for one-Pokémon identity edits.
+ *
+ * It is intentionally surface-agnostic: TeamDisplay, RouteList and Tabelle can
+ * render this component and update their local cache through `onUpdated`.
+ * Team slots and status transitions intentionally live in RouteLinkActionMenu.
+ */
+export default function EncounterActionMenu({
+  encounter,
+  pokemonOptions = [],
+  onUpdated,
+  onDeleted,
+  onError,
+  triggerLabel = 'Verwalten',
+  compact = false,
+  disabled = false,
+  scope = 'individual',
+  className = '',
+}: EncounterActionMenuProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<DialogAction>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nickname, setNickname] = useState(encounter.nickname ?? '');
+  const [pokemonSearch, setPokemonSearch] = useState('');
+  const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const hadDialogRef = useRef(false);
+  const menuId = useId();
+
+  const name = pokemonDisplayName(encounter);
+  const filteredPokemon = useMemo(() => {
+    const query = pokemonSearch.trim().toLocaleLowerCase('de-DE');
+    if (!query) return pokemonOptions.slice(0, 20);
+    return pokemonOptions
+      .filter((pokemon) => {
+        const names = `${pokemon.name} ${pokemon.nameGerman ?? ''} ${pokemon.pokedexId}`;
+        return names.toLocaleLowerCase('de-DE').includes(query);
+      })
+      .slice(0, 20);
+  }, [pokemonOptions, pokemonSearch]);
+
+  const resetForm = useCallback((action: Exclude<DialogAction, null>) => {
+    setError(null);
+    setNickname(encounter.nickname ?? '');
+    setPokemonSearch('');
+    setSelectedPokemonId(action === 'swap-pokemon' ? encounter.pokemon.id : null);
+  }, [encounter]);
+
+  const openDialog = useCallback((action: Exclude<DialogAction, null>) => {
+    resetForm(action);
+    setMenuOpen(false);
+    setDialogAction(action);
+  }, [resetForm]);
+
+  const closeDialog = useCallback(() => {
+    if (busy) return;
+    setDialogAction(null);
+    setError(null);
+  }, [busy]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = 240;
+      const menuHeight = menuRef.current?.offsetHeight ?? 360;
+      const viewportMargin = 8;
+      const left = Math.min(
+        Math.max(viewportMargin, rect.right - menuWidth),
+        window.innerWidth - menuWidth - viewportMargin,
+      );
+      const fitsBelow = rect.bottom + viewportMargin + menuHeight <= window.innerHeight;
+      const top = fitsBelow
+        ? rect.bottom + viewportMargin
+        : Math.max(viewportMargin, rect.top - menuHeight - viewportMargin);
+      setMenuPosition({ top, left });
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setMenuOpen(false);
+      triggerRef.current?.focus();
+    };
+    updatePosition();
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    const focusTimer = window.setTimeout(() => {
+      updatePosition();
+      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (dialogAction) {
+      hadDialogRef.current = true;
+      return;
+    }
+    if (!hadDialogRef.current) return;
+    hadDialogRef.current = false;
+    const focusTimer = window.setTimeout(() => triggerRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [dialogAction]);
+
+  const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])'),
+    );
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % items.length;
+    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + items.length) % items.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = items.length - 1;
+    if (nextIndex !== null && items[nextIndex]) {
+      event.preventDefault();
+      items[nextIndex].focus();
+    }
+  };
+
+  const submit = async (action: IndividualEncounterAction) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await mutateEncounterAdmin(encounter.id, action);
+      onUpdated?.(updated);
+      setDialogAction(null);
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Änderung fehlgeschlagen';
+      setError(message);
+      onError?.(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitDelete = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteEncounterAdmin(encounter.id);
+      onDeleted?.(encounter.id);
+      setDialogAction(null);
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Löschen fehlgeschlagen';
+      setError(message);
+      onError?.(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmAction = () => {
+    switch (dialogAction) {
+      case 'swap-pokemon':
+        if (selectedPokemonId) void submit({ action: 'swap-pokemon', pokemonId: selectedPokemonId });
+        break;
+      case 'update-nickname':
+        void submit({ action: 'update-nickname', nickname: nickname || null });
+        break;
+      case 'delete':
+        void submitDelete();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const canConfirm =
+    !busy &&
+    (dialogAction === 'delete' ||
+      dialogAction === 'update-nickname' ||
+      (dialogAction === 'swap-pokemon' && selectedPokemonId !== null));
+
+  const dialogCopy: Record<Exclude<DialogAction, null>, { title: string; description: string; confirm: string; danger?: boolean }> = {
+    'swap-pokemon': {
+      title: 'Pokémon tauschen',
+      description: `${name} auf ${encounter.route.name} ersetzen.`,
+      confirm: 'Pokémon tauschen',
+    },
+    'update-nickname': {
+      title: 'Spitzname bearbeiten',
+      description: `${name} bei ${encounter.player.name}`,
+      confirm: 'Spitzname speichern',
+    },
+    delete: {
+      title: 'Begegnung löschen',
+      description: `${name} von ${encounter.player.name} auf ${encounter.route.name} wird dauerhaft gelöscht.`,
+      confirm: 'Begegnung löschen',
+      danger: true,
+    },
+  };
+
+  const copy = dialogAction ? dialogCopy[dialogAction] : null;
+
+  return (
+    <div ref={rootRef} className={`relative inline-flex ${className}`}>
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        aria-controls={menuOpen ? menuId : undefined}
+        aria-label={compact ? `${name} verwalten` : undefined}
+        onClick={() => setMenuOpen((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setMenuOpen(true);
+          }
+        }}
+        className="min-h-11 border border-[var(--border-default)] bg-[var(--card-bg)] px-3 py-2 text-sm font-extrabold text-[var(--foreground)] hover:border-[var(--brand-blue)] hover:text-[var(--brand-blue)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] disabled:opacity-50"
+      >
+        {compact ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-5 w-5"
+          >
+            <circle cx="12" cy="5" r="1.75" />
+            <circle cx="12" cy="12" r="1.75" />
+            <circle cx="12" cy="19" r="1.75" />
+          </svg>
+        ) : triggerLabel}
+      </button>
+
+      {menuOpen && menuPosition && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              id={menuId}
+              ref={menuRef}
+              role="menu"
+              aria-label={`${name} verwalten`}
+              onKeyDown={handleMenuKeyDown}
+              style={{ top: menuPosition.top, left: menuPosition.left }}
+              className="fixed z-[9998] w-60 overflow-hidden border border-[var(--border-default)] bg-[var(--card-bg-elevated)] p-1.5 text-[var(--foreground)] shadow-lg"
+            >
+              {pokemonOptions.length > 0 ? (
+                <MenuButton onClick={() => openDialog('swap-pokemon')}>Pokémon tauschen</MenuButton>
+              ) : null}
+              <MenuButton onClick={() => openDialog('update-nickname')}>Spitzname bearbeiten</MenuButton>
+              {scope === 'repair' ? (
+                <>
+                  <div className="my-1 border-t border-[var(--border-default)]" />
+                  <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                    Reparaturmodus
+                  </p>
+                  <MenuButton onClick={() => openDialog('delete')} danger>
+                    Einzelnen Datensatz löschen
+                  </MenuButton>
+                </>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {dialogAction && copy ? (
+        <EncounterAdminDialog
+          isOpen
+          title={copy.title}
+          description={copy.description}
+          onClose={closeDialog}
+          busy={busy}
+          actions={
+            <>
+              <button type="button" onClick={closeDialog} disabled={busy} className={secondaryButtonClasses}>
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={confirmAction}
+                disabled={!canConfirm}
+                className={`${primaryButtonClasses} ${copy.danger ? 'bg-red-600 hover:bg-red-700' : ''}`}
+              >
+                {busy ? 'Wird gespeichert…' : copy.confirm}
+              </button>
+            </>
+          }
+        >
+          {dialogAction === 'swap-pokemon' ? (
+            <>
+              <Field label="Pokémon suchen" htmlFor={`pokemon-search-${encounter.id}`}>
+                <input
+                  id={`pokemon-search-${encounter.id}`}
+                  type="search"
+                  value={pokemonSearch}
+                  onChange={(event) => setPokemonSearch(event.target.value)}
+                  placeholder="Name oder Pokédex-Nummer"
+                  disabled={busy}
+                  className={inputClasses}
+                />
+              </Field>
+              <div className="max-h-52 space-y-1 overflow-y-auto" role="listbox" aria-label="Pokémon auswählen">
+                {filteredPokemon.map((pokemon) => (
+                  <button
+                    key={pokemon.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selectedPokemonId === pokemon.id}
+                    onClick={() => setSelectedPokemonId(pokemon.id)}
+                    disabled={busy}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      selectedPokemonId === pokemon.id
+                        ? 'bg-blue-600 text-white'
+                        : 'hover:bg-[var(--background-tertiary)]'
+                    }`}
+                  >
+                    <span className="mr-2 opacity-70">#{pokemon.pokedexId}</span>
+                    {pokemon.nameGerman ?? pokemon.name}
+                  </button>
+                ))}
+                {filteredPokemon.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-sm text-[var(--text-secondary)]">Kein Pokémon gefunden</p>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+
+          {dialogAction === 'update-nickname' ? (
+            <Field label="Spitzname" htmlFor={`nickname-${encounter.id}`}>
+              <input
+                id={`nickname-${encounter.id}`}
+                value={nickname}
+                onChange={(event) => setNickname(event.target.value)}
+                maxLength={60}
+                placeholder="Leer lassen, um den Spitznamen zu entfernen"
+                disabled={busy}
+                className={inputClasses}
+              />
+            </Field>
+          ) : null}
+
+          {dialogAction === 'delete' ? (
+            <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-200">
+              Diese Aktion kann nicht rückgängig gemacht werden. Andere Begegnungen auf derselben Route bleiben unverändert.
+            </p>
+          ) : null}
+
+          {error ? (
+            <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              {error}
+            </p>
+          ) : null}
+        </EncounterAdminDialog>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuButton({
+  children,
+  onClick,
+  danger = false,
+}: {
+  children: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={`min-h-11 w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-[var(--background-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${danger ? 'text-red-600 dark:text-red-300' : ''}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}

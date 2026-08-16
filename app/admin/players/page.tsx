@@ -242,13 +242,13 @@ export default function AdminPlayersPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-4xl font-bold text-[var(--foreground)] mb-8">
+    <main className="admin-page">
+      <h1 className="text-4xl font-bold text-[var(--foreground)]">
         Spieler verwalten
       </h1>
 
       {/* Formular */}
-      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 mb-8 border border-[var(--border-default)]">
+      <section className="app-section p-5 sm:p-6">
         <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">
           {editingId ? 'Spieler bearbeiten' : 'Neuer Spieler'}
         </h2>
@@ -397,7 +397,7 @@ export default function AdminPlayersPage() {
                     : 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
                 }`}
               >
-                {uploading ? 'Lädt...' : '📤 Eigenen Avatar hochladen'}
+                {uploading ? 'Lädt…' : 'Eigenen Avatar hochladen'}
               </label>
               <span className="text-xs text-[var(--text-tertiary)]">
                 PNG, JPG, GIF oder WebP (max. 5MB)
@@ -423,10 +423,10 @@ export default function AdminPlayersPage() {
             )}
           </div>
         </form>
-      </div>
+      </section>
 
       {/* Liste */}
-      <div className="bg-[var(--card-bg)] rounded-lg shadow-lg p-6 border border-[var(--border-default)]">
+      <section className="app-section overflow-hidden p-5 sm:p-6">
         <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Spieler-Liste</h2>
 
         {loading ? (
@@ -504,7 +504,7 @@ export default function AdminPlayersPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Crop-Modal */}
       {cropModalOpen && selectedImageForCrop && (
@@ -514,7 +514,6 @@ export default function AdminPlayersPage() {
           onCancel={handleCropCancel}
         />
       )}
-    </div>
+    </main>
   );
 }
-

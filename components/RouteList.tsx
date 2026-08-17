@@ -549,7 +549,7 @@ const RouteList = memo(function RouteList({
           const isEditingThisRoute = editingRouteId === route.id;
           const routeComparisonHref = buildRouteComparisonHref(route);
 
-          const minHeight = 'min-h-[172px]';
+          const cardHeight = 'h-[202px]';
 
           return (
             <div
@@ -645,7 +645,7 @@ const RouteList = memo(function RouteList({
                         <div className="flex flex-wrap items-stretch gap-2">
                           {playerEncounters.map((encounter, encounterIndex) => (
                             <div key={encounter.id} className="w-[132px] shrink-0">
-                              <div className={`relative group ${minHeight}`}>
+                              <div className={`relative group ${cardHeight}`}>
                                 {isAdmin ? (
                                   <div className="absolute right-1 top-1 z-20">
                                     <EncounterActionMenu
@@ -694,7 +694,7 @@ const RouteList = memo(function RouteList({
                                             ? `Basiswerte von ${encounter.nickname || encounter.pokemon.nameGerman || encounter.pokemon.name} anzeigen oder Entwicklung verwalten`
                                             : statTriggerProps['aria-label']
                                         }
-                                        className={`block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] [&>div]:cursor-inherit ${minHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}
+                                        className={`block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] [&>div]:cursor-inherit ${cardHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}
                                       >
                                         <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="tiny" />
                                       </button>

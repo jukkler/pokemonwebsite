@@ -47,22 +47,24 @@ export interface PokemonStatPopoverProps {
   pokemon: PokemonStatPopoverPokemon;
   slotNumber: number;
   teamAverage: number | null;
+  averageLabel?: string;
   interactionDisabled?: boolean;
   renderTrigger?: (triggerProps: PokemonStatPopoverTriggerProps) => ReactNode;
 }
 
-function formatAverageDelta(total: number, teamAverage: number | null): string {
+function formatAverageDelta(total: number, teamAverage: number | null, averageLabel: string): string {
   if (teamAverage === null) return 'Kein Teamdurchschnitt verfügbar';
 
   const delta = total - teamAverage;
-  if (delta === 0) return 'Entspricht dem Team-Ø';
-  return `${delta > 0 ? '+' : '−'}${Math.abs(delta)} BP zum Team-Ø`;
+  if (delta === 0) return `Entspricht dem ${averageLabel}`;
+  return `${delta > 0 ? '+' : '−'}${Math.abs(delta)} BP zum ${averageLabel}`;
 }
 
 export default function PokemonStatPopover({
   pokemon,
   slotNumber,
   teamAverage,
+  averageLabel = 'Team-Ø',
   interactionDisabled = false,
   renderTrigger,
 }: PokemonStatPopoverProps) {
@@ -211,7 +213,7 @@ export default function PokemonStatPopover({
             })}
           </dl>
           <footer data-positive={teamAverage !== null && total >= teamAverage ? 'true' : undefined}>
-            {formatAverageDelta(total, teamAverage)}
+            {formatAverageDelta(total, teamAverage, averageLabel)}
           </footer>
         </aside>
       ) : null}

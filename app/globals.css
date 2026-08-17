@@ -830,6 +830,24 @@ body {
   height: auto;
 }
 
+.route-pokemon-stat-shell .dashboard-pokemon-stat-shell {
+  display: block;
+  height: 100%;
+}
+
+.route-pokemon-stat-shell .dashboard-pokemon-stat-popover {
+  left: 0;
+  translate: 0 5px;
+}
+
+.route-pokemon-stat-shell .dashboard-pokemon-stat-shell[data-open='true'] .dashboard-pokemon-stat-popover {
+  translate: 0 0;
+}
+
+.route-list-row:has(.dashboard-pokemon-stat-shell[data-open='true']) {
+  z-index: 30;
+}
+
 @media (max-width: 639px) {
   .team-display-slot:nth-child(odd) .dashboard-pokemon-stat-popover {
     left: 0;

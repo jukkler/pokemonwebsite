@@ -12,12 +12,14 @@ import PokemonCard from './PokemonCard';
 import EvolutionMenu from './EvolutionMenu';
 import EncounterActionMenu from './admin/EncounterActionMenu';
 import RouteLinkActionMenu from './admin/RouteLinkActionMenu';
+import PokemonStatPopover from './dashboard/PokemonStatPopover';
 import PlayerAvatar from './PlayerAvatar';
 import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
 import { calculateAverageStats, filterPokemonBySearch } from '@/lib/team-utils';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
 import { buildPokeradarHref } from '@/lib/pokeradar-team-data';
+import { parseTypes } from '@/lib/typeEffectiveness';
 import type { EncounterWithMeta, PlayerBase, PokemonListItem } from '@/lib/types';
 import type { EncounterAdminTarget } from '@/lib/encounter-admin';
 
@@ -552,7 +554,7 @@ const RouteList = memo(function RouteList({
           return (
             <div
               key={route.id}
-              className={`py-5 transition-colors ${isInactive ? 'bg-[var(--background-secondary)]/60 opacity-75' : ''}`}
+              className={`route-list-row relative z-0 py-5 transition-colors hover:z-30 focus-within:z-30 ${isInactive ? 'bg-[var(--background-secondary)]/60' : ''}`}
             >
               {/* Header */}
               <div className="mb-4 flex flex-col items-stretch gap-3 px-3 sm:flex-row sm:items-center sm:justify-between">
@@ -641,9 +643,9 @@ const RouteList = memo(function RouteList({
 
                       {hasEncounter ? (
                         <div className="flex flex-wrap items-stretch gap-2">
-                          {playerEncounters.map((encounter) => (
+                          {playerEncounters.map((encounter, encounterIndex) => (
                             <div key={encounter.id} className="w-[132px] shrink-0">
-                              <div className={`relative group ${minHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}>
+                              <div className={`relative group ${minHeight}`}>
                                 {isAdmin ? (
                                   <div className="absolute right-1 top-1 z-20">
                                     <EncounterActionMenu
@@ -662,15 +664,42 @@ const RouteList = memo(function RouteList({
                                   </span>
                                 ) : null}
                                 
-                                <div
-                                  className={`h-full ${minHeight} ${isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught ? 'cursor-pointer' : ''}`}
-                                  onClick={() => {
-                                    if (isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught) {
-                                      evolution.openMenu(encounter.id, encounter.pokemon.pokedexId);
-                                    }
-                                  }}
-                                >
-                                  <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="tiny" />
+                                <div className="route-pokemon-stat-shell h-full">
+                                  <PokemonStatPopover
+                                    pokemon={{
+                                      ...encounter.pokemon,
+                                      nickname: encounter.nickname,
+                                      types: parseTypes(encounter.pokemon.types),
+                                    }}
+                                    slotNumber={encounterIndex + 1}
+                                    teamAverage={routeAverage?.total ?? null}
+                                    averageLabel="Link-Ø"
+                                    renderTrigger={(statTriggerProps) => (
+                                      <button
+                                        {...statTriggerProps}
+                                        disabled={
+                                          isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught
+                                            ? false
+                                            : statTriggerProps.disabled
+                                        }
+                                        onClick={(event) => {
+                                          if (isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught) {
+                                            evolution.openMenu(encounter.id, encounter.pokemon.pokedexId);
+                                            return;
+                                          }
+                                          statTriggerProps.onClick?.(event);
+                                        }}
+                                        aria-label={
+                                          isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught
+                                            ? `Basiswerte von ${encounter.nickname || encounter.pokemon.nameGerman || encounter.pokemon.name} anzeigen oder Entwicklung verwalten`
+                                            : statTriggerProps['aria-label']
+                                        }
+                                        className={`block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] [&>div]:cursor-inherit ${minHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}
+                                      >
+                                        <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="tiny" />
+                                      </button>
+                                    )}
+                                  />
                                 </div>
 
                                 {/* Evolution-Menue - direkt unter der Pokemon-Box als Overlay */}

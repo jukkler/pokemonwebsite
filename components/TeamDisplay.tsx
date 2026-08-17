@@ -355,7 +355,7 @@ export default function TeamDisplay({
                           }
                           statTriggerProps.onClick?.(event);
                         }}
-                        className="flex w-full min-w-0 flex-col items-center px-1 pt-2 text-center"
+                        className="grid h-[9.5rem] w-full min-w-0 grid-rows-[3.5rem_1.75rem_3.75rem] justify-items-center px-1 pt-2 text-center"
                         aria-label={isAdmin
                           ? `Basiswerte von ${member.nickname || pokemonName} anzeigen oder Entwicklung verwalten`
                           : statTriggerProps['aria-label']}
@@ -366,7 +366,7 @@ export default function TeamDisplay({
                             alt=""
                             width={56}
                             height={56}
-                            className="h-14 w-14 object-contain"
+                            className="h-14 w-14 self-center object-contain"
                             unoptimized={spriteMode === 'animated' && Boolean(member.pokemon.spriteGifUrl)}
                           />
                         ) : (
@@ -374,11 +374,13 @@ export default function TeamDisplay({
                             #{member.pokemon.pokedexId}
                           </span>
                         )}
-                        <strong className="mt-1 max-w-full truncate text-xs text-[var(--foreground)]">
-                          {member.nickname || pokemonName}
-                        </strong>
-                        {member.nickname ? <span className="max-w-full truncate text-[10px] text-[var(--text-secondary)]">{pokemonName}</span> : null}
-                        <span className="mt-1 flex flex-wrap justify-center gap-1">
+                        <span className="flex h-full w-full min-w-0 flex-col items-center justify-start overflow-hidden">
+                          <strong className="max-w-full truncate text-xs text-[var(--foreground)]">
+                            {member.nickname || pokemonName}
+                          </strong>
+                          {member.nickname ? <span className="max-w-full truncate text-[10px] text-[var(--text-secondary)]">{pokemonName}</span> : null}
+                        </span>
+                        <span className="flex h-full min-w-0 flex-wrap content-start justify-center gap-1 pt-1">
                           {parseTypes(member.pokemon.types).map((type) => (
                             <TypeBadge key={type} type={type} size="sm" />
                           ))}

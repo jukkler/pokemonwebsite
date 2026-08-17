@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import AppPageTitle from '@/components/layout/AppPageTitle';
 import ComparisonInsights from '@/components/pokeradar/ComparisonInsights';
 import BaseStatsComparison from '@/components/pokeradar/BaseStatsComparison';
 import PokemonPicker from '@/components/pokeradar/PokemonPicker';
@@ -267,17 +268,11 @@ export default function PokeradarClient() {
   return (
     <div className="app-page">
       <header className="app-page-header mb-5">
-        <div className="flex min-w-0 items-start gap-3 md:items-center md:gap-5">
-          <span aria-hidden="true" className="shrink-0 border-r-2 border-red-600 pr-3 text-3xl font-black leading-none text-red-600 md:text-5xl">03</span>
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-[-0.04em] text-[var(--foreground)] md:text-5xl">
-              Vergleich
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-5 text-[var(--text-secondary)]">
-              Basiswerte, Profile und Typen direkt gegenüberstellen.
-            </p>
-          </div>
-        </div>
+        <AppPageTitle
+          index="03"
+          title="Vergleich"
+          description="Basiswerte, Profile und Typen direkt gegenüberstellen."
+        />
         <button
           type="button"
           onClick={() => void shareComparison()}

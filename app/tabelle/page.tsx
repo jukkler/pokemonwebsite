@@ -5,6 +5,7 @@
  */
 
 import TabelleClient, { type RouteRow } from './TabelleClient';
+import AppPageTitle from '@/components/layout/AppPageTitle';
 import prisma from '@/lib/prisma';
 import { parseTypes } from '@/lib/typeEffectiveness';
 
@@ -181,17 +182,11 @@ export default async function TabellePage() {
   return (
     <main className="app-page">
       <header className="app-page-header">
-        <div className="flex min-w-0 items-start gap-4 sm:gap-6">
-          <span aria-hidden="true" className="border-l-4 border-[var(--brand-red)] pl-3 text-4xl font-black leading-none text-[var(--brand-red)] sm:text-5xl">
-            04
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-4xl font-black uppercase leading-none tracking-tight text-[var(--foreground)] sm:text-6xl">Tabelle</h1>
-            <p className="mt-3 max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base">
-              Alle gefangenen Pokémon im direkten Routenvergleich – mit Teamstatus, Typen und Gesamt-BP.
-            </p>
-          </div>
-        </div>
+        <AppPageTitle
+          index="04"
+          title="Tabelle"
+          description="Alle gefangenen Pokémon im direkten Routenvergleich – mit Teamstatus, Typen und Gesamt-BP."
+        />
         <dl className="grid shrink-0 grid-cols-2 divide-x divide-[var(--border-default)] border-y border-[var(--border-default)] text-right">
           <div className="px-4 py-2">
             <dt className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Routen</dt>

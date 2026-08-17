@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import AppPageTitle from '@/components/layout/AppPageTitle';
 import StreamsTopBar from '@/components/streams/StreamsTopBar';
 import StreamGrid from '@/components/streams/StreamGrid';
 import StreamAdminPanel from '@/components/streams/StreamAdminPanel';
@@ -204,13 +205,11 @@ export default function StreamsClient() {
   return (
     <div className="app-page streams-page flex min-h-[calc(100dvh-4rem)] flex-col gap-3">
       <header className="app-page-header">
-        <div className="flex min-w-0 items-start gap-3 md:items-center md:gap-5">
-          <span aria-hidden="true" className="shrink-0 border-r-2 border-red-600 pr-3 text-3xl font-black leading-none text-red-600 md:text-5xl">06</span>
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-[-0.04em] text-[var(--foreground)] md:text-5xl">Streams</h1>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Livebild, Teams und Runstatus in einer Ansicht.</p>
-          </div>
-        </div>
+        <AppPageTitle
+          index="06"
+          title="Streams"
+          description="Livebild, Teams und Runstatus in einer Ansicht."
+        />
       </header>
 
       <StreamsTopBar

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { DashboardData } from '@/app/dashboard-data';
+import AppPageTitle from '@/components/layout/AppPageTitle';
 
 function formatDuration(durationMs: number) {
   const totalMinutes = Math.floor(durationMs / 60_000);
@@ -21,10 +22,7 @@ function statusTone(status: NonNullable<DashboardData['run']>['status']) {
 export default function DashboardHeader({ data }: { data: DashboardData }) {
   return (
     <header className="dashboard-header app-page-header">
-      <div className="dashboard-title-block">
-        <span className="dashboard-index" aria-hidden="true">01</span>
-        <h1>Dashboard</h1>
-      </div>
+      <AppPageTitle index="01" title="Dashboard" className="dashboard-title-block" />
 
       {data.run ? (
         <div className="dashboard-run-line" aria-label="Aktueller Run">

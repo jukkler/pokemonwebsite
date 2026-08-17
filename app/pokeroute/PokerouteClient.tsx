@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import TeamDisplay from '@/components/TeamDisplay';
 import RouteList from '@/components/RouteList';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import AppPageTitle from '@/components/layout/AppPageTitle';
 import { fetchJson } from '@/lib/fetchJson';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -203,17 +204,11 @@ export default function PokerouteClient({
   return (
     <main className="app-page">
       <header className="app-page-header">
-        <div className="flex min-w-0 items-start gap-4 sm:gap-6">
-          <span aria-hidden="true" className="border-l-4 border-[var(--brand-red)] pl-3 text-4xl font-black leading-none text-[var(--brand-red)] sm:text-5xl">
-            02
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-4xl font-black uppercase leading-none tracking-tight text-[var(--foreground)] sm:text-6xl">Routen</h1>
-            <p className="mt-3 max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
-              Encounter-Links verwalten, Fänge erfassen und verbundene Pokémon gemeinsam aktualisieren.
-            </p>
-          </div>
-        </div>
+        <AppPageTitle
+          index="02"
+          title="Routen"
+          description="Encounter-Links verwalten, Fänge erfassen und verbundene Pokémon gemeinsam aktualisieren."
+        />
         <dl className="grid shrink-0 grid-cols-2 divide-x divide-[var(--border-default)] border-y border-[var(--border-default)] text-right">
           <div className="px-4 py-2">
             <dt className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Routen</dt>

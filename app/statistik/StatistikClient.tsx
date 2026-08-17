@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import AppPageTitle from '@/components/layout/AppPageTitle';
 import { AnalyticsCards } from '@/components/statistics/AnalyticsCards';
 import { GameFilter } from '@/components/statistics/GameFilter';
 import { GameSummaryCard } from '@/components/statistics/GameSummaryCard';
@@ -296,15 +297,11 @@ export default function StatistikClient() {
     <div className="app-page">
       <header className="app-page-header mb-7 md:mb-9">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div className="flex min-w-0 items-start gap-3 md:items-center md:gap-5">
-            <span aria-hidden="true" className="shrink-0 border-r-2 border-red-600 pr-3 text-3xl font-black leading-none text-red-600 md:text-5xl">05</span>
-            <div>
-              <h1 className="text-3xl font-black uppercase tracking-[-0.04em] text-[var(--foreground)] md:text-5xl">Statistik</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-5 text-[var(--text-secondary)]">
-                Jeder dokumentierte Run, unabhängig davon, welches Spiel gerade aktiv ist.
-              </p>
-            </div>
-          </div>
+          <AppPageTitle
+            index="05"
+            title="Statistik"
+            description="Jeder dokumentierte Run, unabhängig davon, welches Spiel gerade aktiv ist."
+          />
           {data && (
             <div className="app-band app-band--navy px-4 py-3 text-sm text-white/70">
               <span className="font-bold text-white">{scopeLabel}</span>

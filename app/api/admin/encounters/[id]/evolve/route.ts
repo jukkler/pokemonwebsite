@@ -13,6 +13,8 @@ import {
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 import { isInEvolutionChain, fetchPokemonById } from '@/lib/pokeapi';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
+import { invalidatePokemonListCache } from '@/lib/pokemon-cache.server';
 
 // POST: Pokémon entwickeln
 export async function POST(
@@ -67,18 +69,26 @@ export async function POST(
 
     // 3. Ziel-Pokémon aus DB holen (oder von API fetchen falls nicht vorhanden)
     const targetPokemon = await fetchPokemonById(parsedTargetPokedexId);
+    // fetchPokemonById darf den Cache anlegen/aktualisieren und laeuft wegen
+    // externer Netzwerkzugriffe bewusst ausserhalb der Encounter-Transaktion.
+    invalidatePokemonListCache();
+    await bumpLiveRevisions(prisma, ['pokemon']);
 
     // 4. Encounter aktualisieren
-    const updatedEncounter = await prisma.encounter.update({
-      where: { id: encounterId },
-      data: {
-        pokemonId: targetPokemon.id,
-      },
-      include: {
-        player: true,
-        route: true,
-        pokemon: true,
-      },
+    const updatedEncounter = await prisma.$transaction(async (tx) => {
+      const changed = await tx.encounter.update({
+        where: { id: encounterId },
+        data: {
+          pokemonId: targetPokemon.id,
+        },
+        include: {
+          player: true,
+          route: true,
+          pokemon: true,
+        },
+      });
+      await bumpLiveRevisions(tx, ['encounters']);
+      return changed;
     });
 
     return NextResponse.json({

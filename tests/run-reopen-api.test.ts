@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
     },
     runEncounter: { deleteMany: vi.fn() },
     runPlayerStats: { deleteMany: vi.fn() },
+    liveRevision: { upsert: vi.fn() },
   };
 
   return {
@@ -74,6 +75,9 @@ describe('POST /api/admin/runs/[id]/reopen', () => {
           endedAt: null,
         },
       }),
+    );
+    expect(mocks.transactionClient.liveRevision.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'runs' } }),
     );
   });
 

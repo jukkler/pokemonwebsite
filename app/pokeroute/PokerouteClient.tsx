@@ -11,6 +11,10 @@ import PlayerAvatar from '@/components/PlayerAvatar';
 import AppPageTitle from '@/components/layout/AppPageTitle';
 import { fetchJson } from '@/lib/fetchJson';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
+
+const ROUTE_DATA_TOPICS = ['encounters', 'routes', 'players'] as const;
+const ROUTE_POKEMON_TOPICS = ['pokemon'] as const;
 
 interface PlayerEncounter {
   id: number;
@@ -108,6 +112,7 @@ export default function PokerouteClient({
   const [newRouteName, setNewRouteName] = useState('');
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
+  const [pokemonReloadToken, setPokemonReloadToken] = useState(0);
 
   // Pokémon-Daten werden nur für eingeloggte Admins benötigt.
   useEffect(() => {
@@ -130,7 +135,7 @@ export default function PokerouteClient({
     return () => {
       cancelled = true;
     };
-  }, [isAdmin]);
+  }, [isAdmin, pokemonReloadToken]);
 
   // Daten neu laden (wird auch von anderen Funktionen verwendet)
   const reloadData = useCallback(async () => {
@@ -147,22 +152,12 @@ export default function PokerouteClient({
     }
   }, []); // Keine Dependencies, da setState stabil ist
 
-  // Automatisches Polling: Aktualisiere Daten regelmäßig
-  useEffect(() => {
-    // Initiales Laden
-    void reloadData();
+  const reloadPokemon = useCallback(() => {
+    setPokemonReloadToken((token) => token + 1);
+  }, []);
 
-    // Polling-Interval: Jede Sekunde aktualisieren für Echtzeit-Experience
-    const interval = setInterval(() => {
-      // Nur aktualisieren, wenn die Seite sichtbar ist
-      if (!document.hidden) {
-        void reloadData();
-      }
-    }, 1000);
-
-    // Cleanup beim Unmount
-    return () => clearInterval(interval);
-  }, [reloadData]);
+  useLiveRefresh(ROUTE_DATA_TOPICS, reloadData);
+  useLiveRefresh(ROUTE_POKEMON_TOPICS, reloadPokemon);
 
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : 'Unbekannter Fehler';

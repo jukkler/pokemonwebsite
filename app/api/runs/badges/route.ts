@@ -8,6 +8,7 @@ import { withAdminAuthAndErrorHandling, success, badRequest, notFound } from '@/
 import prisma from '@/lib/prisma';
 import { getBadgesForGame } from '@/lib/badge-data';
 import { emitEvent } from '@/lib/event-store';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function POST(request: NextRequest) {
   return withAdminAuthAndErrorHandling(async () => {
@@ -51,9 +52,12 @@ export async function POST(request: NextRequest) {
       newCount = Math.max(activeRun.badgesEarned - 1, 0);
     }
 
-    await prisma.run.update({
-      where: { id: activeRun.id },
-      data: { badgesEarned: newCount },
+    await prisma.$transaction(async (tx) => {
+      await tx.run.update({
+        where: { id: activeRun.id },
+        data: { badgesEarned: newCount },
+      });
+      await bumpLiveRevisions(tx, ['runs']);
     });
 
     // Event emittieren bei Badge-Increment

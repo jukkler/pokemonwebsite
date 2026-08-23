@@ -68,5 +68,8 @@ export function emitEvent(type: EventType, data: GameEvent['data']): void {
 
 export function getEventsSince(since: number): GameEvent[] {
   cleanup();
-  return events.filter(e => e.timestamp > since);
+  // Inklusive Cursor-Semantik verhindert, dass ein Event mit exakt demselben
+  // Millisekunden-Timestamp wie der letzte Server-Cursor verloren geht. Clients
+  // deduplizieren Events ueber ihre ID.
+  return events.filter(e => e.timestamp >= since);
 }

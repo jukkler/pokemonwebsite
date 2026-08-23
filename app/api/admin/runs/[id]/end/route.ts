@@ -14,6 +14,7 @@ import {
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 import { emitEvent } from '@/lib/event-store';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 interface EndRunBody {
   status: 'failed' | 'completed';
@@ -132,7 +133,7 @@ export async function POST(
         });
       }
 
-      return tx.run.findUnique({
+      const finishedRun = await tx.run.findUnique({
         where: { id: runId },
         include: {
           gameVersion: true,
@@ -140,6 +141,8 @@ export async function POST(
           encounters: true,
         },
       });
+      await bumpLiveRevisions(tx, ['runs']);
+      return finishedRun;
     });
 
     if (!updatedRun) {

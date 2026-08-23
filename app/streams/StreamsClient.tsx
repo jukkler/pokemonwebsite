@@ -11,6 +11,10 @@ import StreamsTopBar from '@/components/streams/StreamsTopBar';
 import StreamGrid from '@/components/streams/StreamGrid';
 import StreamAdminPanel from '@/components/streams/StreamAdminPanel';
 import { fetchJson } from '@/lib/fetchJson';
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
+import type { LiveUpdateTopic } from '@/lib/live-updates';
+
+const STREAMS_LIVE_TOPICS = ['streams', 'encounters', 'runs', 'players'] as const;
 
 interface GameVersion {
   key: string;
@@ -122,28 +126,35 @@ export default function StreamsClient() {
     }
   }, []);
 
+  const fetchPlayerOptions = useCallback(async () => {
+    try {
+      const data = await fetchJson<{ id: number; name: string }[]>('/api/admin/players');
+      setPlayers(Array.isArray(data) ? data : []);
+    } catch {
+      // Die Streamanzeige bleibt auch bei vorübergehend fehlender Adminliste nutzbar.
+    }
+  }, []);
+
   // Auth-Check und initiale Daten
   useEffect(() => {
     fetchJson<{ isAdmin?: boolean }>('/api/auth/status')
       .then(data => {
         setIsAdmin(data.isAdmin || false);
         if (data.isAdmin) {
-          // Player-Liste für Admin-Panel laden
-          fetchJson<{ id: number; name: string }[]>('/api/admin/players')
-            .then(res => setPlayers(Array.isArray(res) ? res : []))
-            .catch(() => {});
+          void fetchPlayerOptions();
         }
       })
       .catch(() => setIsAdmin(false));
 
     fetchStreams();
-  }, [fetchStreams]);
+  }, [fetchPlayerOptions, fetchStreams]);
 
-  // Polling für Team-Updates
-  useEffect(() => {
-    const interval = setInterval(fetchStreams, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchStreams]);
+  const refreshLiveStreamData = useCallback((changedTopics: ReadonlySet<LiveUpdateTopic>) => {
+    void fetchStreams();
+    if (isAdmin && changedTopics.has('players')) void fetchPlayerOptions();
+  }, [fetchPlayerOptions, fetchStreams, isAdmin]);
+
+  useLiveRefresh(STREAMS_LIVE_TOPICS, refreshLiveStreamData);
 
   // localStorage-Sync für hiddenStreamIds
   useEffect(() => {

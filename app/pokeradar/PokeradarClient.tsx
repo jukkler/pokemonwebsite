@@ -17,6 +17,7 @@ import TeamSourcePicker, {
 import TypeComparison from '@/components/pokeradar/TypeComparison';
 import type { SavedComparisonSetV2 } from '@/components/pokeradar/team-comparison-types';
 import { fetchJson } from '@/lib/fetchJson';
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
 import {
   DEFAULT_COMPARISON_METRIC,
   normalizeComparisonState,
@@ -34,6 +35,9 @@ import type { Pokemon } from '@/lib/types';
 
 type LoadedPokemon = Pokemon & { id: number };
 
+const COMPARISON_POKEMON_TOPICS = ['pokemon'] as const;
+const COMPARISON_TEAM_TOPICS = ['encounters', 'players'] as const;
+
 export default function PokeradarClient() {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,6 +50,8 @@ export default function PokeradarClient() {
   const [teamSources, setTeamSources] = useState<PokeradarPlayerTeam[]>([]);
   const [teamSourcesLoading, setTeamSourcesLoading] = useState(true);
   const [teamSourcesError, setTeamSourcesError] = useState<string | null>(null);
+  const [pokemonReloadToken, setPokemonReloadToken] = useState(0);
+  const [teamReloadToken, setTeamReloadToken] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,7 +67,7 @@ export default function PokeradarClient() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [pokemonReloadToken]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -82,7 +88,17 @@ export default function PokeradarClient() {
       });
 
     return () => controller.abort();
+  }, [teamReloadToken]);
+
+  const reloadPokemon = useCallback(() => {
+    setPokemonReloadToken((token) => token + 1);
   }, []);
+  const reloadTeams = useCallback(() => {
+    setTeamReloadToken((token) => token + 1);
+  }, []);
+
+  useLiveRefresh(COMPARISON_POKEMON_TOPICS, reloadPokemon);
+  useLiveRefresh(COMPARISON_TEAM_TOPICS, reloadTeams);
 
   const comparisonState = useMemo(
     () => normalizeComparisonState(

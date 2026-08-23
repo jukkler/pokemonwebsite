@@ -18,6 +18,8 @@ import PlayerAvatar from '@/components/PlayerAvatar';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
 import { fetchJson } from '@/lib/fetchJson';
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
+import type { LiveUpdateTopic } from '@/lib/live-updates';
 import type { PokemonListItem } from '@/lib/types';
 import {
   rowMatchesTableFilters,
@@ -52,6 +54,8 @@ export type RouteRow = {
 
 type SortKey = 'route' | 'average' | `player-${number}`;
 type SortDirection = 'asc' | 'desc';
+
+const TABLE_LIVE_TOPICS = ['encounters', 'routes', 'players', 'pokemon'] as const;
 
 interface TabelleClientProps {
   players: PlayerInfo[];
@@ -120,6 +124,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
   const [pokemonOptionsLoading, setPokemonOptionsLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const pokemonOptionsRequest = useRef<Promise<void> | null>(null);
+  const pokemonOptionsGeneration = useRef(0);
 
   useEffect(() => {
     setTableRows(rows);
@@ -127,6 +132,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
 
   useEffect(() => {
     if (isAdmin) return;
+    pokemonOptionsGeneration.current += 1;
     setPokemonOptions(null);
     setPokemonOptionsLoading(false);
     pokemonOptionsRequest.current = null;
@@ -136,17 +142,32 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
     startRefresh(() => router.refresh());
   }, [router]);
 
+  const refreshLiveTable = useCallback((changedTopics: ReadonlySet<LiveUpdateTopic>) => {
+    if (changedTopics.has('pokemon')) {
+      pokemonOptionsGeneration.current += 1;
+      setPokemonOptions(null);
+      setPokemonOptionsLoading(false);
+      pokemonOptionsRequest.current = null;
+    }
+    refreshTable();
+  }, [refreshTable]);
+
+  useLiveRefresh(TABLE_LIVE_TOPICS, refreshLiveTable);
+
   const loadPokemonOptions = useCallback(() => {
     if (!isAdmin || pokemonOptions || pokemonOptionsRequest.current) return;
 
     setPokemonOptionsLoading(true);
     setActionMessage(null);
+    const generation = pokemonOptionsGeneration.current;
     const request = fetchJson<{ data?: PokemonListItem[] }>(
       '/api/admin/pokemon/options',
-      { cache: 'force-cache' },
+      { cache: 'no-store' },
     )
       .then((payload) => {
-        setPokemonOptions(payload.data ?? []);
+        if (generation === pokemonOptionsGeneration.current) {
+          setPokemonOptions(payload.data ?? []);
+        }
       })
       .catch((error: unknown) => {
         setActionMessage(
@@ -156,8 +177,10 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
         );
       })
       .finally(() => {
-        setPokemonOptionsLoading(false);
-        pokemonOptionsRequest.current = null;
+        if (pokemonOptionsRequest.current === request) {
+          setPokemonOptionsLoading(false);
+          pokemonOptionsRequest.current = null;
+        }
       });
 
     pokemonOptionsRequest.current = request;

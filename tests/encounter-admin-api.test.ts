@@ -5,11 +5,16 @@ const mocks = vi.hoisted(() => ({
   isAdmin: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
+  revisionUpsert: vi.fn(),
+  transaction: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({ isAdmin: mocks.isAdmin }));
 vi.mock('@/lib/prisma', () => ({
-  default: { encounter: { update: mocks.update, delete: mocks.delete } },
+  default: {
+    encounter: { update: mocks.update, delete: mocks.delete },
+    $transaction: mocks.transaction,
+  },
 }));
 
 import { DELETE, PATCH } from '@/app/api/admin/encounters/[id]/route';
@@ -56,6 +61,10 @@ beforeEach(() => {
   mocks.isAdmin.mockResolvedValue(true);
   mocks.update.mockResolvedValue(encounter);
   mocks.delete.mockResolvedValue(encounter);
+  mocks.transaction.mockImplementation(async (callback) => callback({
+    encounter: { update: mocks.update, delete: mocks.delete },
+    liveRevision: { upsert: mocks.revisionUpsert },
+  }));
 });
 
 describe('PATCH /api/admin/encounters/[id]', () => {
@@ -72,6 +81,9 @@ describe('PATCH /api/admin/encounters/[id]', () => {
       success: true,
       encounter: { id: 42, nickname: 'Sparky' },
     });
+    expect(mocks.revisionUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'encounters' } }),
+    );
   });
 
   it('rejects route-link actions without touching Prisma', async () => {
@@ -99,5 +111,8 @@ describe('DELETE /api/admin/encounters/[id] repair API', () => {
     );
     expect(response.status).toBe(200);
     expect(mocks.delete).toHaveBeenCalledWith({ where: { id: 42 } });
+    expect(mocks.revisionUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'encounters' } }),
+    );
   });
 });

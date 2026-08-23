@@ -13,6 +13,7 @@ import {
   conflict,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 interface NextRunBody {
   gameVersionKey?: string | null;
@@ -78,6 +79,8 @@ export async function POST(request: NextRequest) {
               },
               include: { gameVersion: true },
             });
+
+            await bumpLiveRevisions(tx, ['runs', 'encounters']);
 
             return { kind: 'created' as const, newRun };
           },

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
       deleteMany: vi.fn(),
     },
     player: { findMany: vi.fn() },
+    liveRevision: { upsert: vi.fn() },
   };
   return { tx, transaction: vi.fn(), emitEvent: vi.fn() };
 });
@@ -88,6 +89,9 @@ describe('executeEncounterLinkAdminAction', () => {
         koCausedBy: 'Lukas',
       }),
     });
+    expect(mocks.tx.liveRevision.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'encounters' } }),
+    );
   });
 
   it('removes all team slots even when statuses are mixed', async () => {

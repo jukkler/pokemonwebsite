@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { withAdminAuthAndErrorHandling, success, badRequest, conflict } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function GET() {
   return withAdminAuthAndErrorHandling(async () => {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
               nextRunNumber = (lastSameVersion?.runNumber ?? 0) + 1;
             }
 
-            return tx.run.create({
+            const createdRun = await tx.run.create({
               data: {
                 runNumber: nextRunNumber,
                 gameVersionKey: gameVersionKey || null,
@@ -88,6 +89,8 @@ export async function POST(request: NextRequest) {
                 gameVersion: true,
               },
             });
+            await bumpLiveRevisions(tx, ['runs']);
+            return createdRun;
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
         );

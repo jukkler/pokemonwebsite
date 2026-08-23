@@ -11,6 +11,9 @@ import {
   updatePokemonSync,
   finishPokemonSync,
 } from '@/lib/pokemonSyncProgress';
+import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
+import { invalidatePokemonListCache } from '@/lib/pokemon-cache.server';
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Unbekannter Fehler';
@@ -54,6 +57,8 @@ export async function POST(request: NextRequest) {
     }
 
     finishPokemonSync();
+    invalidatePokemonListCache();
+    await bumpLiveRevisions(prisma, ['pokemon']);
 
     return NextResponse.json({
       success: true,

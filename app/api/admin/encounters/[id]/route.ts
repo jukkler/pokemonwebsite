@@ -23,6 +23,7 @@ import {
   encounterAdminInclude,
   serializeEncounterAdminTarget,
 } from '@/lib/encounter-admin.server';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 // PATCH: Nur individuelle Pokémon-/Spitznamenattribute ändern.
 export async function PATCH(
@@ -51,10 +52,14 @@ export async function PATCH(
     try {
       const update = buildEncounterAdminUpdate(parsed.action);
       if (!update.ok) return badRequest(update.error);
-      const encounter = await prisma.encounter.update({
-        where: { id: encounterId },
-        data: update.data,
-        include: encounterAdminInclude,
+      const encounter = await prisma.$transaction(async (tx) => {
+        const changed = await tx.encounter.update({
+          where: { id: encounterId },
+          data: update.data,
+          include: encounterAdminInclude,
+        });
+        await bumpLiveRevisions(tx, ['encounters']);
+        return changed;
       });
       const response: EncounterAdminResponse = {
         success: true,
@@ -106,17 +111,21 @@ export async function PUT(
     }
 
     try {
-      const updatedEncounter = await prisma.encounter.update({
-        where: { id: encounterId },
-        data: {
-          pokemonId: parsedPokemonId,
-          nickname: nickname?.trim() ? nickname.trim() : null,
-        },
-        include: {
-          player: true,
-          route: true,
-          pokemon: true,
-        },
+      const updatedEncounter = await prisma.$transaction(async (tx) => {
+        const changed = await tx.encounter.update({
+          where: { id: encounterId },
+          data: {
+            pokemonId: parsedPokemonId,
+            nickname: nickname?.trim() ? nickname.trim() : null,
+          },
+          include: {
+            player: true,
+            route: true,
+            pokemon: true,
+          },
+        });
+        await bumpLiveRevisions(tx, ['encounters']);
+        return changed;
       });
 
       return NextResponse.json(updatedEncounter);
@@ -149,8 +158,9 @@ export async function DELETE(
     }
 
     try {
-      await prisma.encounter.delete({
-        where: { id: encounterId },
+      await prisma.$transaction(async (tx) => {
+        await tx.encounter.delete({ where: { id: encounterId } });
+        await bumpLiveRevisions(tx, ['encounters']);
       });
 
       return success();

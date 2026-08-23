@@ -5,6 +5,7 @@
 
 import { withAdminAuthAndErrorHandling, success } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function GET() {
   return withAdminAuthAndErrorHandling(async () => {
@@ -70,9 +71,12 @@ export async function GET() {
         { key: 'violet', name: 'Pokémon Purpur', generation: 9 },
       ];
       
-      await prisma.gameVersion.createMany({
-        data: gameVersions,
-        skipDuplicates: true,
+      await prisma.$transaction(async (tx) => {
+        await tx.gameVersion.createMany({
+          data: gameVersions,
+          skipDuplicates: true,
+        });
+        await bumpLiveRevisions(tx, ['runs']);
       });
     }
     

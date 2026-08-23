@@ -13,6 +13,7 @@ import {
   parseId,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function POST(
   _request: Request,
@@ -61,6 +62,8 @@ export async function POST(
               },
               include: { gameVersion: true },
             });
+
+            await bumpLiveRevisions(tx, ['runs']);
 
             return { kind: 'reopened' as const, reopenedRun };
           },

@@ -16,6 +16,7 @@ import {
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
 import { auditEncounterLinkGroup } from '@/lib/encounter-link-admin';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 
 // GET: Alle Encounters abrufen
@@ -154,6 +155,7 @@ export async function POST(request: NextRequest) {
               },
               include: { player: true, route: true, pokemon: true },
             });
+            await bumpLiveRevisions(tx, ['encounters']);
             return { kind: 'created' as const, encounter };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

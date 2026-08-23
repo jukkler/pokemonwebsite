@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
     },
     runPlayerStats: { createMany: vi.fn() },
     runEncounter: { createMany: vi.fn() },
+    liveRevision: { upsert: vi.fn() },
   };
 
   return {
@@ -86,6 +87,9 @@ describe('POST /api/admin/runs/[id]/end', () => {
     expect(mocks.emitEvent).toHaveBeenCalledWith('run_completed', {
       runNumber: 4,
     });
+    expect(mocks.transactionClient.liveRevision.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'runs' } }),
+    );
   });
 
   it('still requires a loser for a defeat', async () => {

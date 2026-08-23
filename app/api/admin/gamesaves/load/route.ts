@@ -10,6 +10,7 @@ import {
   GameSaveValidationError,
   validateGameSaveData,
 } from '@/lib/gamesave-validation';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function POST(request: NextRequest) {
   return withAdminAuth(async () => {
@@ -189,6 +190,14 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+
+      await bumpLiveRevisions(tx, [
+        'players',
+        'routes',
+        'encounters',
+        'runs',
+        'streams',
+      ]);
     });
 
     return NextResponse.json({

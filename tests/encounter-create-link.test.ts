@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
       create: vi.fn(),
     },
     player: { findMany: vi.fn() },
+    liveRevision: { upsert: vi.fn() },
   };
   return { isAdmin: vi.fn(), transaction: vi.fn(), tx };
 });
@@ -82,6 +83,9 @@ describe('POST /api/admin/encounters link inheritance', () => {
           isNotCaught: false,
         }),
       }),
+    );
+    expect(mocks.tx.liveRevision.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'encounters' } }),
     );
   });
 

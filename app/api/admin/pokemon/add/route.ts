@@ -12,6 +12,9 @@ import {
   success,
 } from '@/lib/api-utils';
 import { fetchPokemonById } from '@/lib/pokeapi';
+import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
+import { invalidatePokemonListCache } from '@/lib/pokemon-cache.server';
 
 export async function POST(request: NextRequest) {
   return withAdminAuthAndErrorHandling(async () => {
@@ -26,6 +29,8 @@ export async function POST(request: NextRequest) {
     }
 
     const pokemon = await fetchPokemonById(id);
+    invalidatePokemonListCache();
+    await bumpLiveRevisions(prisma, ['pokemon']);
 
     return success({
       pokemon,

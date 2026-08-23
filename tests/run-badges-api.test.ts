@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   update: vi.fn(),
   emitEvent: vi.fn(),
+  revisionUpsert: vi.fn(),
+  transaction: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({ isAdmin: mocks.isAdmin }));
@@ -15,6 +17,7 @@ vi.mock('@/lib/prisma', () => ({
       findFirst: mocks.findFirst,
       update: mocks.update,
     },
+    $transaction: mocks.transaction,
   },
 }));
 vi.mock('@/lib/event-store', () => ({ emitEvent: mocks.emitEvent }));
@@ -41,6 +44,10 @@ beforeEach(() => {
     gameVersionKey: 'black2',
   });
   mocks.update.mockResolvedValue({ id: 11, badgesEarned: 7 });
+  mocks.transaction.mockImplementation(async (callback) => callback({
+    run: { update: mocks.update },
+    liveRevision: { upsert: mocks.revisionUpsert },
+  }));
 });
 
 describe('POST /api/runs/badges', () => {
@@ -71,6 +78,9 @@ describe('POST /api/runs/badges', () => {
       data: { badgesEarned: 7 },
     });
     expect(mocks.emitEvent).not.toHaveBeenCalled();
+    expect(mocks.revisionUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'runs' } }),
+    );
   });
 
   it('can select a later badge and emits the newly reached badge', async () => {

@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import prisma from '@/lib/prisma';
+import { POKEMON_LIST_CACHE_TAG } from '@/lib/pokemon-cache.server';
 
 // Performance: Server-Side Cache für Pokémon-Daten (5 Minuten)
 const getCachedPokemonList = unstable_cache(
@@ -31,7 +32,7 @@ const getCachedPokemonList = unstable_cache(
     });
   },
   ['pokemon-list'],
-  { revalidate: 300 } // 5 Minuten
+  { revalidate: 300, tags: [POKEMON_LIST_CACHE_TAG] } // 5 Minuten
 );
 
 export async function GET() {
@@ -44,8 +45,9 @@ export async function GET() {
       count,
     }, {
       headers: {
-        // Pokémon-Daten ändern sich selten - längeres Caching
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        // Die DB-Abfrage bleibt serverseitig getaggt gecacht. Der HTTP-Client
+        // muss nach einer Live-Revision aber garantiert die neue Liste sehen.
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {

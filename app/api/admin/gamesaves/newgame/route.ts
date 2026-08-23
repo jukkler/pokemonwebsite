@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function POST() {
   try {
@@ -65,11 +66,17 @@ export async function POST() {
     });
 
     // Lösche alle Spieldaten
-    await prisma.$transaction([
-      prisma.encounter.deleteMany({}),
-      prisma.route.deleteMany({}),
-      prisma.player.deleteMany({}),
-    ]);
+    await prisma.$transaction(async (tx) => {
+      await tx.encounter.deleteMany({});
+      await tx.route.deleteMany({});
+      await tx.player.deleteMany({});
+      await bumpLiveRevisions(tx, [
+        'players',
+        'routes',
+        'encounters',
+        'streams',
+      ]);
+    });
 
     return NextResponse.json({
       success: true,

@@ -23,6 +23,9 @@ import {
   parseRunComparisonParam,
   serializeRunComparisonParam,
 } from '@/lib/run-comparison';
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
+
+const STATISTICS_LIVE_TOPICS = ['encounters', 'runs', 'players'] as const;
 
 interface PageData {
   overview: OverviewResponse;
@@ -108,6 +111,12 @@ export default function StatistikClient() {
   const [loadingMore, setLoadingMore] = useState<Set<string>>(new Set());
   const [comparisonRetryToken, setComparisonRetryToken] = useState(0);
   const [comparisonRequest, setComparisonRequest] = useState<ComparisonRequestState | null>(null);
+
+  const reloadStatistics = useCallback(() => {
+    setReloadToken((token) => token + 1);
+  }, []);
+
+  useLiveRefresh(STATISTICS_LIVE_TOPICS, reloadStatistics);
 
   const comparisonPairKey = selectedRunIds.length === 2 ? selectedRunIds.join(',') : null;
   const comparisonRequestKey = comparisonPairKey

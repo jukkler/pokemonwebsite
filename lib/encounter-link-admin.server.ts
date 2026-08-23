@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { emitEvent } from '@/lib/event-store';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 import {
   auditEncounterLinkGroup,
   buildEncounterLinkUpdate,
@@ -84,6 +85,7 @@ export async function executeEncounterLinkAdminAction(
           // deleteMany still removes the link completely and atomically.
           if (action.action === 'delete-link') {
             const deleted = await tx.encounter.deleteMany({ where: { routeId } });
+            await bumpLiveRevisions(tx, ['encounters']);
             return { kind: 'deleted' as const, count: deleted.count };
           }
 
@@ -147,6 +149,7 @@ export async function executeEncounterLinkAdminAction(
             include: encounterAdminInclude,
             orderBy: { id: 'asc' },
           });
+          await bumpLiveRevisions(tx, ['encounters']);
           return {
             kind: 'updated' as const,
             count: updated.count,

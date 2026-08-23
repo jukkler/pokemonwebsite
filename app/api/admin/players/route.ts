@@ -14,6 +14,7 @@ import {
   handlePrismaError,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 // GET: Alle Spieler abrufen
 export async function GET() {
@@ -50,12 +51,16 @@ export async function POST(request: NextRequest) {
 
     try {
       // Spieler erstellen
-      const player = await prisma.player.create({
-        data: {
-          name: String(name).trim(),
-          color: String(color).trim(),
-          avatar: avatar && avatar !== 'none' ? String(avatar).trim() : null,
-        },
+      const player = await prisma.$transaction(async (tx) => {
+        const createdPlayer = await tx.player.create({
+          data: {
+            name: String(name).trim(),
+            color: String(color).trim(),
+            avatar: avatar && avatar !== 'none' ? String(avatar).trim() : null,
+          },
+        });
+        await bumpLiveRevisions(tx, ['players']);
+        return createdPlayer;
       });
 
       return created(player);

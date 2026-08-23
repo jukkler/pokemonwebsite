@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
       create: vi.fn(),
     },
     encounter: { deleteMany: vi.fn() },
+    liveRevision: { upsert: vi.fn() },
   };
 
   return {
@@ -69,6 +70,13 @@ describe('POST /api/admin/runs/next', () => {
       },
       include: { gameVersion: true },
     });
+    expect(mocks.transactionClient.liveRevision.upsert).toHaveBeenCalledTimes(2);
+    expect(mocks.transactionClient.liveRevision.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'runs' } }),
+    );
+    expect(mocks.transactionClient.liveRevision.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { topic: 'encounters' } }),
+    );
   });
 
   it('does not clear encounters when another active run exists', async () => {

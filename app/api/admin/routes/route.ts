@@ -12,6 +12,7 @@ import {
   created,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 // GET: Alle Routen abrufen
 export async function GET() {
@@ -47,11 +48,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Route erstellen
-    const route = await prisma.route.create({
-      data: {
-        name: String(name).trim(),
-        order: typeof order === 'number' ? order : 0,
-      },
+    const route = await prisma.$transaction(async (tx) => {
+      const createdRoute = await tx.route.create({
+        data: {
+          name: String(name).trim(),
+          order: typeof order === 'number' ? order : 0,
+        },
+      });
+      await bumpLiveRevisions(tx, ['routes']);
+      return createdRoute;
     });
 
     return created(route);

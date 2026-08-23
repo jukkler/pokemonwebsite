@@ -13,6 +13,7 @@ import {
   success,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 // PUT: Route aktualisieren
 export async function PUT(
@@ -42,12 +43,16 @@ export async function PUT(
 
     try {
       // Route aktualisieren
-      const route = await prisma.route.update({
-        where: { id: routeId },
-        data: {
-          name: String(name).trim(),
-          order: typeof order === 'number' ? order : undefined,
-        },
+      const route = await prisma.$transaction(async (tx) => {
+        const changed = await tx.route.update({
+          where: { id: routeId },
+          data: {
+            name: String(name).trim(),
+            order: typeof order === 'number' ? order : undefined,
+          },
+        });
+        await bumpLiveRevisions(tx, ['routes']);
+        return changed;
       });
 
       return NextResponse.json(route);
@@ -79,8 +84,9 @@ export async function DELETE(
 
     try {
       // Route löschen (Cascade löscht auch Encounters)
-      await prisma.route.delete({
-        where: { id: routeId },
+      await prisma.$transaction(async (tx) => {
+        await tx.route.delete({ where: { id: routeId } });
+        await bumpLiveRevisions(tx, ['routes', 'encounters']);
       });
 
       return success();

@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { withAdminAuthAndErrorHandling, success } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 export async function POST() {
   return withAdminAuthAndErrorHandling(async () => {
@@ -25,18 +26,24 @@ export async function POST() {
 
     if (activeRun.pausedAt) {
       const pauseDuration = now.getTime() - new Date(activeRun.pausedAt).getTime();
-      await prisma.run.update({
-        where: { id: activeRun.id },
-        data: {
-          pausedAt: null,
-          totalPausedMs: activeRun.totalPausedMs + pauseDuration,
-        },
+      await prisma.$transaction(async (tx) => {
+        await tx.run.update({
+          where: { id: activeRun.id },
+          data: {
+            pausedAt: null,
+            totalPausedMs: activeRun.totalPausedMs + pauseDuration,
+          },
+        });
+        await bumpLiveRevisions(tx, ['runs']);
       });
       return success({ action: 'resumed', message: 'Run fortgesetzt' });
     } else {
-      await prisma.run.update({
-        where: { id: activeRun.id },
-        data: { pausedAt: now },
+      await prisma.$transaction(async (tx) => {
+        await tx.run.update({
+          where: { id: activeRun.id },
+          data: { pausedAt: now },
+        });
+        await bumpLiveRevisions(tx, ['runs']);
       });
       return success({ action: 'paused', message: 'Run pausiert' });
     }

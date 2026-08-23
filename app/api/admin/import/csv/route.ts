@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAdminAuth } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
+import type { LiveUpdateTopic } from '@/lib/live-updates';
+import { invalidatePokemonListCache } from '@/lib/pokemon-cache.server';
 
 interface CSVRow {
   route: string;
@@ -464,6 +467,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const changedTopics: LiveUpdateTopic[] = [];
+    if (results.routesCreated > 0) changedTopics.push('routes');
+    if (results.pokemonSynced > 0) changedTopics.push('pokemon');
+    if (results.encountersCreated > 0) changedTopics.push('encounters');
+    if (changedTopics.length > 0) {
+      // Der CSV-Importer arbeitet bewusst zeilenweise und kann Teilerfolge
+      // liefern. Der abschliessende Bump signalisiert den gesamten Batch.
+      if (changedTopics.includes('pokemon')) invalidatePokemonListCache();
+      await bumpLiveRevisions(prisma, changedTopics);
+    }
+
     return NextResponse.json({
       success: true,
       message: `Import abgeschlossen: ${results.encountersCreated} Encounters erstellt, ${results.routesCreated} Routen erstellt, ${results.pokemonSynced} Pokémon synchronisiert`,
@@ -481,4 +495,3 @@ export async function POST(request: NextRequest) {
     }
   });
 }
-

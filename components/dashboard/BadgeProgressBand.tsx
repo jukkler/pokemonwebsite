@@ -4,6 +4,7 @@ import Image from 'next/image';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import type { DashboardData } from '@/app/dashboard-data';
+import { getLevelCapsForGame } from '@/lib/badge-data';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface BadgeUpdateResponse {
@@ -23,6 +24,9 @@ export default function BadgeProgressBand({ data }: { data: DashboardData }) {
   const [savingBadge, setSavingBadge] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const total = data.badges.length;
+  const levelCaps = data.run?.gameVersionKey
+    ? getLevelCapsForGame(data.run.gameVersionKey)
+    : null;
   const trackInset = total > 0 ? 100 / (total * 2) : 0;
   const trackSpan = 100 - trackInset * 2;
   const progressWidth =
@@ -90,8 +94,9 @@ export default function BadgeProgressBand({ data }: { data: DashboardData }) {
           aria-label={`${earned} von ${total} Orden erhalten`}
           style={progressStyle}
         >
-          {data.badges.map((badge) => {
+          {data.badges.map((badge, index) => {
             const isEarned = badge.position <= earned;
+            const levelCap = levelCaps?.[index] ?? null;
             const actionLabel = isEarned
               ? `${badge.name} abwählen. Der Fortschritt wird auf ${badge.position - 1} von ${total} gesetzt.`
               : `${badge.name} auswählen. Der Fortschritt wird auf ${badge.position} von ${total} gesetzt.`;
@@ -120,9 +125,15 @@ export default function BadgeProgressBand({ data }: { data: DashboardData }) {
                 ) : (
                   <div className="dashboard-badge-icon">{badgeIcon}</div>
                 )}
-              <span className="sr-only">
-                  {badge.position}. {badge.name}, {badge.leader}: {isEarned ? 'erhalten' : 'noch offen'}
-              </span>
+                {levelCap !== null ? (
+                  <span className="dashboard-badge-level-cap" aria-hidden="true">
+                    LV {levelCap}
+                  </span>
+                ) : null}
+                <span className="sr-only">
+                  {badge.position}. {badge.name}, {badge.leader}
+                  {levelCap !== null ? `, Level-Cap ${levelCap}` : ''}: {isEarned ? 'erhalten' : 'noch offen'}
+                </span>
               </li>
             );
           })}

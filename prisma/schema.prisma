@@ -10,6 +10,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Persistenter, monotoner Aenderungszaehler fuer leichtgewichtiges Polling.
+// Der Topic-String ist absichtlich der Primaerschluessel, damit neue Topics
+// ohne weitere Schemaaenderung hinzugefuegt werden koennen.
+model LiveRevision {
+  topic     String   @id
+  revision  BigInt   @default(0)
+  updatedAt DateTime @updatedAt
+}
+
 // Spieler-Modell
 model Player {
   id          Int            @id @default(autoincrement())

@@ -14,6 +14,7 @@ import {
   success,
 } from '@/lib/api-utils';
 import prisma from '@/lib/prisma';
+import { bumpLiveRevisions } from '@/lib/live-updates.server';
 
 // PUT: Spieler aktualisieren
 export async function PUT(
@@ -43,13 +44,17 @@ export async function PUT(
 
     try {
       // Spieler aktualisieren
-      const player = await prisma.player.update({
-        where: { id: playerId },
-        data: {
-          name: String(name).trim(),
-          color: String(color).trim(),
-          avatar: avatar && avatar !== 'none' ? String(avatar).trim() : null,
-        },
+      const player = await prisma.$transaction(async (tx) => {
+        const changed = await tx.player.update({
+          where: { id: playerId },
+          data: {
+            name: String(name).trim(),
+            color: String(color).trim(),
+            avatar: avatar && avatar !== 'none' ? String(avatar).trim() : null,
+          },
+        });
+        await bumpLiveRevisions(tx, ['players']);
+        return changed;
       });
 
       return NextResponse.json(player);
@@ -84,8 +89,9 @@ export async function DELETE(
 
     try {
       // Spieler löschen (Cascade löscht auch Encounters)
-      await prisma.player.delete({
-        where: { id: playerId },
+      await prisma.$transaction(async (tx) => {
+        await tx.player.delete({ where: { id: playerId } });
+        await bumpLiveRevisions(tx, ['players', 'encounters', 'streams']);
       });
 
       return success();

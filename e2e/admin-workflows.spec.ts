@@ -143,9 +143,11 @@ test.describe('Administration', () => {
     await expect(menu).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Pokémon tauschen' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Spitzname bearbeiten' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Entwicklung ändern' })).toBeVisible();
     await expect(menu.getByRole('menuitem')).toHaveText([
       'Pokémon tauschen',
       'Spitzname bearbeiten',
+      'Entwicklung ändern',
     ]);
   });
 

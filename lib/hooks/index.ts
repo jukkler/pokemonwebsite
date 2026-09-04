@@ -3,4 +3,3 @@
  */
 
 export { useOutsideClick } from './useOutsideClick';
-export { useEvolutionMenu } from './useEvolutionMenu';

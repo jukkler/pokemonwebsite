@@ -9,12 +9,10 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import Link from 'next/link';
 import PokemonCard from './PokemonCard';
-import EvolutionMenu from './EvolutionMenu';
 import EncounterActionMenu from './admin/EncounterActionMenu';
 import RouteLinkActionMenu from './admin/RouteLinkActionMenu';
-import PokemonStatPopover from './dashboard/PokemonStatPopover';
+import { PokemonDetailsTrigger } from './pokemon-details';
 import PlayerAvatar from './PlayerAvatar';
-import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
 import { calculateAverageStats, filterPokemonBySearch } from '@/lib/team-utils';
 import { fetchJson } from '@/lib/fetchJson';
 import { getErrorMessage } from '@/lib/component-utils';
@@ -79,6 +77,7 @@ interface RouteListProps {
   routes: Route[];
   players: PlayerBase[];
   isAdmin?: boolean;
+  gameVersionKey?: string | null;
   onTeamUpdate?: () => void;
   pokemon?: PokemonListItem[];
 }
@@ -394,6 +393,7 @@ const RouteList = memo(function RouteList({
   routes,
   players,
   isAdmin = false,
+  gameVersionKey = null,
   onTeamUpdate,
   pokemon = [],
 }: RouteListProps) {
@@ -405,9 +405,6 @@ const RouteList = memo(function RouteList({
   // Route Edit State
   const [editingRouteId, setEditingRouteId] = useState<number | null>(null);
   const [editingRouteName, setEditingRouteName] = useState('');
-
-  // Evolution-Hook
-  const evolution = useEvolutionMenu(onTeamUpdate);
 
   // ==========================================================================
   // Handler
@@ -643,7 +640,7 @@ const RouteList = memo(function RouteList({
 
                       {hasEncounter ? (
                         <div className="flex flex-wrap items-stretch gap-2">
-                          {playerEncounters.map((encounter, encounterIndex) => (
+                          {playerEncounters.map((encounter) => (
                             <div key={encounter.id} className="w-[132px] shrink-0">
                               <div className={`relative group ${cardHeight}`}>
                                 {isAdmin ? (
@@ -651,6 +648,7 @@ const RouteList = memo(function RouteList({
                                     <EncounterActionMenu
                                       encounter={toEncounterAdminTarget(encounter, route)}
                                       pokemonOptions={pokemon}
+                                      gameVersionKey={gameVersionKey}
                                       compact
                                       disabled={processing}
                                       onUpdated={() => { void onTeamUpdate?.(); }}
@@ -665,55 +663,17 @@ const RouteList = memo(function RouteList({
                                 ) : null}
                                 
                                 <div className="route-pokemon-stat-shell h-full">
-                                  <PokemonStatPopover
+                                  <PokemonDetailsTrigger
                                     pokemon={{
                                       ...encounter.pokemon,
-                                      nickname: encounter.nickname,
+                                      displayName: encounter.nickname || encounter.pokemon.nameGerman || encounter.pokemon.name,
                                       types: parseTypes(encounter.pokemon.types),
                                     }}
-                                    slotNumber={encounterIndex + 1}
-                                    teamAverage={routeAverage?.total ?? null}
-                                    averageLabel="Link-Ø"
-                                    renderTrigger={(statTriggerProps) => (
-                                      <button
-                                        {...statTriggerProps}
-                                        disabled={
-                                          isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught
-                                            ? false
-                                            : statTriggerProps.disabled
-                                        }
-                                        onClick={(event) => {
-                                          if (isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught) {
-                                            evolution.openMenu(encounter.id, encounter.pokemon.pokedexId);
-                                            return;
-                                          }
-                                          statTriggerProps.onClick?.(event);
-                                        }}
-                                        aria-label={
-                                          isAdmin && !encounter.isKnockedOut && !encounter.isNotCaught
-                                            ? `Basiswerte von ${encounter.nickname || encounter.pokemon.nameGerman || encounter.pokemon.name} anzeigen oder Entwicklung verwalten`
-                                            : statTriggerProps['aria-label']
-                                        }
-                                        className={`block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] [&>div]:cursor-inherit ${cardHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}
-                                      >
-                                        <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="tiny" />
-                                      </button>
-                                    )}
-                                  />
+                                    className={`block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] [&>div]:cursor-inherit ${cardHeight} ${(encounter.isKnockedOut || encounter.isNotCaught) ? 'opacity-60' : ''}`}
+                                  >
+                                    <PokemonCard pokemon={encounter.pokemon} nickname={encounter.nickname} size="tiny" />
+                                  </PokemonDetailsTrigger>
                                 </div>
-
-                                {/* Evolution-Menue - direkt unter der Pokemon-Box als Overlay */}
-                                {isAdmin && evolution.openEncounterId === encounter.id && (
-                                  <EvolutionMenu
-                                    evolutionData={evolution.evolutionData}
-                                    isLoading={evolution.isLoading}
-                                    isEvolving={evolution.isEvolving}
-                                    onEvolve={(targetId) => evolution.evolve(encounter.id, targetId)}
-                                    onClose={evolution.closeMenu}
-                                    menuRef={evolution.menuRef}
-                                    className="absolute z-50 top-full left-0 mt-1"
-                                  />
-                                )}
                               </div>
                             </div>
                           ))}

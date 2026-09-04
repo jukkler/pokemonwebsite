@@ -6,6 +6,7 @@
 
 import TabelleClient, { type RouteRow } from './TabelleClient';
 import AppPageTitle from '@/components/layout/AppPageTitle';
+import { getCurrentGameVersion } from '@/lib/current-game';
 import prisma from '@/lib/prisma';
 import { parseTypes } from '@/lib/typeEffectiveness';
 
@@ -177,7 +178,10 @@ async function getTableData(): Promise<{
 }
 
 export default async function TabellePage() {
-  const data = await getTableData();
+  const [data, currentGameVersion] = await Promise.all([
+    getTableData(),
+    getCurrentGameVersion(),
+  ]);
 
   return (
     <main className="app-page">
@@ -200,7 +204,13 @@ export default async function TabellePage() {
       </header>
 
       <section className="app-section" aria-labelledby="encounter-table-title">
-        <TabelleClient players={data.players} rows={data.rows} />
+        <TabelleClient
+          players={data.players}
+          rows={data.rows}
+          currentGameVersion={currentGameVersion
+            ? { key: currentGameVersion.key, name: currentGameVersion.name }
+            : null}
+        />
       </section>
     </main>
   );

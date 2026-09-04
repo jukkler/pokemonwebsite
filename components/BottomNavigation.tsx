@@ -68,12 +68,7 @@ const focusableSelector = [
 export default function BottomNavigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const {
-    spriteMode,
-    toggleSpriteMode,
-    baseStatOverlaysEnabled,
-    toggleBaseStatOverlays,
-  } = useSpriteMode();
+  const { spriteMode, toggleSpriteMode } = useSpriteMode();
   const { isAdmin, setSession } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
@@ -254,22 +249,6 @@ export default function BottomNavigation() {
                   Pokémon-Bilder
                 </span>
                 <span className="text-xs text-[var(--text-secondary)]">{spriteMode === 'animated' ? 'Animiert' : 'Statisch'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={toggleBaseStatOverlays}
-                aria-pressed={baseStatOverlaysEnabled}
-                className="flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-left text-sm font-medium text-[var(--foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 active:bg-[var(--background-tertiary)]"
-              >
-                <span className="flex items-center gap-3">
-                  <svg className="h-5 w-5 text-[var(--text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 19V9m5 10V5m5 14v-7m5 7V3" />
-                  </svg>
-                  Basiswert-Overlays
-                </span>
-                <span className={`text-xs font-black ${baseStatOverlaysEnabled ? 'text-[var(--brand-blue)]' : 'text-[var(--text-tertiary)]'}`}>
-                  {baseStatOverlaysEnabled ? 'An' : 'Aus'}
-                </span>
               </button>
               <div className="flex min-h-12 items-center justify-between rounded-xl px-3 text-sm font-medium">
                 <span>Farbschema</span>

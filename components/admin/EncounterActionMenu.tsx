@@ -10,6 +10,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import dynamic from 'next/dynamic';
 import type { PokemonListItem } from '@/lib/types';
 import {
   deleteEncounterAdmin,
@@ -18,6 +19,15 @@ import {
   type EncounterAdminTarget,
 } from '@/lib/encounter-admin';
 import EncounterAdminDialog from './EncounterAdminDialog';
+
+const AdminEvolutionPicker = dynamic(() => import('./AdminEvolutionPicker'), {
+  ssr: false,
+  loading: () => (
+    <div role="status" className="border border-[var(--border-default)] bg-[var(--background-secondary)] p-4 text-sm text-[var(--text-secondary)]">
+      Entwicklungen werden geladen…
+    </div>
+  ),
+});
 
 export type EncounterActionMenuTarget = EncounterAdminTarget;
 
@@ -38,13 +48,16 @@ interface EncounterActionMenuProps {
    */
   scope?: 'individual' | 'repair';
   className?: string;
+  /** Exact edition key from the current run. The details API can resolve it
+   * itself, but passing it keeps the dialog stable while the run changes. */
+  gameVersionKey?: string | null;
 }
 
 type IndividualEncounterAction = Extract<
   EncounterAdminAction,
   { action: 'swap-pokemon' | 'update-nickname' }
 >;
-type DialogAction = IndividualEncounterAction['action'] | 'delete' | null;
+type DialogAction = IndividualEncounterAction['action'] | 'evolution' | 'delete' | null;
 
 const inputClasses =
   'w-full border border-[var(--border-default)] bg-[var(--background-secondary)] px-3 py-2.5 text-[var(--foreground)] placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] disabled:opacity-50';
@@ -75,6 +88,7 @@ export default function EncounterActionMenu({
   disabled = false,
   scope = 'individual',
   className = '',
+  gameVersionKey = null,
 }: EncounterActionMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogAction, setDialogAction] = useState<DialogAction>(null);
@@ -83,6 +97,7 @@ export default function EncounterActionMenu({
   const [nickname, setNickname] = useState(encounter.nickname ?? '');
   const [pokemonSearch, setPokemonSearch] = useState('');
   const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
+  const [selectedEvolutionId, setSelectedEvolutionId] = useState<number | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -107,6 +122,7 @@ export default function EncounterActionMenu({
     setNickname(encounter.nickname ?? '');
     setPokemonSearch('');
     setSelectedPokemonId(action === 'swap-pokemon' ? encounter.pokemon.id : null);
+    setSelectedEvolutionId(null);
   }, [encounter]);
 
   const openDialog = useCallback((action: Exclude<DialogAction, null>) => {
@@ -228,6 +244,34 @@ export default function EncounterActionMenu({
     }
   };
 
+  const submitEvolution = async (targetPokedexId: number) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/encounters/${encounter.id}/evolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPokedexId }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { encounter?: EncounterAdminTarget; error?: string }
+        | null;
+      if (!response.ok || !payload?.encounter) {
+        throw new Error(payload?.error ?? 'Entwicklung konnte nicht gespeichert werden');
+      }
+      onUpdated?.(payload.encounter);
+      setDialogAction(null);
+    } catch (submitError) {
+      const message = submitError instanceof Error
+        ? submitError.message
+        : 'Entwicklung konnte nicht gespeichert werden';
+      setError(message);
+      onError?.(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmAction = () => {
     switch (dialogAction) {
       case 'swap-pokemon':
@@ -235,6 +279,9 @@ export default function EncounterActionMenu({
         break;
       case 'update-nickname':
         void submit({ action: 'update-nickname', nickname: nickname || null });
+        break;
+      case 'evolution':
+        if (selectedEvolutionId) void submitEvolution(selectedEvolutionId);
         break;
       case 'delete':
         void submitDelete();
@@ -248,6 +295,7 @@ export default function EncounterActionMenu({
     !busy &&
     (dialogAction === 'delete' ||
       dialogAction === 'update-nickname' ||
+      (dialogAction === 'evolution' && selectedEvolutionId !== null) ||
       (dialogAction === 'swap-pokemon' && selectedPokemonId !== null));
 
   const dialogCopy: Record<Exclude<DialogAction, null>, { title: string; description: string; confirm: string; danger?: boolean }> = {
@@ -260,6 +308,11 @@ export default function EncounterActionMenu({
       title: 'Spitzname bearbeiten',
       description: `${name} bei ${encounter.player.name}`,
       confirm: 'Spitzname speichern',
+    },
+    evolution: {
+      title: 'Entwicklung ändern',
+      description: `${name} bei ${encounter.player.name}: direkte Vor- oder Weiterentwicklung auswählen.`,
+      confirm: 'Entwicklung speichern',
     },
     delete: {
       title: 'Begegnung löschen',
@@ -319,6 +372,7 @@ export default function EncounterActionMenu({
                 <MenuButton onClick={() => openDialog('swap-pokemon')}>Pokémon tauschen</MenuButton>
               ) : null}
               <MenuButton onClick={() => openDialog('update-nickname')}>Spitzname bearbeiten</MenuButton>
+              <MenuButton onClick={() => openDialog('evolution')}>Entwicklung ändern</MenuButton>
               {scope === 'repair' ? (
                 <>
                   <div className="my-1 border-t border-[var(--border-default)]" />
@@ -409,6 +463,16 @@ export default function EncounterActionMenu({
                 className={inputClasses}
               />
             </Field>
+          ) : null}
+
+          {dialogAction === 'evolution' ? (
+            <AdminEvolutionPicker
+              currentPokedexId={encounter.pokemon.pokedexId}
+              gameVersionKey={gameVersionKey}
+              selectedPokedexId={selectedEvolutionId}
+              onSelect={setSelectedEvolutionId}
+              disabled={busy}
+            />
           ) : null}
 
           {dialogAction === 'delete' ? (

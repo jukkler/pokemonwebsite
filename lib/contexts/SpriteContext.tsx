@@ -14,24 +14,16 @@ interface SpriteContextType {
   spriteMode: SpriteMode;
   setSpriteMode: (mode: SpriteMode) => void;
   toggleSpriteMode: () => void;
-  baseStatOverlaysEnabled: boolean;
-  setBaseStatOverlaysEnabled: (enabled: boolean) => void;
-  toggleBaseStatOverlays: () => void;
 }
 
 const SpriteContext = createContext<SpriteContextType | undefined>(undefined);
 
 const SPRITE_STORAGE_KEY = 'pokemon-sprite-mode';
-const BASE_STAT_OVERLAY_STORAGE_KEY = 'pokemon-base-stat-overlays';
 const DISPLAY_SETTINGS_EVENT = 'pokemon-display-settings-change';
 
 function subscribeToDisplaySettings(onStoreChange: () => void) {
   const handleStorage = (event: StorageEvent) => {
-    if (
-      event.key === SPRITE_STORAGE_KEY
-      || event.key === BASE_STAT_OVERLAY_STORAGE_KEY
-      || event.key === null
-    ) {
+    if (event.key === SPRITE_STORAGE_KEY || event.key === null) {
       onStoreChange();
     }
   };
@@ -53,14 +45,6 @@ function getStoredSpriteMode(): SpriteMode {
   }
 }
 
-function getStoredBaseStatOverlayPreference(): boolean {
-  try {
-    return localStorage.getItem(BASE_STAT_OVERLAY_STORAGE_KEY) !== 'disabled';
-  } catch {
-    return true;
-  }
-}
-
 function notifyDisplaySettingsChanged() {
   window.dispatchEvent(new Event(DISPLAY_SETTINGS_EVENT));
 }
@@ -77,27 +61,9 @@ export function SpriteProvider({ children }: SpriteProviderProps) {
     getStoredSpriteMode,
     (): SpriteMode => 'static',
   );
-  const baseStatOverlaysEnabled = useSyncExternalStore(
-    subscribeToDisplaySettings,
-    getStoredBaseStatOverlayPreference,
-    () => true,
-  );
-
   const setSpriteMode = useCallback((mode: SpriteMode) => {
     try {
       localStorage.setItem(SPRITE_STORAGE_KEY, mode);
-    } catch {
-      // Die Darstellung bleibt auch ohne verfügbaren Web Storage bedienbar.
-    }
-    notifyDisplaySettingsChanged();
-  }, []);
-
-  const setBaseStatOverlaysEnabled = useCallback((enabled: boolean) => {
-    try {
-      localStorage.setItem(
-        BASE_STAT_OVERLAY_STORAGE_KEY,
-        enabled ? 'enabled' : 'disabled',
-      );
     } catch {
       // Die Darstellung bleibt auch ohne verfügbaren Web Storage bedienbar.
     }
@@ -108,18 +74,11 @@ export function SpriteProvider({ children }: SpriteProviderProps) {
     setSpriteMode(spriteMode === 'static' ? 'animated' : 'static');
   }, [setSpriteMode, spriteMode]);
 
-  const toggleBaseStatOverlays = useCallback(() => {
-    setBaseStatOverlaysEnabled(!baseStatOverlaysEnabled);
-  }, [baseStatOverlaysEnabled, setBaseStatOverlaysEnabled]);
-
   return (
     <SpriteContext.Provider value={{
       spriteMode,
       setSpriteMode,
       toggleSpriteMode,
-      baseStatOverlaysEnabled,
-      setBaseStatOverlaysEnabled,
-      toggleBaseStatOverlays,
     }}>
       {children}
     </SpriteContext.Provider>

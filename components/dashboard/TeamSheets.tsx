@@ -1,10 +1,18 @@
+"use client";
+
+import Image from 'next/image';
 import type { CSSProperties } from 'react';
 import type { DashboardPlayer } from '@/app/dashboard-data';
+import { PokemonDetailsTrigger } from '@/components/pokemon-details';
+import { useSpriteMode } from '@/lib/contexts/SpriteContext';
+import { getTypeColor } from '@/lib/design-tokens';
+import { getSpriteUrl } from '@/lib/sprite-utils';
 import { getAverageTeamStrength } from '@/lib/team-base-stats';
+import { getGermanTypeName } from '@/lib/typeEffectiveness';
 import DefensiveCoverageMap from './DefensiveCoverageMap';
-import PokemonStatPopover from './PokemonStatPopover';
 
 export function TeamSheet({ player }: { player: DashboardPlayer }) {
+  const { spriteMode } = useSpriteMode();
   const slots = Array.from({ length: 6 }, (_, index) =>
     player.team.find(pokemon => pokemon.teamSlot === index + 1) ?? null
   );
@@ -32,11 +40,36 @@ export function TeamSheet({ player }: { player: DashboardPlayer }) {
         {slots.map((pokemon, index) => (
           <li key={pokemon?.id ?? `empty-${index}`} className={pokemon ? 'is-occupied' : 'is-empty'}>
             {pokemon ? (
-              <PokemonStatPopover
+              <PokemonDetailsTrigger
                 pokemon={pokemon}
-                slotNumber={index + 1}
-                teamAverage={teamAverage}
-              />
+                className="dashboard-pokemon-stat-trigger"
+              >
+                <span className="dashboard-slot-number">{index + 1}</span>
+                <Image
+                  src={getSpriteUrl(pokemon, spriteMode) ?? '/pokeball.svg'}
+                  alt=""
+                  width={72}
+                  height={72}
+                  sizes="(max-width: 767px) 44px, 64px"
+                  className="dashboard-pokemon-sprite"
+                  unoptimized={spriteMode === 'animated' && Boolean(pokemon.spriteGifUrl)}
+                />
+                <strong title={pokemon.nickname ? `${pokemon.nameGerman ?? pokemon.name} (${pokemon.nickname})` : undefined}>
+                  {pokemon.nickname ?? pokemon.nameGerman ?? pokemon.name}
+                </strong>
+                {pokemon.nickname ? <small>{pokemon.nameGerman ?? pokemon.name}</small> : null}
+                <span className="dashboard-type-list">
+                  {pokemon.types.length > 0 ? pokemon.types.map(type => (
+                    <span
+                      key={type}
+                      className="dashboard-type-tag"
+                      style={{ '--type-accent': getTypeColor(type) } as CSSProperties}
+                    >
+                      {getGermanTypeName(type)}
+                    </span>
+                  )) : <span className="dashboard-empty-value">–</span>}
+                </span>
+              </PokemonDetailsTrigger>
             ) : (
               <>
                 <span className="dashboard-slot-number">{index + 1}</span>

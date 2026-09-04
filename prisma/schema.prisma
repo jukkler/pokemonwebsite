@@ -121,10 +121,28 @@ model Stream {
 
 // Spielversionen (Gen 1-9)
 model GameVersion {
-  key        String @id // z.B. "platinum", "heartgold"
-  name       String // z.B. "Pokémon Platin"
-  generation Int    // 1-9
-  runs       Run[]
+  key                     String @id // z.B. "platinum", "heartgold"
+  name                    String // z.B. "Pokémon Platin"
+  generation              Int    // 1-9
+  pokeapiVersionSlug      String?
+  pokeapiVersionGroupSlug String?
+  runs                    Run[]
+}
+
+// Editionsspezifische Detaildaten von PokeAPI. Der Payload enthält nur
+// Level-up-Attacken der Version Group sowie die Evolutionskette.
+model PokemonEditionDetailCache {
+  id               Int      @id @default(autoincrement())
+  pokedexId        Int
+  versionGroupSlug String
+  payload          String   @db.Text
+  schemaVersion    Int      @default(1)
+  fetchedAt        DateTime @default(now())
+  expiresAt        DateTime
+  updatedAt        DateTime @updatedAt
+
+  @@unique([pokedexId, versionGroupSlug])
+  @@index([expiresAt])
 }
 
 // Ein Run = Ein Durchlauf des Nuzlocke

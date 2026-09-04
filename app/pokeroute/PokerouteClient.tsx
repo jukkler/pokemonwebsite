@@ -5,10 +5,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import TeamDisplay from '@/components/TeamDisplay';
 import RouteList from '@/components/RouteList';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import AppPageTitle from '@/components/layout/AppPageTitle';
+import { PokemonDetailsProvider } from '@/components/pokemon-details';
 import { fetchJson } from '@/lib/fetchJson';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh';
@@ -100,12 +102,15 @@ interface Pokemon {
 interface PokerouteClientProps {
   initialPlayers: Player[];
   initialRoutes: RouteListRoute[];
+  currentGameVersion: { key: string; name: string } | null;
 }
 
 export default function PokerouteClient({
   initialPlayers,
   initialRoutes,
+  currentGameVersion,
 }: PokerouteClientProps) {
+  const router = useRouter();
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [routes, setRoutes] = useState<RouteListRoute[]>(initialRoutes);
   const { isAdmin } = useAuth();
@@ -113,6 +118,11 @@ export default function PokerouteClient({
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
   const [pokemonReloadToken, setPokemonReloadToken] = useState(0);
+
+  useEffect(() => {
+    setPlayers(initialPlayers);
+    setRoutes(initialRoutes);
+  }, [initialPlayers, initialRoutes]);
 
   // Pokémon-Daten werden nur für eingeloggte Admins benötigt.
   useEffect(() => {
@@ -158,6 +168,7 @@ export default function PokerouteClient({
 
   useLiveRefresh(ROUTE_DATA_TOPICS, reloadData);
   useLiveRefresh(ROUTE_POKEMON_TOPICS, reloadPokemon);
+  useLiveRefresh(['runs'], () => router.refresh());
 
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : 'Unbekannter Fehler';
@@ -197,6 +208,10 @@ export default function PokerouteClient({
   );
 
   return (
+    <PokemonDetailsProvider
+      gameVersionKey={currentGameVersion?.key ?? null}
+      gameVersionName={currentGameVersion?.name ?? null}
+    >
     <main className="app-page">
       <header className="app-page-header">
         <AppPageTitle
@@ -247,6 +262,7 @@ export default function PokerouteClient({
                   teamMembers={player.encounters}
                   routes={routes}
                   isAdmin={isAdmin}
+                  gameVersionKey={currentGameVersion?.key ?? null}
                   onUpdated={reloadData}
                   pokemon={pokemon}
                 />
@@ -265,7 +281,14 @@ export default function PokerouteClient({
         </div>
 
         <div className="app-band">
-          <RouteList routes={routes} players={players} isAdmin={isAdmin} onTeamUpdate={reloadData} pokemon={pokemon} />
+          <RouteList
+            routes={routes}
+            players={players}
+            isAdmin={isAdmin}
+            gameVersionKey={currentGameVersion?.key ?? null}
+            onTeamUpdate={reloadData}
+            pokemon={pokemon}
+          />
           {isAdmin ? (
             <form onSubmit={handleCreateRoute} className="app-toolbar mt-4">
               <label htmlFor="new-route-name" className="text-xs font-black uppercase tracking-widest text-[var(--text-secondary)]">Neue Route</label>
@@ -286,6 +309,7 @@ export default function PokerouteClient({
         </div>
       </section>
     </main>
+    </PokemonDetailsProvider>
   );
 }
 

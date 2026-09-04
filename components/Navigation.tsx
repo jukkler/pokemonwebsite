@@ -22,12 +22,7 @@ export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAdmin, setSession } = useAuth();
-  const {
-    spriteMode,
-    toggleSpriteMode,
-    baseStatOverlaysEnabled,
-    toggleBaseStatOverlays,
-  } = useSpriteMode();
+  const { spriteMode, toggleSpriteMode } = useSpriteMode();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isStreamsPage = pathname === '/streams';
   const [navHidden, setNavHidden] = useState(false);
@@ -155,30 +150,6 @@ export default function Navigation() {
               </svg>
               {spriteMode === 'animated' ? 'GIF' : 'Statisch'}
             </button>
-            <button
-              type="button"
-              onClick={toggleBaseStatOverlays}
-              className={`flex min-h-9 w-24 shrink-0 items-center justify-center gap-1.5 border px-2 text-[0.7rem] font-extrabold uppercase tracking-wide transition-colors hover:border-[var(--brand-blue)] hover:text-[var(--brand-blue)] ${
-                baseStatOverlaysEnabled
-                  ? 'border-[var(--brand-blue)] bg-blue-500/10 text-[var(--brand-blue)]'
-                  : 'border-[var(--border-default)] text-[var(--text-secondary)]'
-              }`}
-              title={baseStatOverlaysEnabled ? 'Basiswert-Overlays aktiv' : 'Basiswert-Overlays deaktiviert'}
-              aria-label={baseStatOverlaysEnabled ? 'Basiswert-Overlays ausschalten' : 'Basiswert-Overlays einschalten'}
-              aria-pressed={baseStatOverlaysEnabled}
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 19V9m5 10V5m5 14v-7m5 7V3" />
-              </svg>
-              <span className="hidden xl:inline">Stats</span>
-              <span className="flex items-center gap-1 text-[0.62rem]">
-                <span
-                  aria-hidden="true"
-                  className={`h-1.5 w-1.5 rounded-full ${baseStatOverlaysEnabled ? 'bg-emerald-500' : 'bg-[var(--text-tertiary)]'}`}
-                />
-                {baseStatOverlaysEnabled ? 'An' : 'Aus'}
-              </span>
-            </button>
             {isAdmin ? (
               <button
                 type="button"
@@ -237,14 +208,6 @@ export default function Navigation() {
           <div className="app-toolbar mt-6 flex-wrap justify-start">
             <button type="button" className="app-action" onClick={toggleSpriteMode}>
               Sprites: {spriteMode === 'animated' ? 'Animiert' : 'Statisch'}
-            </button>
-            <button
-              type="button"
-              className={`app-action ${baseStatOverlaysEnabled ? 'border-[var(--brand-blue)] bg-blue-500/10 text-[var(--brand-blue)]' : ''}`}
-              onClick={toggleBaseStatOverlays}
-              aria-pressed={baseStatOverlaysEnabled}
-            >
-              Basiswerte: {baseStatOverlaysEnabled ? 'An' : 'Aus'}
             </button>
             <div className="[&_button]:min-h-10 [&_button]:rounded-sm [&_button]:shadow-none">
               <ThemeToggle />

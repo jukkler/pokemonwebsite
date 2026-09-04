@@ -4,6 +4,7 @@
  */
 
 import PokerouteClient from './PokerouteClient';
+import { getCurrentGameVersion } from '@/lib/current-game';
 import prisma from '@/lib/prisma';
 
 async function getPlayers() {
@@ -92,15 +93,19 @@ async function getRoutes() {
 }
 
 export default async function PokeroutePage() {
-  const [players, routes] = await Promise.all([
+  const [players, routes, currentGameVersion] = await Promise.all([
     getPlayers(),
     getRoutes(),
+    getCurrentGameVersion(),
   ]);
 
   return (
     <PokerouteClient 
       initialPlayers={players}
       initialRoutes={routes}
+      currentGameVersion={currentGameVersion
+        ? { key: currentGameVersion.key, name: currentGameVersion.name }
+        : null}
     />
   );
 }

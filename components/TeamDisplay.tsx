@@ -9,9 +9,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
-import EvolutionMenu from './EvolutionMenu';
 import TypeBadge from './ui/TypeBadge';
-import PokemonStatPopover from './dashboard/PokemonStatPopover';
+import { PokemonDetailsTrigger } from './pokemon-details';
 import EncounterActionMenu, {
   type EncounterActionMenuTarget,
 } from './admin/EncounterActionMenu';
@@ -19,7 +18,6 @@ import RouteLinkActionMenu, {
   type RouteLinkActionMenuTarget,
 } from './admin/RouteLinkActionMenu';
 import { getEncounterRouteLinkState } from './admin/route-link-ui';
-import { useEvolutionMenu } from '@/lib/hooks/useEvolutionMenu';
 import { useSpriteMode } from '@/lib/contexts/SpriteContext';
 import { calculateAverageStats, countPlayerStats, createTeamSlots } from '@/lib/team-utils';
 import { parseTypes } from '@/lib/typeEffectiveness';
@@ -170,6 +168,7 @@ interface TeamDisplayProps {
   teamMembers: TeamEncounter[];
   routes: Route[];
   isAdmin?: boolean;
+  gameVersionKey?: string | null;
   onUpdated?: () => void | Promise<void>;
   pokemon?: PokemonListItem[];
 }
@@ -181,11 +180,10 @@ export default function TeamDisplay({
   teamMembers,
   routes,
   isAdmin = false,
+  gameVersionKey = null,
   onUpdated,
   pokemon = [],
 }: TeamDisplayProps) {
-  // Evolution-Hook
-  const evolution = useEvolutionMenu(onUpdated);
   const { spriteMode } = useSpriteMode();
   const [openEmptySlot, setOpenEmptySlot] = useState<number | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState('');
@@ -327,6 +325,7 @@ export default function TeamDisplay({
                   <EncounterActionMenu
                     encounter={encounterTargetsById.get(member.id)!}
                     pokemonOptions={pokemon}
+                    gameVersionKey={gameVersionKey}
                     compact
                     onUpdated={() => { void onUpdated?.(); }}
                     onDeleted={() => { void onUpdated?.(); }}
@@ -336,70 +335,40 @@ export default function TeamDisplay({
 
               {member ? (
                 <>
-                  <PokemonStatPopover
+                  <PokemonDetailsTrigger
                     pokemon={{
                       ...member.pokemon,
-                      nickname: member.nickname,
+                      displayName: member.nickname || pokemonName,
                       types: parseTypes(member.pokemon.types),
                     }}
-                    slotNumber={index + 1}
-                    teamAverage={teamAverage?.total ?? null}
-                    renderTrigger={(statTriggerProps) => (
-                      <button
-                        {...statTriggerProps}
-                        disabled={!isAdmin && statTriggerProps.disabled}
-                        onClick={(event) => {
-                          if (isAdmin) {
-                            evolution.openMenu(member.id, member.pokemon.pokedexId);
-                            return;
-                          }
-                          statTriggerProps.onClick?.(event);
-                        }}
-                        className="grid h-[9.5rem] w-full min-w-0 grid-rows-[3.5rem_1.75rem_3.75rem] justify-items-center px-1 pt-2 text-center"
-                        aria-label={isAdmin
-                          ? `Basiswerte von ${member.nickname || pokemonName} anzeigen oder Entwicklung verwalten`
-                          : statTriggerProps['aria-label']}
-                      >
-                        {spriteUrl ? (
-                          <Image
-                            src={spriteUrl}
-                            alt=""
-                            width={56}
-                            height={56}
-                            className="h-14 w-14 self-center object-contain"
-                            unoptimized={spriteMode === 'animated' && Boolean(member.pokemon.spriteGifUrl)}
-                          />
-                        ) : (
-                          <span className="flex h-14 w-14 items-center justify-center text-xs font-bold text-[var(--text-tertiary)]">
-                            #{member.pokemon.pokedexId}
-                          </span>
-                        )}
-                        <span className="flex h-full w-full min-w-0 flex-col items-center justify-start overflow-hidden">
-                          <strong className="max-w-full truncate text-xs text-[var(--foreground)]">
-                            {member.nickname || pokemonName}
-                          </strong>
-                          {member.nickname ? <span className="max-w-full truncate text-[10px] text-[var(--text-secondary)]">{pokemonName}</span> : null}
-                        </span>
-                        <span className="flex h-full min-w-0 flex-wrap content-start justify-center gap-1 pt-1">
-                          {parseTypes(member.pokemon.types).map((type) => (
-                            <TypeBadge key={type} type={type} size="sm" />
-                          ))}
-                        </span>
-                      </button>
+                    className="grid h-[9.5rem] w-full min-w-0 grid-rows-[3.5rem_1.75rem_3.75rem] justify-items-center px-1 pt-2 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)]"
+                  >
+                    {spriteUrl ? (
+                      <Image
+                        src={spriteUrl}
+                        alt=""
+                        width={56}
+                        height={56}
+                        className="h-14 w-14 self-center object-contain"
+                        unoptimized={spriteMode === 'animated' && Boolean(member.pokemon.spriteGifUrl)}
+                      />
+                    ) : (
+                      <span className="flex h-14 w-14 items-center justify-center text-xs font-bold text-[var(--text-tertiary)]">
+                        #{member.pokemon.pokedexId}
+                      </span>
                     )}
-                  />
-
-                  {isAdmin && evolution.openEncounterId === member.id ? (
-                    <EvolutionMenu
-                      evolutionData={evolution.evolutionData}
-                      isLoading={evolution.isLoading}
-                      isEvolving={evolution.isEvolving}
-                      onEvolve={(targetId) => evolution.evolve(member.id, targetId)}
-                      onClose={evolution.closeMenu}
-                      menuRef={evolution.menuRef}
-                      className="absolute left-1/2 top-12 z-50 max-w-[280px] -translate-x-1/2"
-                    />
-                  ) : null}
+                    <span className="flex h-full w-full min-w-0 flex-col items-center justify-start overflow-hidden">
+                      <strong className="max-w-full truncate text-xs text-[var(--foreground)]">
+                        {member.nickname || pokemonName}
+                      </strong>
+                      {member.nickname ? <span className="max-w-full truncate text-[10px] text-[var(--text-secondary)]">{pokemonName}</span> : null}
+                    </span>
+                    <span className="flex h-full min-w-0 flex-wrap content-start justify-center gap-1 pt-1">
+                      {parseTypes(member.pokemon.types).map((type) => (
+                        <TypeBadge key={type} type={type} size="sm" />
+                      ))}
+                    </span>
+                  </PokemonDetailsTrigger>
 
                   {member.route.name ? (
                     <div className="mt-2 border-t border-[var(--border-default)] pt-1 text-center">

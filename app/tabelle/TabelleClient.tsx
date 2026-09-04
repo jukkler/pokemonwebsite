@@ -13,6 +13,10 @@ import { useRouter } from 'next/navigation';
 import EncounterActionMenu, {
   type EncounterActionMenuTarget,
 } from '@/components/admin/EncounterActionMenu';
+import {
+  PokemonDetailsProvider,
+  PokemonDetailsTrigger,
+} from '@/components/pokemon-details';
 import RouteLinkActionMenu from '@/components/admin/RouteLinkActionMenu';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -55,11 +59,12 @@ export type RouteRow = {
 type SortKey = 'route' | 'average' | `player-${number}`;
 type SortDirection = 'asc' | 'desc';
 
-const TABLE_LIVE_TOPICS = ['encounters', 'routes', 'players', 'pokemon'] as const;
+const TABLE_LIVE_TOPICS = ['encounters', 'routes', 'players', 'pokemon', 'runs'] as const;
 
 interface TabelleClientProps {
   players: PlayerInfo[];
   rows: RouteRow[];
+  currentGameVersion: { key: string; name: string } | null;
 }
 
 const TYPE_TRANSLATIONS: Record<string, string> = {
@@ -108,7 +113,7 @@ function SortIndicator({ direction }: { direction: SortDirection }) {
   );
 }
 
-export default function TabelleClient({ players, rows }: TabelleClientProps) {
+export default function TabelleClient({ players, rows, currentGameVersion }: TabelleClientProps) {
   const router = useRouter();
   const { isAdmin } = useAuth();
   const { spriteMode } = useSpriteMode();
@@ -336,7 +341,18 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
 
     return (
       <div className="flex min-w-56 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
+        <PokemonDetailsTrigger
+          pokemon={{
+            pokedexId: encounter.pokemon.pokedexId,
+            name: encounter.pokemon.name,
+            nameGerman: encounter.pokemon.nameGerman,
+            displayName,
+            spriteUrl: encounter.pokemon.spriteUrl,
+            spriteGifUrl: encounter.pokemon.spriteGifUrl,
+            types: cell.types,
+          }}
+          className="flex min-w-0 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)]"
+        >
           {displaySpriteUrl ? (
             <Image
               src={displaySpriteUrl}
@@ -387,7 +403,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
               </span>
             </div>
           </div>
-        </div>
+        </PokemonDetailsTrigger>
 
         {isAdmin ? (
           <div
@@ -399,6 +415,7 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
             <EncounterActionMenu
               encounter={encounter}
               pokemonOptions={pokemonOptions ?? []}
+              gameVersionKey={currentGameVersion?.key ?? null}
               onUpdated={handleUpdated}
               onError={setActionMessage}
               compact
@@ -417,6 +434,10 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
   };
 
   return (
+    <PokemonDetailsProvider
+      gameVersionKey={currentGameVersion?.key ?? null}
+      gameVersionName={currentGameVersion?.name ?? null}
+    >
     <div>
       <div className="mb-5 flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -617,5 +638,6 @@ export default function TabelleClient({ players, rows }: TabelleClientProps) {
         </table>
       </div>
     </div>
+    </PokemonDetailsProvider>
   );
 }

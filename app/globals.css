@@ -689,6 +689,8 @@ body {
 }
 
 .dashboard-team-slots li.is-occupied {
+  /* The click target owns the content rows and fills the entire team slot. */
+  display: block;
   padding: 0;
 }
 
@@ -762,6 +764,7 @@ body {
 .dashboard-pokemon-stat-trigger {
   display: grid;
   width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 144px;
   cursor: pointer;

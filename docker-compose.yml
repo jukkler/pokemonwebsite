@@ -23,6 +23,13 @@ services:
     # Security: Verhindert Privilege Escalation
     security_opt:
       - no-new-privileges:true
+    # Memory Limit (verhindert dass Postgres allen RAM frisst)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
 
   # Database Migration Service (runs once)
   migrate:

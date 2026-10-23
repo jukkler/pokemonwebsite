@@ -316,8 +316,8 @@ sudo ufw status
 **Lösung:** Im Dockerfile:
 ```dockerfile
 # User erstellen
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 10001 nodejs
+RUN adduser --system --uid 10001 nextjs
 
 # Als User ausführen
 USER nextjs

@@ -62,8 +62,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user for security
-RUN groupadd --system --gid 1001 nodejs
-RUN useradd --system --uid 1001 nextjs
+# UID/GID 10001: liegt außerhalb der Host-Benutzer (1000+), damit der Container-User
+# auf dem Host keinem echten Benutzer entspricht
+RUN groupadd --system --gid 10001 nodejs
+RUN useradd --system --uid 10001 nextjs
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public

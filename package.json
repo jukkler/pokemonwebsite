@@ -13,16 +13,16 @@
     "test:all": "npm run test && npm run test:e2e"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.0",
+    "@prisma/client": "^6.19.3",
     "dotenv": "^17.2.3",
     "iron-session": "^8.0.4",
-    "next": "^16.1.4",
+    "next": "16.4.3",
     "prisma": "^6.19.0",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-easy-crop": "^5.5.6",
     "recharts": "^3.4.1",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -32,7 +32,7 @@
     "@types/react-dom": "^19",
     "baseline-browser-mapping": "^2.9.19",
     "eslint": "^9",
-    "eslint-config-next": "16.0.3",
+    "eslint-config-next": "16.4.3",
     "node-addon-api": "^8.5.0",
     "tailwindcss": "^4",
     "typescript": "^5",

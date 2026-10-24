@@ -1,7 +1,7 @@
 # ================================
 # Stage 1: Dependencies
 # ================================
-FROM node:20-slim AS deps
+FROM node:24-slim AS deps
 
 # Install dependencies for Prisma and Sharp
 RUN apt-get update && apt-get install -y \
@@ -20,7 +20,7 @@ RUN npm ci
 # ================================
 # Stage 2: Builder
 # ================================
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 
 # Prisma generates its native client in this stage and therefore needs the
 # same OpenSSL runtime that is present in the dependency and runner stages.
@@ -50,7 +50,7 @@ RUN npm run build
 # ================================
 # Stage 3: Runner (Production)
 # ================================
-FROM node:20-slim AS runner
+FROM node:24-slim AS runner
 
 # Install OpenSSL for Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
